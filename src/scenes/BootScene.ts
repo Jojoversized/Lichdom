@@ -20,9 +20,11 @@ export class BootScene extends Phaser.Scene {
     // that point an existing sprite key at an imported sheet. The generated files stay
     // untouched, so removing an override (or enabled: false) restores the original art.
     const ai = this.cache.json.get('manifest_ai');
-    if (ai && ai.enabled !== false && (G.settings?.aiArt ?? true)) {
+    if (ai) {
+      // new content (e.g. the Wendigo) always loads; only the reskin overrides are switchable
       Object.assign(SHEETS, ai.sheets || {});
-      for (const [key, aiKey] of Object.entries<string>(ai.overrides || {})) if (ai.sheets?.[aiKey]) SHEETS[key] = ai.sheets[aiKey];
+      if (ai.enabled !== false && (G.settings?.aiArt ?? true))
+        for (const [key, aiKey] of Object.entries<string>(ai.overrides || {})) if (ai.sheets?.[aiKey]) SHEETS[key] = ai.sheets[aiKey];
     }
     SFX_LIST.push(...(this.cache.json.get('sfxlist') || []));
     for (const [key, m] of Object.entries(SHEETS)) this.load.spritesheet(key, m.file, { frameWidth: m.fw, frameHeight: m.fh });

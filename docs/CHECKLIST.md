@@ -14,11 +14,17 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 - [ ] Unit tests for pure systems (stats curves, card pool, flow field)
 
 ## AI-assisted art (Dreamina)
-- [x] Test asset: Skeleton Warriors (tier 1) imported from Dreamina via `manifest_ai.json` override
-- [x] Importer `tools/assets/import_ai_sprite.py` (resample → quantize → emissive glow → outline → strip)
-- [ ] Decide character scale for AI art (H 24 loses face/mail detail; H 32–36 keeps it)
+- [x] Pipeline adopted: Dreamina (Seedream 5.0 Lite + reference) → Remove BG → `import_ai_sprite.py` → `manifest_ai.json`
+- [x] AI detail tier: res 4 texels/world px (same world size, 2× detail); crisp at zoom ≥ 4, smooth below
+- [x] Imported: Skeleton Warriors, Zombie Horde, Necromantic Acolyte (cleric), Death Knight (haunted armor), Undead Wendigo (new)
+- [ ] Tier 2/3 forms for imported units (currently tiers 2–3 keep procedural art; Wendigo reuses one sheet)
 - [ ] Real animation poses (currently derived from one pose: bob, squash, lean)
 - [ ] Remaining undead tiers, crusaders, towers, keep, tiles, spell FX
+
+## Roster
+- [x] Random starting roster per campaign: 1 front-line + 1 ranged + 1 wild card (`startingRoster` in campaign.ts)
+- [x] Undead Wendigo: fastest undead, lifesteal, hunts ranged/caster/healer mortals first
+- [ ] Wendigo-specific card modifiers
 
 ## Battlefield
 - [x] Keep on far left; crusade enters from the right (3 roads → 5 at waves 12 and 20)

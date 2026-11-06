@@ -77,7 +77,7 @@ assets/
   data/manifest.json, palette.json, sfx.json
 ```
 
-## AI-assisted art (Dreamina) — pipeline under test
+## AI-assisted art (Dreamina) — the adopted art pipeline
 
 Imported AI art never overwrites generated assets. It is layered at boot:
 - **Generate** in Dreamina (Seedream 5.0 Lite, 6 credits/image, the original style reference attached).
@@ -86,10 +86,15 @@ Imported AI art never overwrites generated assets. It is layered at boot:
 - **Keep the original** in `art_source/dreamina/<asset>_vN/` (`cutout.png` + `meta.json` with prompt, model,
   credits). `art_source/` is outside `assets/`, so it is not shipped.
 - **Import**: `python3 tools/assets/import_ai_sprite.py <cutout> <key> --H 24 [--override <sprite key>]`
-  → resample to H×2 texels, palette-quantize, keep emissive glows, 1-texel selective outline, derive the
+  → resample to **H×4 texels** (`--res 4`, the AI detail tier: same world size, twice the detail), palette-quantize, keep emissive glows, 1-texel selective outline, derive the
   idle/walk/atk/cast strip, write `assets/sprites/<category>/ai/<key>.png` and `assets/data/manifest_ai.json`.
 - **Runtime**: BootScene merges `manifest_ai.json`; `overrides` maps an existing sprite key to the imported
-  sheet (`enabled: false` or removing the entry restores the procedural art).
+  sheet (`enabled: false` or removing the entry restores the procedural art). New-content sheets (e.g. `wendigo`)
+  always load. Each sheet's `res` sets its draw scale (1/res). Res-4 textures use NEAREST filtering when a
+  texel covers ≥ 1 screen px (zoom ≥ 4, default at 1080p) and LINEAR below that (smooth downsampling,
+  `WorldRenderer.updateDetailFilters`).
+- **Imported so far:** skeleton (Skeleton Warriors), zombie, acolyte (skeleton cleric), deathknight (haunted
+  armor), wendigo (new unit). Credits remaining after this session: ~204.
 
 
 
@@ -136,6 +141,9 @@ Key rules:
 - After any change: typecheck, run smoke + ui_flow, run the bot for balance changes, update `docs/CHECKLIST.md`.
 
 ## Current status
+
+v0.4 — Dreamina art pipeline adopted (5 AI-art units, res-4 detail tier), new Undead Wendigo unit,
+random 3-type starting roster per campaign (front-line + ranged + wild card; more via level-ups and the Soul Well).
 
 v0.3 — hi-res art pass and uncapped squads, on top of v0.2 (Phaser/TS port, left keep / right crusade,
 autonomous undead AI, free wave-end revival, incremental curves, Soul Well Ascensions):

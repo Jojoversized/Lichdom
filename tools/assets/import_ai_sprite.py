@@ -22,7 +22,7 @@ import numpy as np
 from PIL import Image, ImageFilter
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-TEXEL_RES = 2
+TEXEL_RES = 2  # procedural art; AI art defaults to --res 4 (twice the detail at the same world size)
 OUTLINE = np.array([8, 9, 11])
 
 
@@ -125,13 +125,14 @@ def place(frame_w, frame_h, img, dx=0, dy=0, shear=0.0, squash=1.0):
     return canvas
 
 
-def build_strip(spr):
+def build_strip(spr, k=1.0):
+    """k scales the motion offsets (texels) with the sheet's texel density."""
     h, w = spr.shape[:2]
-    fw, fh = w + 10, h + 4
+    fw, fh = w + int(10 * k), h + int(4 * k)
     frames = {
         'idle': [place(fw, fh, spr), place(fw, fh, spr, squash=0.97)],
-        'walk': [place(fw, fh, spr, dy=0, shear=1), place(fw, fh, spr, dy=-1, shear=1.5), place(fw, fh, spr, dy=0, shear=1), place(fw, fh, spr, dy=-1, shear=0.5)],
-        'atk': [place(fw, fh, spr, shear=-2, dx=-1), place(fw, fh, spr, shear=4, dx=2), place(fw, fh, spr, shear=2, dx=1)],
+        'walk': [place(fw, fh, spr, dy=round(0 * k), shear=1 * k), place(fw, fh, spr, dy=round(-1 * k), shear=1.5 * k), place(fw, fh, spr, dy=round(0 * k), shear=1 * k), place(fw, fh, spr, dy=round(-1 * k), shear=0.5 * k)],
+        'atk': [place(fw, fh, spr, shear=-2 * k, dx=round(-1 * k)), place(fw, fh, spr, shear=4 * k, dx=round(2 * k)), place(fw, fh, spr, shear=2 * k, dx=round(1 * k))],
         'cast': [place(fw, fh, spr), place(fw, fh, spr, squash=0.97)],
     }
     order = ['idle', 'walk', 'atk', 'cast']
@@ -148,16 +149,19 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('cutout'); ap.add_argument('key')
     ap.add_argument('--H', type=float, default=23, help='character height in world px (texels = H*2)')
-    ap.add_argument('--colors', type=int, default=28)
+    ap.add_argument('--colors', type=int, default=32)
+    ap.add_argument('--res', type=int, default=4, help='texels per world px (4 = AI detail tier, drawn at 1/4 scale)')
+    ap.add_argument('--name', default=None, help='label stored in the manifest')
     ap.add_argument('--category', default='units')
     ap.add_argument('--override', default=None, help='existing sprite key to replace at runtime')
     ap.add_argument('--preview', default=None)
     ap.add_argument('--no-manifest', action='store_true')
+    ap.add_argument('--flying', action='store_true')
     a = ap.parse_args()
 
     a.cutout = os.path.abspath(a.cutout)
     cut = load_cutout(a.cutout)
-    th = int(round(a.H * TEXEL_RES))
+    th = int(round(a.H * a.res))
     rgb, mask = resample(cut, th)
     q = quantize(rgb, mask, a.colors)
     em, emc = emissive_mask(cut, q.shape[:2])
@@ -168,7 +172,7 @@ def main():
     rgba[..., :3] = q.clip(0, 255).astype(np.uint8); rgba[..., 3] = np.where(mask, 255, 0)
     pad = np.zeros((rgba.shape[0] + 2, rgba.shape[1] + 2, 4), np.uint8); pad[1:-1, 1:-1] = rgba
     spr = sel_outline(pad.astype(np.float32)).clip(0, 255).astype(np.uint8)
-    sheet, fw, fh, anims = build_strip(spr)
+    sheet, fw, fh, anims = build_strip(spr, a.res / 2)
 
     if a.preview:
         Image.fromarray(spr, 'RGBA').save(a.preview)
@@ -179,7 +183,7 @@ def main():
     Image.fromarray(sheet, 'RGBA').save(os.path.join(ROOT, 'assets', rel), optimize=True)
     mpath = os.path.join(ROOT, 'assets/data/manifest_ai.json')
     man = json.load(open(mpath)) if os.path.exists(mpath) else {'version': 1, 'res': TEXEL_RES, 'enabled': True, 'sheets': {}, 'overrides': {}}
-    man['sheets'][a.key] = {'file': rel, 'fw': fw, 'fh': fh, 'frames': sheet.shape[1] // fw, 'anims': anims, 'H': a.H, 'flying': False, 'category': a.category, 'source': os.path.relpath(a.cutout, ROOT) if a.cutout.startswith(ROOT) else os.path.basename(a.cutout)}
+    man['sheets'][a.key] = {'file': rel, 'fw': fw, 'fh': fh, 'frames': sheet.shape[1] // fw, 'anims': anims, 'H': a.H, 'res': a.res, 'flying': a.flying, 'category': a.category, 'source': os.path.relpath(a.cutout, ROOT) if a.cutout.startswith(ROOT) else os.path.basename(a.cutout)}
     if a.override:
         man['overrides'][a.override] = a.key
     json.dump(man, open(mpath, 'w'), indent=1)

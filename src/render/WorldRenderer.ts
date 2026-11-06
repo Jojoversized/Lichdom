@@ -17,6 +17,8 @@ import { TEXEL_RES, VIEW } from '../config/zoom';
 const T = TEXEL_RES, SC = 1 / TEXEL_RES;
 /** Snap a world coordinate to the texel grid (half-pixel steps at 2x). */
 const snap = (v: number) => Math.round(v * T) / T;
+/** Draw scale of a sheet: 1 / its texel density (procedural art 2, AI art 4). */
+const sheetScale = (key: string) => 1 / ((SHEETS[key] && (SHEETS[key] as any).res) || T);
 
 const DEPTH = { terrain: -10000, decals: -9990, groundFx: -9000, shadows: -8000, world: 0, fx: 100000, dark: 200000, glow: 200001, overlay: 300000 };
 const colorCache = new Map<string, number>();
@@ -53,6 +55,18 @@ export class WorldRenderer {
     this.dark.resize?.(tw, th); this.glow.resize?.(tw, th);
     this.dark.setSize(tw, th); this.glow.setSize(tw, th);
     this.scene.cameras.main.setOrigin(0, 0).setZoom(VIEW.cz);
+    this.updateDetailFilters();
+  }
+  /** High-density sheets (AI art, res 4) show every texel crisply once a texel covers at
+   *  least one screen pixel (zoom >= 4). Below that they are downsampled smoothly
+   *  (linear filtering) instead of dropping texels, so the extra detail still reads. */
+  updateDetailFilters() {
+    for (const [key, m] of Object.entries(SHEETS)) {
+      const res = (m as any).res || T;
+      if (res <= T || !this.scene.textures.exists(key)) continue;
+      const crisp = VIEW.Z / res >= 1;
+      this.scene.textures.get(key).setFilter(crisp ? Phaser.Textures.FilterMode.NEAREST : Phaser.Textures.FilterMode.LINEAR);
+    }
   }
 
   // ---------- world (re)build ----------
@@ -131,9 +145,9 @@ export class WorldRenderer {
 
   private ensureSprite(o: any, key: string, frame = 0) {
     if (!o.view) {
-      o.view = this.scene.add.sprite(o.x, o.y, key, frame).setOrigin(0.5, 1).setScale(SC);
+      o.view = this.scene.add.sprite(o.x, o.y, key, frame).setOrigin(0.5, 1).setScale(sheetScale(key));
       o.viewKey = key;
-    } else if (o.viewKey !== key) { o.view.setTexture(key, frame); o.viewKey = key; }
+    } else if (o.viewKey !== key) { o.view.setTexture(key, frame).setScale(sheetScale(key)); o.viewKey = key; }
     return o.view as Phaser.GameObjects.Sprite;
   }
 
@@ -179,7 +193,7 @@ export class WorldRenderer {
     const meta = SHEETS[c.spr];
     if (!meta) return;
     if (!c.view) {
-      c.view = this.scene.add.sprite(c.x, c.y, c.spr, meta.anims.idle[0]).setOrigin(0.5, 1).setScale(SC).setAngle(90 * (c.face < 0 ? -1 : 1)).setTint(0x8a7a78).setFlipX(c.face < 0);
+      c.view = this.scene.add.sprite(c.x, c.y, c.spr, meta.anims.idle[0]).setOrigin(0.5, 1).setScale(sheetScale(c.spr)).setAngle(90 * (c.face < 0 ? -1 : 1)).setTint(0x8a7a78).setFlipX(c.face < 0);
       c.view.setDepth(DEPTH.decals + 5);
     }
     c.view.setAlpha(c.t > c.life - 5 ? Math.max(0.3, (c.life - c.t) / 5) : 1);
@@ -232,7 +246,8 @@ export class WorldRenderer {
     ctx.globalAlpha = 0.45;
     ctx.translate(Math.round(d.x), Math.round(d.y));
     ctx.rotate((d.face < 0 ? -1 : 1) * Math.PI / 2);
-    ctx.drawImage(img, fx, 0, meta.fw, meta.fh, -meta.fw / T / 2, -meta.fh / T, meta.fw / T, meta.fh / T);
+    const R = (meta as any).res || T;
+    ctx.drawImage(img, fx, 0, meta.fw, meta.fh, -meta.fw / R / 2, -meta.fh / R, meta.fw / R, meta.fh / R);
     ctx.restore();
   }
 

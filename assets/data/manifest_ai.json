@@ -5,8 +5,8 @@
  "sheets": {
   "ai_skeleton_warrior": {
    "file": "sprites/units/ai/ai_skeleton_warrior.png",
-   "fw": 47,
-   "fh": 54,
+   "fw": 92,
+   "fh": 106,
    "frames": 11,
    "anims": {
     "idle": [
@@ -27,12 +27,132 @@
     ]
    },
    "H": 24.0,
+   "res": 4,
    "flying": false,
    "category": "units",
    "source": "art_source/dreamina/skeleton_warrior_v1/cutout.png"
+  },
+  "ai_zombie_rotting": {
+   "file": "sprites/units/ai/ai_zombie_rotting.png",
+   "fw": 78,
+   "fh": 102,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 23.0,
+   "res": 4,
+   "flying": false,
+   "category": "units",
+   "source": "art_source/dreamina/zombie_rotting_v1/cutout.png"
+  },
+  "ai_skeleton_cleric": {
+   "file": "sprites/units/ai/ai_skeleton_cleric.png",
+   "fw": 91,
+   "fh": 114,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 26.0,
+   "res": 4,
+   "flying": false,
+   "category": "units",
+   "source": "art_source/dreamina/skeleton_cleric_v1/cutout.png"
+  },
+  "ai_haunted_armor": {
+   "file": "sprites/units/ai/ai_haunted_armor.png",
+   "fw": 93,
+   "fh": 118,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 27.0,
+   "res": 4,
+   "flying": false,
+   "category": "units",
+   "source": "art_source/dreamina/haunted_armor_v1/cutout.png"
+  },
+  "wendigo": {
+   "file": "sprites/units/ai/wendigo.png",
+   "fw": 122,
+   "fh": 94,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 21.0,
+   "res": 4,
+   "flying": false,
+   "category": "units",
+   "source": "art_source/dreamina/wendigo_v1/cutout.png"
   }
  },
  "overrides": {
-  "skeleton": "ai_skeleton_warrior"
+  "skeleton": "ai_skeleton_warrior",
+  "zombie": "ai_zombie_rotting",
+  "acolyte": "ai_skeleton_cleric",
+  "deathknight": "ai_haunted_armor"
  }
 }

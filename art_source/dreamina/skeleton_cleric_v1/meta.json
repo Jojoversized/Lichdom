@@ -1,0 +1,18 @@
+{
+ "asset": "ai_skeleton_cleric",
+ "used_as": "units/acolyte (tier 1, Necromantic Acolyte) override",
+ "tool": "Dreamina (dreamina.capcut.com) \u2014 AI Image",
+ "model": "Seedream 5.0 Lite",
+ "settings": {
+  "ratio": "Auto",
+  "resolution": "2K"
+ },
+ "reference": "original Lichdom style reference image",
+ "source": "user's existing generation in the 'Undead lich army pixel art' session (Dreamina Assets page)",
+ "postprocess": "Dreamina Remove BG (2 credits) -> tools/assets/import_ai_sprite.py --H 26 --res 4",
+ "credits_spent": {
+  "remove_bg": 2
+ },
+ "date": "2026-11-06",
+ "prompt": "Make character sprites for my upcoming game. The desired units should be themed as an undead lich's army based off of this image's artstyle as a template; high resolution shaded pixel art in this exact style. I'm looking for a rotting zombie, an eldritch skeleton cleric, living/haunted armor, and more."
+}

@@ -31,7 +31,7 @@ function newRunState(fortKey: string, seed: number) {
   return {
     fortress: fortKey, seed, wave: 0, level: 1, xp: 0, xpNext: xpForLevel(1), pendingLevels: metaLv('i_start'),
     souls: 300 + metaLv('s_start') * 60, soulsEarned: 0, kills: 0, bossesKilled: [] as string[], essenceBonus: 0,
-    unlockedTowers: ['brimstone', 'tesla', 'necrotic'], unlockedUnits: ['skeleton', 'archer', 'zombie'],
+    unlockedTowers: ['brimstone', 'tesla', 'necrotic'], unlockedUnits: [] as string[],
     spells: ['deathwave', 'raise'], spellCd: {} as Record<string, number>, unitTier: {} as Record<string, number>, unitBuff: {} as Record<string, number>,
     towerDmg: {} as Record<string, number>, mods: {} as Record<string, number>, picks: {} as Record<string, number>, banished: [] as string[],
     m: defaultMods(), asc: { dmg: 0, hp: 0, souls: 0, squad: 0 }, bought: {} as Record<string, number>, rerolls: metaLv('i_reroll') * 2 + 1, banishes: 1 + metaLv('i_reroll'), insightBuys: 0,
@@ -48,13 +48,16 @@ export function newCampaign(fortKey: string) {
   const extra = SPELL_ORDER.filter(s => !G.run.spells.includes(s) && SPELLS[s].meta && metaLv(SPELLS[s].meta) > 0 && s !== 'apocalypse');
   for (let i = 0; i < metaLv('a_start') && extra.length; i++) G.run.spells.push(extra.splice(rndi(0, extra.length - 1), 1)[0]);
   G.keep.maxHp = 0; recalcKeep(); G.keep.hp = G.keep.maxHp;
-  // starting host: two warrior squads, an archer squad, plus random extra squads —
-  // one of a randomly chosen *new* unit type that this campaign unlocks for free.
-  spawnSquad('skeleton', KEEP.x1 + 30, KEEP.y - 24);
-  spawnSquad('skeleton', KEEP.x1 + 30, KEEP.y + 24);
-  spawnSquad('archer', KEEP.x1 + 10, KEEP.y);
-  const fresh = randomUnitType(true, 2);
-  if (fresh) { G.run.unlockedUnits.push(fresh); spawnSquad(fresh, KEEP.x1 + 40, KEEP.y); msg(`The crypts stir: ${UNITS[fresh].tiers[0].name} join you from the start.`, PAL.necro); }
+  // Every campaign drafts a small random roster: one front-line type, one ranged type and
+  // one wild card. More types are unlocked mid-run via level-up cards (Forgotten Crypt,
+  // unit unlocks) and the Soul Well (Call of the Crypt).
+  const roster = startingRoster();
+  G.run.unlockedUnits.push(...roster);
+  spawnSquad(roster[0], KEEP.x1 + 30, KEEP.y - 24);
+  spawnSquad(roster[0], KEEP.x1 + 30, KEEP.y + 24);
+  spawnSquad(roster[1], KEEP.x1 + 10, KEEP.y);
+  spawnSquad(roster[2], KEEP.x1 + 40, KEEP.y);
+  msg(`Your host rises: ${roster.map(t => UNITS[t].tiers[0].name).join(', ')}.`, PAL.necro);
   for (let i = 0; i < metaLv('m_start'); i++) { const t = randomUnitType(false, 3); if (t) spawnSquad(t, KEEP.x1 + 40, KEEP.y + rnd(-50, 50)); }
   if (metaLv('f_free')) for (const [cx, cy] of [[14, 18], [14, 23], [16, 14], [16, 26]]) if (canBuildAt(cx, cy, 2, 2)) { placeTower('necrotic', cx, cy); break; }
   G.phase = 'prep'; G.speed = 1; G.paused = false;
@@ -97,6 +100,16 @@ export function spawnSquad(type: string, x: number, y: number, opts: any = {}) {
   }
   return out;
 }
+/** Front-line and ranged pools for the opening draft (small, cheap bodies only). */
+const START_MELEE = ['skeleton', 'zombie', 'pikeman', 'wendigo'];
+const START_RANGED = ['archer', 'bonemage', 'acolyte', 'banshee'];
+export function startingRoster(): string[] {
+  const melee = pick(START_MELEE.filter(k => UNITS[k]));
+  const ranged = pick(START_RANGED.filter(k => UNITS[k]));
+  const wild = pick(Object.keys(UNITS).filter(k => UNITS[k].size <= 2 && k !== melee && k !== ranged));
+  return [melee, ranged, wild];
+}
+
 /** A random unit type for free grants (starting squad, Call of the Crypt, Forgotten Crypt).
  *  Random grants may reach past Phylactery gates — a taste of locked undead.
  *  `onlyNew` = not yet unlocked this campaign; `maxSize` limits body size. */

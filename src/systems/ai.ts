@@ -231,6 +231,7 @@ export function planArmy(dt: number) {
       if ((e.boss && !t.danger) || e.champion) cost -= 60;
       if (u.flying && e.flying) cost -= 120;
       if (u.def.antiCav && e.def.cav) cost -= 80;
+      if (u.def.hunter && (e.def.ranged || e.def.caster || e.def.healer)) cost -= 90; // wendigos hunt the backline
       if (u.type === 'deathknight' && e.armor > 0.3) cost -= 50;
       if (u.def.taunt) cost -= c * 30; // taunters dive into the thick of it
       if (cost < bc) { bc = cost; best = e; }
