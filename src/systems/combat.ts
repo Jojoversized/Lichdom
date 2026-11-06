@@ -116,7 +116,7 @@ export function placeTower(type: string, cx: number, cy: number, tier = 0, opts:
 }
 export function placeFort(type: string, cx: number, cy: number, opts: any = {}): Ent {
   const d = FORTS[type];
-  const f = Object.assign(baseEnt('fort', cx * CELL + 8, cy * CELL + 8), { type, def: d, cx, cy, team: 'u' as const, blocks: !!d.block, trapT: 0, abT: 0, rad: 7 });
+  const f = Object.assign(baseEnt('fort', cx * CELL + 8, cy * CELL + 8), { type, def: d, cx, cy, team: 'u' as const, blocks: !!d.block, trapT: 0, abT: 0, rad: 7, site: opts.site || null, wtier: opts.wtier || (type === 'wall' ? 2 : 0) });
   f.maxHp = d.hp ? fortMaxHp(f) : 1; f.hp = opts.hp ?? f.maxHp;
   G.map.struct[cellIdx(cx, cy)] = f;
   G.map.dirty = true;
@@ -169,6 +169,7 @@ export function dealDamage(t: any, amount: number, dtype: string, src: any, opt:
   }
   if (dtype === 'siege' && t.kind === 'unit') dmg *= 0.3;
   dmg = Math.max(1, dmg);
+  const dealt = Math.min(dmg, Math.max(0, t.hp)); // lifesteal never feeds on overkill
   t.hp -= dmg;
   t.hitT = 0.12;
   // damage numbers: one merged number per target every 0.35s (crits always pop) so big fights stay readable
@@ -179,7 +180,7 @@ export function dealDamage(t: any, amount: number, dtype: string, src: any, opt:
       t.dmgAcc = 0; t.dmgTxtT = G.time + 0.35;
     }
   }
-  if (src && src.kind === 'unit' && src.def && src.def.lifesteal) healUnit(src, dmg * src.def.lifesteal, G.run.mods.vamp_feast);
+  if (src && src.kind === 'unit' && src.def && src.def.lifesteal) healUnit(src, dealt * src.def.lifesteal, G.run.mods.vamp_feast);
   if (t.hp <= 0) killEntity(t, src, dtype);
   return dmg;
 }
@@ -188,7 +189,12 @@ function fmtDmg(n: number) { if (n < 1000) return '' + Math.round(n); if (n < 1e
 export function healUnit(u: any, amt: number, splash = false) {
   if (u.dead) return;
   u.hp = Math.min(u.maxHp, u.hp + amt);
-  if (splash) G.hashU.query(u.x, u.y, 50, (o: any) => { if (o !== u) o.hp = Math.min(o.maxHp, o.hp + amt * 0.5); });
+  if (splash) { // Blood Feast: the 2 most wounded undead nearby get 30% of it (was everyone at 50%: quadratic in dense hosts)
+    const near: any[] = [];
+    G.hashU.query(u.x, u.y, 50, (o: any) => { if (o !== u && !o.dead && o.hp < o.maxHp) near.push(o); });
+    near.sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp);
+    for (let i = 0; i < Math.min(2, near.length); i++) near[i].hp = Math.min(near[i].maxHp, near[i].hp + amt * 0.3);
+  }
 }
 
 export function damageKeep(amount: number, src: any) {

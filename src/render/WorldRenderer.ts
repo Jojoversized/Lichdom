@@ -6,11 +6,12 @@ import { G } from '../core/state';
 import { CELL, MW, MH, WW, WH, KEEP, WELL_POS, PAL } from '../config/constants';
 import { SHEETS } from '../config/manifest';
 import { hexNum, clamp, rnd, rndi, pick, dist, lerp, makeCanvas, TAU } from '../core/util';
-import { TOWERS, FORTS } from '../data/towers';
+import { TOWERS, FORTS, WALL_TIERS, WALL_MAX_TIER } from '../data/towers';
+import { siteTier, siteUpgradeCost } from '../systems/ramparts';
 import { towerStats, metaLv } from '../systems/stats';
-import { cellIdx, canBuildAt } from '../world/mapgen';
+import { cellIdx, canBuildAt, siteAtCell, worldToCell } from '../world/mapgen';
 import { SPELLS } from '../data/spells';
-import { animFrameIndex, makeLightTextures, makeShadowTextures, PX_FONT } from './textures';
+import { animFrameIndex, makeLightTextures, makeShadowTextures, PX_FONT, PX_DIGITS } from './textures';
 import { TEXEL_RES, VIEW } from '../config/zoom';
 
 /** Art is authored at TEXEL_RES texels per world pixel. */
@@ -212,8 +213,9 @@ export class WorldRenderer {
     const x = f.cx * CELL + 8, y = f.cy * CELL + 16;
     if (f.type === 'wall') {
       const k = f.hp / f.maxHp;
-      const spr = this.ensureSprite(f, metaLv('f_wall') >= 3 ? 'fort_wall2' : 'fort_wall');
-      spr.setPosition(x, y + 8).setFrame(k > 0.66 ? 0 : k > 0.33 ? 1 : 2).setDepth(f.y + 8);
+      const wt = WALL_TIERS[f.wtier || 2];
+      const spr = this.ensureSprite(f, wt.spr === 'fort_wall' && metaLv('f_wall') >= 3 && f.wtier === 2 ? 'fort_wall2' : wt.spr);
+      spr.setPosition(x, y + 8).setFrame(k > 0.66 ? 0 : k > 0.33 ? 1 : 2).setDepth(f.y + 8).setTint(wt.tint);
     } else if (f.type === 'spikes') this.ensureSprite(f, 'fort_spikes').setPosition(x, y + 2).setDepth(f.y + 8);
     else if (f.type === 'cauldron') this.ensureSprite(f, 'fort_cauldron').setPosition(x, y + 2).setFrame(animF % 4).setDepth(f.y + 8);
     else if (f.type === 'ward') this.ensureSprite(f, 'fort_ward').setPosition(x, y + 2).setFrame(animF % 4).setDepth(f.y + 8);
@@ -279,8 +281,36 @@ export class WorldRenderer {
     } else if (s && !s.dead && s.kind === 'fort' && s.def.radius) this.ellipse(g, s.x, s.y, s.def.radius, s.def.radius * 0.7, '#e8e0c0', 0.8, 2);
   }
 
+  /** Rampart sites: shown while building ramparts or when a site is selected. */
+  drawSites(g: Phaser.GameObjects.Graphics) {
+    const b = G.build, sel = G.selected && G.selected.kind === 'site' ? G.selected.siteId : null;
+    const mode = b && b.kind === 'site';
+    if (!mode && !sel) return;
+    const hov = mode && G.mouse.onCanvas ? siteAtCell(...worldToCell(G.mouse.world[0], G.mouse.world[1])) : null;
+    for (const site of G.map.sites || []) {
+      const t = siteTier(site), on = hov === site || sel === site.id;
+      if (!mode && !on) continue;
+      const cost = siteUpgradeCost(site), ok = t < WALL_MAX_TIER && G.run.souls >= cost;
+      const c = on ? (t >= WALL_MAX_TIER ? 0xe8e0c0 : ok ? 0x5dff7a : 0xff5050) : t ? 0xc8b890 : 0x8a8478;
+      g.fillStyle(c, on ? 0.32 : t ? 0.12 : 0.26);
+      for (const [x, y] of site.cells) g.fillRect(x * CELL + 1, y * CELL + 1, CELL - 2, CELL - 2);
+      g.fillStyle(c, on ? 0.95 : 0.8);
+      for (const [x, y] of site.cells) { // corner ticks per cell
+        const X = x * CELL, Y = y * CELL;
+        g.fillRect(X, Y, 3, SC); g.fillRect(X, Y, SC, 3); g.fillRect(X + CELL - 3, Y + CELL - SC, 3, SC); g.fillRect(X + CELL - SC, Y + CELL - 3, SC, 3);
+      }
+      if (on) {
+        const label = t >= WALL_MAX_TIER ? 'max' : (t ? 'up ' : '') + cost;
+        const top = site.cells.reduce((m: number, c: number[]) => Math.min(m, c[1]), 99), xs = site.cells.map((c: number[]) => c[0]);
+        const lx = (Math.min(...xs) + Math.max(...xs) + 1) / 2 * CELL;
+        this.text(g, label, lx, Math.max(2, top * CELL - 9), c, 1);
+      }
+    }
+  }
+
   drawBuildOverlay(g: Phaser.GameObjects.Graphics) {
-    const b = G.build; if (!b || !G.mouse.onCanvas) return;
+    this.drawSites(g);
+    const b = G.build; if (!b || !G.mouse.onCanvas || b.kind === 'site') return;
     const [wx, wy] = G.mouse.world;
     const size = b.kind === 'tower' ? 2 : 1;
     const cx = Math.floor(wx / CELL - (size === 2 ? 0.5 : 0)), cy = Math.floor(wy / CELL - (size === 2 ? 0.5 : 0));
@@ -452,15 +482,38 @@ export class WorldRenderer {
   }
   text(g: Phaser.GameObjects.Graphics, s: string, x: number, y: number, c: number, alpha: number, scale = 1) {
     s = s.toLowerCase();
-    const w = s.length * 4 * scale - scale;
+    // digits/signs: 5×10 texel glyphs (advance 3 world px); letters: 3×5 world-px glyphs (advance 4)
+    const adv = (ch: string) => (PX_DIGITS[ch] ? 3 : 4) * scale;
+    let w = -scale; for (let i = 0; i < s.length; i++) w += adv(s[i]);
     x = Math.round(x - w / 2); y = Math.round(y);
     const draw = (dx: number, dy: number, cc: number) => {
       g.fillStyle(cc, alpha);
-      for (let i = 0; i < s.length; i++) { const gl = PX_FONT[s[i]]; if (!gl) continue; for (let p = 0; p < 15; p++) if (gl[p] === '1') g.fillRect(x + dx + i * 4 * scale + (p % 3) * scale, y + dy + Math.floor(p / 3) * scale, scale, scale); }
+      let cx = x + dx;
+      for (let i = 0; i < s.length; i++) {
+        const ch = s[i], dg = PX_DIGITS[ch];
+        if (dg) { const t = SC * scale; for (const [rx, ry, rw] of glyphRuns(ch, dg)) g.fillRect(cx + rx * t, y + dy + ry * t, rw * t, t); }
+        else { const gl = PX_FONT[ch]; if (gl) for (let p = 0; p < 15; p++) if (gl[p] === '1') g.fillRect(cx + (p % 3) * scale, y + dy + Math.floor(p / 3) * scale, scale, scale); }
+        cx += adv(ch);
+      }
     };
-    // 1-texel ink outline instead of a full world pixel: lighter, less blocky numbers
-    draw(SC, 0, 0); draw(-SC, 0, 0); draw(0, SC, 0); draw(0, -SC, 0); draw(0, 0, c);
+    // 1-texel ink outline (8 directions so the thin digit strokes stay legible on any ground)
+    const o = SC * Math.max(1, Math.round(scale));
+    for (const [ox, oy] of [[o, 0], [-o, 0], [0, o], [0, -o], [o, o], [-o, o], [o, -o], [-o, -o]]) draw(ox, oy, 0);
+    draw(0, 0, c);
   }
+}
+
+const RUNS: Record<string, number[][]> = {};
+/** Horizontal runs [x, y, w] of a 5-wide glyph, cached: far fewer rects per number. */
+function glyphRuns(ch: string, gl: string) {
+  let r = RUNS[ch]; if (r) return r;
+  r = RUNS[ch] = [];
+  for (let y = 0; y < 10; y++) for (let x = 0; x < 5; x++) {
+    if (gl[y * 5 + x] !== '1') continue;
+    let w = 1; while (x + w < 5 && gl[y * 5 + x + w] === '1') w++;
+    r.push([x, y, w]); x += w - 1;
+  }
+  return r;
 }
 
 function lightBucket(r: number) { return clamp(Math.round(r / 8) * 8, 8, 256); }

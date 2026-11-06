@@ -1,7 +1,8 @@
 // Derived stats: everything that combines base data, run upgrades,
 // fortress bonuses and permanent (meta) upgrades lives here.
 import { G } from '../core/state';
-import { TOWERS, FORTS } from '../data/towers';
+import { clamp } from '../core/util';
+import { TOWERS, FORTS, WALL_TIERS } from '../data/towers';
 import { UNITS } from '../data/units';
 import { CONTENT_GATES } from '../data/meta';
 
@@ -36,17 +37,21 @@ export function towerMaxHp(t: any) {
   let m = 1; for (let i = 1; i <= t.tier; i++) m = d.tiers[i].hp || m;
   return Math.round(d.hp * m * (1 + t.tier * 0.4) * (1 + metaLv('f_tower_hp') * 0.25 + G.run.m.towerHp) * Math.pow(1.05, G.run.wave));
 }
-export function fortMaxHp(f: any) { return Math.round(f.def.hp * (1 + metaLv('f_wall') * 0.2 + G.run.m.wallHp + (G.run.mods.leg_bulwark && f.type === 'wall' ? 1 : 0)) * Math.pow(1.05, G.run.wave)); }
+export function fortMaxHp(f: any) { return Math.round(f.def.hp * (f.type === 'wall' ? WALL_TIERS[f.wtier || 2].hp : 1) * (1 + metaLv('f_wall') * 0.2 + G.run.m.wallHp + (G.run.mods.leg_bulwark && f.type === 'wall' ? 1 : 0)) * Math.pow(1.05, G.run.wave)); }
 /** There is no army cap. Each recruit buys a squad; squad-size upgrades come from
  *  level-up cards (r.m.squad), the Legions meta node and Soul Well Ossuary Expansions. */
 export function squadSize(type: string) {
   const r = G.run;
   return Math.max(5, UNITS[type].squad + (r ? (r.m.squad || 0) + (r.asc.squad || 0) : 0) + metaLv('m_cap'));
 }
-/** Incremental costs: every squad of a type you have bought makes the next one pricier. */
+/** Incremental costs: a type's price climbs with the souls invested in it, not the number
+ *  of squads. A squad's step is ×1.12 per 300 souls of base cost (cheap hordes ~+6%, golems
+ *  ~+31%), so late in a run a cheap squad stays cheap relative to an elite one and every
+ *  type keeps its value per soul (a flat ×1.12 per squad made elites snowball). */
+export function recruitStep(type: string) { return Math.pow(1.12, clamp(UNITS[type].cost / 300, 0.5, 2.4)); }
 export function recruitCost(type: string) {
   const n = (G.run.bought && G.run.bought[type]) || 0;
-  return Math.round(UNITS[type].cost * Math.pow(1.12, n) * (1 - metaLv('m_cost') * 0.08));
+  return Math.round(UNITS[type].cost * Math.pow(recruitStep(type), n) * (1 - metaLv('m_cost') * 0.08));
 }
 /** Soul value of one body in the host (drives Crusade Fervor). */
 export function unitValue(u: any) {
@@ -69,15 +74,13 @@ export function waveHpMult(n: number) { return Math.pow(1.135, n - 1) * (1 + 0.0
 export function waveDmgMult(n: number) { return Math.pow(1.065, n - 1) * (1 + 0.02 * (n - 1)); }
 export function bountyMult(n: number) { return Math.pow(1.08, n - 1); }
 
-/** Crusade Fervor: the mortals answer an ever-larger undead host (recruited and summoned) by sending
- *  stronger soldiers. Logarithmic, so big hosts are always worth it. */
-export function computeFervor() {
-  let host = 0;
-  for (const u of G.units) host += unitValue(u);
-  // a starting-sized host is free; beyond it, every doubling adds +0.45 Fervor
-  const b = bountyMult(Math.max(1, G.run.wave));
-  return 1 + 0.45 * Math.log2(1 + Math.max(0, host - 700 * b) / (1200 * b));
+/** Crusade Fervor: a fixed schedule that rises with the wave number only. It no longer
+ *  reacts to the size or strength of your host, so every upgrade and squad you add is a
+ *  real gain over the crusade. +3% enemy health per wave (compounding) (damage scales with its root). */
+export function computeFervor(wave = G.run ? G.run.wave : 1) {
+  return Math.pow(FERVOR_GROWTH, Math.max(0, wave - 1));
 }
+export const FERVOR_GROWTH = 1.03;
 
 export function applyUnitStats(u: any) {
   const r = G.run;

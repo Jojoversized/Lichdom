@@ -12,6 +12,7 @@ import { addParticle, addRing, addFlash, addText, lightningBolt, explosion, addS
 import { towerStats, globalDmg, dtypeMult, frenzyMult, fb } from './stats';
 import { gainXp } from './progression';
 import { bossAbilities } from './bosses';
+import { WALL_TIERS } from '../data/towers';
 
 export function setAnim(e: any, a: string) { if (e.anim !== a) { e.anim = a; e.at = 0; } }
 function startAttack(e: any) { setAnim(e, 'atk'); e.atkHold = 0.3; }
@@ -157,7 +158,8 @@ function enemyAttack(e: any, t: any) {
   }
   if (d.siege && t.kind !== 'unit') dmg *= 1.5;
   dealDamage(t, dmg, t.kind === 'unit' ? (d.holy ? 'holy' : 'phys') : 'siege', e);
-  if (t.kind === 'fort' && t.def.thorns) dealDamage(e, t.def.thorns * Math.pow(1.08, G.run.wave), 'phys', NEUTRAL_SRC, { noCrit: true });
+  const th = t.kind === 'fort' ? (t.type === 'wall' ? WALL_TIERS[t.wtier || 2].thorns : t.def.thorns) : 0;
+  if (th) dealDamage(e, th * Math.pow(1.08, G.run.wave), 'phys', NEUTRAL_SRC, { noCrit: true });
   if (t.kind === 'fort' && t.type === 'wall' && G.run.mods.leg_bulwark) dealDamage(e, e.maxHp * 0.03 + 10, 'phys', NEUTRAL_SRC, { noCrit: true });
   sfx(t.kind === 'unit' ? 'hit' : 'hitstone', 0.2);
 }
@@ -222,7 +224,10 @@ export function planArmy(dt: number) {
   // once it reaches the guard line and the towers.
   const bosses = G.enemies.filter((e: any) => e.boss);
   const dangerous = (e: any) => e.x > GUARD_LINE_X + 170 && bosses.some((b: any) => dist2(b.x, b.y, e.x, e.y) < 150 * 150);
-  for (const t of threats) t.danger = bosses.length ? dangerous(t.e) : false;
+  // ...but a boss that can already reach the guard formation (long-range casters park just
+  // outside the line and shell it) is engaged by the whole host at once, never waited out
+  const committed = bosses.some((b: any) => b.x - (b.range || 20) < GUARD_LINE_X + 110);
+  for (const t of threats) t.danger = bosses.length && !committed ? dangerous(t.e) : false;
   let gi = 0, ri = 0;
   const nRanged = G.units.filter((u: any) => isRanged(u)).length;
   for (const u of G.units) {
@@ -355,7 +360,8 @@ function unitAttack(u: any, t: any) {
   startAttack(u);
   if (d.cleave || u.splash) {
     const cr = d.cleave || u.splash;
-    aoeDamage(t.x, t.y, cr, u.dmg, d.dtype, u, { onHit: (e: any) => { if (u.type === 'golem' && r.mods.golem_quake) applyStun(e, 1); } });
+    aoeDamage(t.x, t.y, cr, u.dmg, d.dtype, u);
+    if (u.type === 'golem' && r.mods.golem_quake && !t.dead && !(t.st.stunT > 0)) applyStun(t, 0.6); // the struck foe only: a golem crowd must not stun-lock the whole field
     addRing(t.x, t.y, 2, cr, u.summon ? PAL.necro : '#bbbbaa', 0.25);
     if (u.def.size >= 3 || u.summon) { G.shake = Math.max(G.shake, 1.5); sfx('slam', 0.35); }
   } else {

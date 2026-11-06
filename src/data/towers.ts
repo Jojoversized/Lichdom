@@ -36,5 +36,15 @@ export const FORTS: Record<string, any> = {
   cauldron: { name: 'Acid Cauldron', cost: 60, hp: 200, block: true, pour: 28, radius: 44, icon: 'cauldron', meta: 'f_traps2', desc: 'Pours acid (boiling oil) on nearby attackers, shredding armor.' },
   ward: { name: 'Ward Pylon', cost: 50, hp: 220, block: true, slowAura: 0.3, radius: 50, icon: 'ward', meta: 'f_traps2', desc: 'Magical barrier: slows enemies and shields nearby structures from spells.' },
 };
-export const FORT_ORDER = ['wall', 'spikes', 'lava', 'rune', 'cauldron', 'ward'];
+export const FORT_ORDER = ['spikes', 'lava', 'rune', 'cauldron', 'ward'];
+
+/** Ramparts: walls are built on preset sites (keep ring + two defensive lines) and
+ *  upgraded in place. `cell` = souls per wall cell for that tier (× wave inflation). */
+export const WALL_TIERS = [
+  { name: 'Unbuilt', hp: 0, cell: 0, spr: '', tint: 0xffffff },
+  { name: 'Bone Palisade', hp: 0.55, cell: 9, spr: 'fort_wall', tint: 0xb98552, desc: 'Lashed bone and timber. Cheap, but it buckles quickly.' },
+  { name: 'Stone Wall', hp: 1, cell: 20, spr: 'fort_wall', tint: 0xffffff, desc: 'Solid masonry that holds a lane for a long while.' },
+  { name: 'Bone Rampart', hp: 1.9, cell: 44, spr: 'fort_wall2', tint: 0xffffff, desc: 'Black stone fused with bone. Attackers are wounded by its spurs.', thorns: 14 },
+];
+export const WALL_MAX_TIER = 3;
 

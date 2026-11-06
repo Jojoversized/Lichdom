@@ -37,6 +37,7 @@ export function generateMap(seed: number, fortKey: string) {
       else { y += Math.sign(dy); if (rng() < 0.25 && Math.abs(wig) > 0.6) x = clamp(x + Math.sign(wig), gateX, MW - 1); }
     }
   }
+  M.sites = makeWallSites(M);
   const nearRoad = (x: number, y: number, r: number) => { for (let oy = -r; oy <= r; oy++) for (let ox = -r; ox <= r; ox++) if (inb(x + ox, y + oy) && M.road[cellIdx(x + ox, y + oy)]) return true; return false; };
   const nearKeep = (x: number, y: number, r: number) => x <= KEEP.cx1 + r && y >= KEEP.cy0 - r && y <= KEEP.cy1 + r;
   // obstacles
@@ -71,18 +72,47 @@ export function generateMap(seed: number, fortKey: string) {
   const small = ['grave', 'grave2', 'cross', 'skullpole', 'fence', 'cart', 'banner'];
   while (sp < 55 && tries++ < 3000) {
     const x = rng.int(1, MW - 2), y = rng.int(2, MH - 2);
-    if (M.road[cellIdx(x, y)] || M.obstacle[cellIdx(x, y)] || nearKeep(x, y, 3)) continue;
+    if (M.road[cellIdx(x, y)] || M.obstacle[cellIdx(x, y)] || M.reserved[cellIdx(x, y)] || nearKeep(x, y, 3)) continue;
     const name = rng() < 0.55 ? rng.pick(['grave', 'grave2', 'cross']) : rng.pick(small);
     const count = name.startsWith('grave') || name === 'cross' ? rng.int(2, 5) : 1;
     for (let i = 0; i < count; i++) {
       const gx = x + rng.int(-2, 2), gy = y + rng.int(-1, 1);
-      if (!inb(gx, gy) || M.road[cellIdx(gx, gy)] || M.obstacle[cellIdx(gx, gy)] || nearKeep(gx, gy, 3)) continue;
+      if (!inb(gx, gy) || M.road[cellIdx(gx, gy)] || M.obstacle[cellIdx(gx, gy)] || M.reserved[cellIdx(gx, gy)] || nearKeep(gx, gy, 3)) continue;
       M.props.push({ name: i ? rng.pick(['grave', 'grave2', 'cross']) : name, x: gx * CELL + 8, y: gy * CELL + 14, anim: name === 'banner' });
       sp++;
     }
   }
   M.terrain = paintTerrain(M, rng);
   return M;
+}
+
+export interface WallSite { id: string; name: string; cells: [number, number][]; x: number; y: number; }
+/** Preset rampart sites (no rng: identical for every seed). The keep ring closes on the map's
+ *  left edge; the two lines span the whole field, so closing every segment of a line forces
+ *  the crusade to breach it, while gaps funnel the host through them. */
+export const WALL_LINES = [{ cx: 24, name: 'Inner Line' }, { cx: 36, name: 'Outer Line' }];
+const SEG_NAMES = ['North', 'Upper', 'Centre', 'Lower', 'South'];
+function makeWallSites(M: any): WallSite[] {
+  const sites: WallSite[] = [];
+  const add = (id: string, name: string, cells: [number, number][]) => {
+    cells = cells.filter(([x, y]) => x >= 0 && y >= 0 && x < MW && y < MH && !M.reserved[cellIdx(x, y)]);
+    for (const [x, y] of cells) M.reserved[cellIdx(x, y)] = 4;
+    const x = cells.reduce((a, c) => a + c[0], 0) / cells.length, y = cells.reduce((a, c) => a + c[1], 0) / cells.length;
+    sites.push({ id, name, cells, x: (x + 0.5) * CELL, y: (y + 0.5) * CELL });
+  };
+  const fx = 14, ny = 14, sy = 28; // ring around keep + Soul Well
+  const row = (y: number, x0: number, x1: number) => { const c: [number, number][] = []; for (let x = x0; x <= x1; x++) c.push([x, y]); return c; };
+  const col = (x: number, y0: number, y1: number) => { const c: [number, number][] = []; for (let y = y0; y <= y1; y++) c.push([x, y]); return c; };
+  add('keep_n', 'Keep Rampart: North', row(ny, 0, fx));
+  add('keep_g', 'Keep Rampart: Gate', col(fx, ny + 1, sy - 1));
+  add('keep_s', 'Keep Rampart: South', row(sy, 0, fx));
+  for (const l of WALL_LINES) for (let s = 0; s < 5; s++) add(`l${l.cx}_${s}`, `${l.name}: ${SEG_NAMES[s]}`, col(l.cx, s * 8, s * 8 + 7));
+  return sites;
+}
+export function siteAtCell(cx: number, cy: number): WallSite | null {
+  if (!G.map || !G.map.sites || G.map.reserved[cellIdx(cx, cy)] !== 4) return null;
+  for (const s of G.map.sites) for (const [x, y] of s.cells) if (x === cx && y === cy) return s;
+  return null;
 }
 
 function valueNoise(seed: number) {

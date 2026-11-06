@@ -16,6 +16,12 @@ BOT = r"""
   function build() {
     const r = G.run;
     let tries = 0;
+    // ramparts: ring the keep (palisade, then stone), repair what was breached
+    for (const s of G.map.sites || []) {
+      if (!s.id.startsWith('keep')) continue;
+      const rep = L.siteRepairCost(s); if (rep && r.souls > rep * 2) L.repairSite(s);
+      if (r.wave >= 3 && L.siteTier(s) < 2 && r.souls > L.siteUpgradeCost(s) * 2.5) L.upgradeSite(s);
+    }
     // alternate between towers and squads (no army cap any more)
     while (r.souls > 140 && tries++ < 120) {
       if (Math.random() < 0.5) {

@@ -48,10 +48,11 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 - [x] 13 recruitable undead (3 forms each), 6 summon packs (Legion ×12, Wraiths ×8, Colossus ×2, Abomination ×2, Devourer ×2, Dragon ×1)
 - [x] Autonomous army AI: guard line weighted to hot roads (with formation depth for big hosts), urgency/travel/crowding target assignment, ranged kiting, wounded retreat-and-mend at the keep, flyers hunt flyers, taunters dive, no piecemeal charges into distant boss kill-zones
 - [x] 20 mortal types across 4 factions; 6 bosses with abilities; champions every 5 waves; adaptive crusade
-- [x] Walls/barricades/lava/runes/cauldrons/wards; climbers, rams, catapults, flyers
+- [x] **Ramparts (v0.5)**: walls are built on preset sites, click to build/upgrade (Bone Palisade → Stone Wall → Bone Rampart with spurs). Sites: keep ring (North / Gate / South, closes on the map edge, encloses the Soul Well) and two full-height lines (Inner x=24, Outer x=36, 5 segments each). A closed line must be breached; gaps funnel the crusade. Destroyed sections stay rubble until the site is repaired. Site cells are reserved (no towers/decor). `systems/ramparts.ts`, `makeWallSites` in mapgen
+- [x] Barricades/lava/runes/cauldrons/wards still painted freely; climbers, rams, catapults, flyers
 - [x] All slain undead (recruits and summons) revive free at wave end
 - [x] **No army cap**: recruits come in squads of ≥ 5 (squad-size upgrades: cards, Legions, Ossuary Expansion); summons permanent
-- [x] Crusade Fervor scales enemies to the whole host (recruits + summons) beyond a free allowance; bosses use √Fervor
+- [x] **Crusade Fervor is a fixed schedule (v0.5)**: ×1.03 per wave (compounding), independent of the host, so every upgrade is real strength over the crusade (bosses use √Fervor)
 - [x] Universal targeting — every unit, tower and enemy can hit flyers and ground alike
 - [x] Random undead: random starting squad type, Call of the Crypt, Unbidden Dead, Forgotten Crypt, unlock cards grant a squad
 - [ ] Per-unit "stance" hints (optional, no micromanagement) — e.g. favour a road
@@ -60,13 +61,23 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 - [x] Three-choice level-ups, 5 rarities, ~80 cards incl. modifiers and legendaries
 - [x] Offers never contain two tiers of the same upgrade family (better tier kept, worse rerolled; checked by the bot)
 - [x] Soul Well: Ascensions (repeatable ×1.12 dmg/hp, ×1.08 souls, +1 squad size), insight, mend, revive, frenzy, Call of the Crypt, summons, emergencies
-- [x] Incremental curves: enemy HP ×1.135/wave, bounty ×1.08/wave, per-copy cost scaling (towers ×1.2, squads ×1.12 per squad bought)
+- [x] Incremental curves: enemy HP ×1.135/wave, bounty ×1.08/wave, per-copy cost scaling (towers ×1.2; squads: ×1.12 per 300 souls of base cost per squad bought, i.e. by souls invested — cheap hordes +6%, golems +31%)
 - [x] 8 spells, Life Essence, 49-node Phylactery tree, 5 fortresses, 20 achievements, codex
 - [x] Save/continue (localStorage), resume mid-wave at that wave's prep
 - [ ] Prestige layer beyond Life Essence (e.g. "Dread" multiplier per boss tier cleared)
 - [ ] Offline/idle progress between sessions (classic incremental feature)
-- [ ] Balance pass with human playtests (v0.3 bot baseline: no meta dies at wave 10 boss ~¼ of runs, otherwise ~18–24; maxed meta reaches ~wave 53 with ~6,700 undead)
+- [ ] Balance pass with human playtests (see the Balance section for the v0.5 bot baselines)
 - [ ] Squad formations / banner per squad (squads currently dissolve into the host)
+
+## Balance (v0.5)
+- [x] `tools/test/balance.py`: campaigns restricted to a fixed set of undead types (solo / combo), identical spending policy, no towers/walls; `LICH_PORT` env picks the server
+- [x] Solo sweep (3 runs, cap 60) → fixes: investment-based squad cost escalation (elites were snowballing), Vampire/Golem nerfs, Pikeman/Skeleton buffs
+- [x] Boss fixes found by the sweep: Purge/Sunburst capped per target (were wiping melee hosts), host commits to a boss that can already shell the guard line (melee waited it out and died)
+- [x] Outlier mechanics fixed: Blood Feast (healed every undead nearby on each hit → 2 most wounded at 30%), lifesteal no longer feeds on overkill, Tremor stuns only the struck foe (golem crowds stun-locked the field), boss summons scale 3→6 with boss wave
+- [x] Final solo results (cap 70, excluding wave-10 losses): all 14 types between waves ~42–61; combos 49–58 (frontline + ranged pairs a little above their solos)
+- [x] Bot baseline (Fervor ×1.03/wave): no meta waves 10–23; max meta waves 34–39+ with 3–4k undead
+- [ ] The wave-10 Inquisitor still ends ~15–30% of solo cheap-melee runs without towers (towers fix it in real play)
+- [ ] Late max-meta runs end around wave 35–40 (v0.3 reached ~53 with rubber-banded Fervor); revisit late boss/elite scaling
 
 ## UI
 - [x] Collapsible build drawer (▼ Hide / B key / click active tab)
@@ -87,5 +98,6 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 
 ## Known issues
 - Fonts load from Google Fonts; offline they fall back to Georgia/Courier.
+- World-space numbers use texel-resolution digit glyphs (`PX_DIGITS`, 5×10 texels, flat-topped 5); letters still use the 3×5 font.
 - Painters still author shapes on the 1× grid; the 2× pass adds rounding and shading but not new hand-placed detail. Next art step: native 2× painters for the most-seen units (skeleton, footman, knight).
 - Uncapped hosts reach 2,000+ undead by wave 30 with max meta (~3 ms/step simulation); rendering that many sprites + shadows on weak GPUs needs an effects-quality preset (e.g. drop shadows/lights for small units).

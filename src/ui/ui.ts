@@ -6,7 +6,8 @@ import { hooks } from '../core/events';
 import { clamp, fmt, makeCanvas, rnd } from '../core/util';
 import { PAL, KEEP } from '../config/constants';
 import { SHEETS } from '../config/manifest';
-import { TOWERS, TOWER_ORDER, FORTS, FORT_ORDER } from '../data/towers';
+import { TOWERS, TOWER_ORDER, FORTS, FORT_ORDER, WALL_TIERS, WALL_MAX_TIER } from '../data/towers';
+import { siteById, siteTier, siteUpgradeCost, siteRepairCost, siteHp, upgradeSite, repairSite } from '../systems/ramparts';
 import { UNITS, UNIT_ORDER, SUMMONS } from '../data/units';
 import { unearthCost, SPELLS, SPELL_ORDER, WELL } from '../data/spells';
 import { ENEMIES, BOSSES } from '../data/enemies';
@@ -124,7 +125,7 @@ export const UI: any = {
       case 'keep': return `<b>The Keep</b><br>${fmt(G.keep.hp)} / ${fmt(G.keep.maxHp)}<br>If it falls, the campaign ends.`;
       case 'enemies': return `<b>Mortals on the field</b>`;
       case 'units': return `<b>Your undead host</b><br>There is no army limit: every recruit raises a whole squad. The crusade's Fervor grows with your host.<br>Total host: ${G.units.length}`;
-      case 'fervor': return `<b>Crusade Fervor ×${(r.fervor || 1).toFixed(2)}</b><br>The mortals send stronger soldiers to match your summoned host. Applied at the start of each wave.`;
+      case 'fervor': return `<b>Crusade Fervor ×${(r.fervor || 1).toFixed(2)}</b><br>The crusade grows more zealous every wave (a fixed +3% enemy health per wave, compounding; damage by its square root). It does not react to your army: every squad and upgrade you add is pure gain.`;
       default: return '';
     }
   },
@@ -243,6 +244,9 @@ export const UI: any = {
       const locked = TOWER_ORDER.filter(t => !r.unlockedTowers.includes(t)).length;
       if (locked) L.appendChild(h('div', 'bnote', `${locked} more tower${locked > 1 ? 's' : ''} can be unlocked through level-ups${TOWER_ORDER.some(t => !contentAvailable('tower', t)) ? ' and the Phylactery' : ''}.`));
     } else if (this.tab === 'fort') {
+      const sites = G.map.sites || [], built = sites.filter((s: any) => siteTier(s) > 0).length;
+      card(icon('wall', 2, 'pix'), 'Ramparts', null, `<b>Ramparts</b><br>Walls stand on fixed sites: a ring around the keep and two defensive lines across the field.<br>Click a site to raise a <b>Bone Palisade</b>, click again for a <b>Stone Wall</b>, then a <b>Bone Rampart</b>. Close every segment of a line and the crusade must breach it; leave a gap and they funnel through it.<br><span class="dim">${built}/${sites.length} sites built. Right-click to stop.</span>`,
+        () => { G.build = G.build && G.build.kind === 'site' ? null : { kind: 'site', type: 'site', cost: 0 }; G.selected = null; sfx('click'); this.renderBuild(); }, '', !!(G.build && G.build.kind === 'site'));
       for (const f of FORT_ORDER) {
         const d = FORTS[f], avail = !d.meta || metaLv(d.meta) > 0;
         const b = card(icon(d.icon, 2, 'pix'), d.name, fortCost(f), `<b>${d.name}</b><br>${d.desc}${avail ? '<br><span class="dim">Hold the mouse to paint. Right-click to stop.</span>' : `<br><span class="bad">Unlock in the Phylactery: ${META_BY_ID[d.meta].name}</span>`}`,
@@ -274,9 +278,25 @@ export const UI: any = {
   },
 
   // ---------------- selection info ----------------
+  renderSiteInfo(s: any, P: HTMLElement) {
+    const site = siteById(s.siteId); if (!site) { G.selected = null; P.classList.add('hidden'); return; }
+    const t = siteTier(site), up = siteUpgradeCost(site), rep = siteRepairCost(site), [hp, max] = siteHp(site);
+    const key = s.id + ':' + t + ':' + Math.round(hp) + ':' + Math.floor(G.run.souls / 10);
+    if (this.infoKey === key && !P.classList.contains('hidden')) return;
+    this.infoKey = key; P.classList.remove('hidden');
+    const cur = WALL_TIERS[t], nx = WALL_TIERS[t + 1];
+    P.innerHTML = `<span class="x" id="i-x">✕</span><div class="ihead">${icon('wall', 3, 'pix')}<div><b>${site.name}</b><div class="dim">${t ? cur.name : 'Empty site'} · ${site.cells.length} sections</div></div></div>
+      ${t ? `<div class="istats"><span>Durability</span><b>${fmt(hp)}/${fmt(max)}</b>${cur.thorns ? '<span>Spurs</span><b>wound attackers</b>' : ''}</div><div class="idesc">${cur.desc}</div>` : '<div class="idesc">A surveyed wall site. Build it to block this stretch.</div>'}
+      ${nx ? `<div class="idesc"><span class="good">Next: ${nx.name}</span> (${t ? `+${Math.round((nx.hp / cur.hp - 1) * 100)}% health` : 'blocks the crusade'}${nx.thorns ? ', spurs wound attackers' : ''})</div>` : ''}
+      <div class="ibtns">${t < WALL_MAX_TIER ? `<button class="btn sm" id="i-up">${t ? 'Upgrade' : 'Build'} ${SOUL()}${fmt(up)}</button>` : ''}${rep ? `<button class="btn sm" id="i-rep">Repair ${SOUL()}${fmt(rep)}</button>` : ''}</div>`;
+    const ub = $('#i-up'); if (ub) ub.onclick = () => { if (upgradeSite(site)) saveRunSoon(); this.infoKey = ''; };
+    const rb = $('#i-rep'); if (rb) rb.onclick = () => { if (repairSite(site)) saveRunSoon(); this.infoKey = ''; };
+    $('#i-x').onclick = () => { G.selected = null; P.classList.add('hidden'); };
+  },
   renderInfo() {
     const s = G.selected, P = $('#infopanel');
     if (!s || s.dead) { P.classList.add('hidden'); G.selected = null; return; }
+    if (s.kind === 'site') { this.renderSiteInfo(s, P); return; }
     const key = s.id + ':' + (s.tier || 0) + ':' + Math.round(s.hp) + ':' + (s.mode || '') + ':' + Math.floor(G.run.souls / 10) + ':' + (s.kills || 0) + ':' + (s.silT > 0);
     if (this.infoKey === key && !P.classList.contains('hidden')) return;
     this.infoKey = key;

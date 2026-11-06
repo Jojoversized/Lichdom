@@ -31,7 +31,7 @@ function newRunState(fortKey: string, seed: number) {
   return {
     fortress: fortKey, seed, wave: 0, level: 1, xp: 0, xpNext: xpForLevel(1), pendingLevels: metaLv('i_start'),
     souls: 300 + metaLv('s_start') * 60, soulsEarned: 0, kills: 0, bossesKilled: [] as string[], essenceBonus: 0,
-    unlockedTowers: ['brimstone', 'tesla', 'necrotic'], unlockedUnits: [] as string[],
+    unlockedTowers: ['brimstone', 'tesla', 'necrotic'], unlockedUnits: [] as string[], walls: {} as Record<string, number>,
     spells: ['deathwave', 'raise'], spellCd: {} as Record<string, number>, unitTier: {} as Record<string, number>, unitBuff: {} as Record<string, number>,
     towerDmg: {} as Record<string, number>, mods: {} as Record<string, number>, picks: {} as Record<string, number>, banished: [] as string[],
     m: defaultMods(), asc: { dmg: 0, hp: 0, souls: 0, squad: 0 }, bought: {} as Record<string, number>, unearthed: 0, rerolls: metaLv('i_reroll') * 2 + 1, banishes: 1 + metaLv('i_reroll'), insightBuys: 0,
@@ -78,7 +78,8 @@ export function loadRun(): boolean {
   G.run.unearthed = s.run.unearthed || 0;
   G.keep.maxHp = 0; recalcKeep(); G.keep.hp = Math.min(Math.max(1, s.keepHp), G.keep.maxHp);
   for (const t of s.towers) { const tw = placeTower(t.type, t.cx, t.cy, t.tier, { hp: t.hp, invested: t.invested }); tw.mode = t.mode || 'first'; tw.kills = t.kills || 0; }
-  for (const f of s.forts) placeFort(f.type, f.cx, f.cy, { hp: f.hp });
+  G.run.walls = Object.assign({}, s.run.walls);
+  for (const f of s.forts) placeFort(f.type, f.cx, f.cy, { hp: f.hp, site: f.site, wtier: f.wt });
   const summonVals: Record<string, number> = {};
   for (const u of s.units) {
     if (u.summon) { if (!SUMMONS[u.type]) continue; const made = spawnSummonSingle(u.type, u.x, u.y, u.value); made.x = u.x; made.y = u.y; continue; }

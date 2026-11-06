@@ -111,8 +111,8 @@ export function buildCardPool(): any[] {
   mod('mage_chain', 'Ricocheting Bone', 2, 'Bone Mage bolts bounce to 2 more targets.', U('bonemage'), 1, { unit: 'bonemage' });
   mod('pike_wall', 'Hedge of Spears', 1, 'Pikemen deal +60% damage and knock back attackers.', U('pikeman'), 1, { unit: 'pikeman' });
   mod('wraith_terror', 'Terror', 2, 'Wraith strikes terrify enemies, making them flee for 1.5s.', U('wraith'), 1, { unit: 'wraith' });
-  mod('vamp_feast', 'Blood Feast', 2, 'Vampire lifesteal also heals all undead within 50px.', U('vampire'), 1, { unit: 'vampire' });
-  mod('golem_quake', 'Tremor', 2, 'Bone Golem slams stun enemies for 1s.', U('golem'), 1, { unit: 'golem' });
+  mod('vamp_feast', 'Blood Feast', 2, 'Vampire lifesteal also heals the 2 most wounded undead within 50px (30% of it).', U('vampire'), 1, { unit: 'vampire' });
+  mod('golem_quake', 'Tremor', 2, 'Bone Golem slams stun their target for 0.6s.', U('golem'), 1, { unit: 'golem' });
   mod('unit_rise', 'Unending', 3, 'Undead units have a 30% chance to reassemble once after dying.', (r: any) => G.units.length >= 4, 1);
   mod('feast', 'Feast of Souls', 2, 'Every kill heals undead within 70px by 6% of their max health.', (r: any) => G.units.length >= 3, 1);
   mod('volatile', 'Volatile Remains', 2, '25% of slain mortals explode in necrotic fire.', () => true, 1);

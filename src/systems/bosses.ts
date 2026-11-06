@@ -24,12 +24,14 @@ export function bossAbilities(e: any, dt: number) {
   switch (ab) {
     case 'purge':
       addRing(e.x, e.y, 4, 110, PAL.holy, 0.6); addFlash(e.x, e.y, 120, PAL.holy, 0.5);
-      G.hashU.query(e.x, e.y, 110, (u: any) => { dealDamage(u, pw * 1.6, 'holy', e, { aoe: true }); });
+      // capped at ~45% of each target's max health (holy doubles it): punishing, never a wipe
+      G.hashU.query(e.x, e.y, 100, (u: any) => { dealDamage(u, Math.min(pw * 1.6, u.maxHp * 0.22), 'holy', e, { aoe: true }); });
       sfx('holy'); addSpeech(e, 'Be purged!');
       break;
     case 'summon': {
       const types = e.def.summon || ['footman'];
-      for (let i = 0; i < 5; i++) { const m = spawnEnemy(pick(types), e.lane); m.x = e.x + rnd(-24, 24); m.y = e.y + rnd(-16, 16); }
+      const n = Math.min(6, 2 + Math.floor((e.def.wave || 10) / 10)); // 3 at wave 10 … 6 from wave 40
+      for (let i = 0; i < n; i++) { const m = spawnEnemy(pick(types), e.lane); m.x = e.x + rnd(-24, 24); m.y = e.y + rnd(-16, 16); }
       addRing(e.x, e.y, 4, 50, PAL.holy, 0.5); addSpeech(e, 'To me, faithful!');
       break;
     }
@@ -75,7 +77,7 @@ export function bossAbilities(e: any, dt: number) {
       break;
     case 'sunburst':
       addFlash(e.x, e.y, 220, '#fff8d0', 0.7); addRing(e.x, e.y, 4, 140, PAL.holy, 0.7); G.flash = 0.25;
-      G.hashU.query(e.x, e.y, 140, (u: any) => { dealDamage(u, pw * 2, 'holy', e, { aoe: true }); });
+      G.hashU.query(e.x, e.y, 140, (u: any) => { dealDamage(u, Math.min(pw * 2, u.maxHp * 0.25), 'holy', e, { aoe: true }); });
       structuresNear(e.x, e.y, 140).forEach(s => dealDamage(s, pw * 1.5, 'holy', e, { spell: true }));
       sfx('holy'); addSpeech(e, 'Behold the dawn!');
       break;

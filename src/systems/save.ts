@@ -2,7 +2,7 @@
 // A campaign saved mid-wave resumes at that wave's preparation phase.
 import { G } from '../core/state';
 
-export const SAVE_META = 'lichdom_meta_v2', SAVE_RUN = 'lichdom_run_v2';
+export const SAVE_META = 'lichdom_meta_v2', SAVE_RUN = 'lichdom_run_v3';
 export const store = {
   get(k: string): string | null { try { return localStorage.getItem(k); } catch { return null; } },
   set(k: string, v: string) { try { localStorage.setItem(k, v); return true; } catch { return false; } },
@@ -35,7 +35,7 @@ export function serializeRun() {
   return {
     v: 2, ts: Date.now(), run: r, keepHp: G.keep.hp,
     towers: G.towers.map((t: any) => ({ type: t.type, tier: t.tier, cx: t.cx, cy: t.cy, hp: Math.round(t.hp), mode: t.mode, kills: t.kills, invested: t.invested })),
-    forts: G.forts.map((f: any) => ({ type: f.type, cx: f.cx, cy: f.cy, hp: Math.round(f.hp) })),
+    forts: G.forts.map((f: any) => ({ type: f.type, cx: f.cx, cy: f.cy, hp: Math.round(f.hp), site: f.site || undefined, wt: f.wtier || undefined })),
     units: G.units.filter((u: any) => !u.temp).map((u: any) => ({ type: u.type, x: Math.round(u.x), y: Math.round(u.y), summon: !!u.summon, free: !!u.free, spr: u.fixedSpr ? u.spr : null, value: u.summonValue || 0, mult: u.raisedMult || 1 })),
   };
 }

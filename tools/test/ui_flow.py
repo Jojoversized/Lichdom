@@ -34,6 +34,13 @@ with sync_playwright() as p:
     n1 = pg.evaluate("() => window.__LICH.G.units.length")
     print('squad recruited:', n1 - n0, 'undead (must be >= 5)'); assert n1 - n0 >= 5
     shot(pg, 'c2_army_tab')
+    # ramparts: Fortify tab -> Ramparts mode -> click the keep gate site twice (palisade, stone)
+    pg.click('.tabs button[data-tab=fort]'); pg.wait_for_timeout(120)
+    pg.click('#buildlist .bitem >> nth=0'); pg.wait_for_timeout(120)
+    world_click(14 * 16 + 8, 20 * 16 + 8); world_click(14 * 16 + 8, 20 * 16 + 8)
+    wl = pg.evaluate("() => window.__LICH.G.run.walls"); print('ramparts:', wl); assert wl.get('keep_g') == 2
+    shot(pg, 'c3_ramparts')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
     pg.click('#b-wave'); pg.wait_for_timeout(6000); shot(pg, 'd_wave')
     # force level up, check modal covers HUD
     pg.evaluate("() => { window.__LICH.G.run.pendingLevels = 1; }"); pg.wait_for_timeout(500); shot(pg, 'e_levelup')
@@ -64,7 +71,7 @@ with sync_playwright() as p:
     pg.reload(); pg.wait_for_timeout(2500)
     print('continue button:', pg.evaluate("() => !!document.querySelector('#m-cont')"))
     pg.click('#m-cont'); pg.wait_for_timeout(800)
-    print('resumed', pg.evaluate("() => { const G = window.__LICH.G; return {wave: G.run.wave, towers: G.towers.length, units: G.units.length, summons: G.units.filter(u=>u.summon).length} }"))
+    print('resumed', pg.evaluate("() => { const G = window.__LICH.G; return {wave: G.run.wave, towers: G.towers.length, units: G.units.length, summons: G.units.filter(u=>u.summon).length, walls: G.run.walls, wallCells: G.forts.filter(f=>f.site).length} }"))
     pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
     if pg.evaluate("() => !!document.querySelector('#p-codex')"):
         pg.click('#p-codex'); pg.wait_for_timeout(300); shot(pg, 'i_codex')

@@ -8,7 +8,8 @@ import { WorldRenderer } from '../render/WorldRenderer';
 import { step, castSpell, resetWorld } from '../systems/campaign';
 import { stepVisual } from '../systems/fx';
 import { placeTower, placeFort } from '../systems/combat';
-import { canBuildAt, worldToCell, cellIdx, generateMap } from '../world/mapgen';
+import { canBuildAt, worldToCell, cellIdx, generateMap, siteAtCell } from '../world/mapgen';
+import { upgradeSite, siteById } from '../systems/ramparts';
 import { loadMeta, saveRun, saveMeta, saveRunSoon } from '../systems/save';
 import { UI } from '../ui/ui';
 import { initAudio, startMusic } from '../audio/audio';
@@ -113,6 +114,14 @@ export class GameScene extends Phaser.Scene {
     const b = G.build; if (!b) return;
     const [wx, wy] = G.mouse.world, r = G.run;
     if (b.kind === 'spell') { if (castSpell(b.type, wx, wy)) G.build = null; return; }
+    if (b.kind === 'site') {
+      if (painting) return;
+      const site = siteAtCell(...worldToCell(wx, wy));
+      if (!site) { hooks.sfx('error'); return; }
+      if (upgradeSite(site)) saveRunSoon();
+      G.selected = siteSel(site.id); UI.infoKey = '';
+      return;
+    }
     const size = b.kind === 'tower' ? 2 : 1;
     const cx = Math.floor(wx / CELL - (size === 2 ? 0.5 : 0)), cy = Math.floor(wy / CELL - (size === 2 ? 0.5 : 0));
     if (painting && b.lastCell === cx + ',' + cy) return;
@@ -129,7 +138,10 @@ export class GameScene extends Phaser.Scene {
   selectAt(wx: number, wy: number) {
     const [cx, cy] = worldToCell(wx, wy + 6);
     const s = G.map.struct[cellIdx(cx, cy)] || G.map.struct[cellIdx(...worldToCell(wx, wy + 16))];
+    if (s && s.site) { G.selected = siteSel(s.site); UI.infoKey = ''; hooks.sfx('click'); return; }
     if (s) { G.selected = s; UI.infoKey = ''; hooks.sfx('click'); return; }
+    const site = siteAtCell(cx, cy);
+    if (site) { G.selected = siteSel(site.id); UI.infoKey = ''; hooks.sfx('click'); return; }
     if (dist2(wx, wy, WELL_POS.x, WELL_POS.y) < 26 * 26) { UI.showWell(); return; }
     const u = G.hashU.nearest(wx, wy + 6, 12);
     if (u) { G.selected = u; UI.infoKey = ''; hooks.sfx('click'); return; }
@@ -148,3 +160,6 @@ export class GameScene extends Phaser.Scene {
   }
   hovered: any = null;
 }
+
+/** Selection handle for a rampart site (the info panel and overlay read it). */
+export function siteSel(id: string) { const st = siteById(id); return { kind: 'site', id: 'site:' + id, siteId: id, dead: false, x: st ? st.x : 0, y: st ? st.y : 0 }; }

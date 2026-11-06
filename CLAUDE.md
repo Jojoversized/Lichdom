@@ -28,6 +28,7 @@ GitHub Pages: every push to `main` runs `.github/workflows/deploy.yml` (install 
    - `tools/test/ui_flow.py` — real clicks through build, drawer, level-up, Soul Well, save/reload, codex
    - `tools/test/bot.py [maxWave] [runs] [metaMax]` — automated campaigns for balance/regression (also asserts no duplicate upgrade tiers in offers)
    - `tools/test/closeup.py [outdir] [zoom] [w] [h]` — staged skirmish screenshot for art/render review
+   - `tools/test/balance.py '<json configs>' [runs] [maxWave]` — unit balance: campaigns restricted to fixed undead types (solo/combo), same spending policy, no towers/walls (`LICH_PORT=8766` to run against a frozen copy of the build while you keep editing)
 
 `window.__LICH` exposes the state `G` and every system function for tests.
 
@@ -141,6 +142,12 @@ Key rules:
 - After any change: typecheck, run smoke + ui_flow, run the bot for balance changes, update `docs/CHECKLIST.md`.
 
 ## Current status
+
+v0.5 — unit balance pass from solo/combo simulations (investment-based squad cost escalation,
+Vampire/Golem nerfs, Pikeman/Skeleton buffs, boss AoE caps, host commits to bosses shelling the line),
+preset **Ramparts** (click-to-build/upgrade wall sites: keep ring + two field lines, 3 tiers) replacing
+free-form wall painting, **flat Crusade Fervor** (×1.03/wave, ignores the host), readable texel-resolution
+digits for world-space numbers.
 
 v0.4.1 — crypt picker (choose unit unlocks), unit detail sheets (hover/right-click), field-filling formation
 with post hysteresis (no walk/idle flicker), reworked derived animations, zoom-out black-screen fix.
