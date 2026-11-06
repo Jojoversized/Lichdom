@@ -66,6 +66,10 @@ console.log('Painting towers...');
 P.buildTowerArt();
 for (const t in P.TOWER_ART) writeStrip('tower_' + t, `sprites/towers/${t}.png`, P.TOWER_ART[t].flat(), { tiers: 3, perTier: 4 }, { body: 9, part: 4 });
 
+console.log('Painting keep buildings...');
+P.buildBuildingArt();
+for (const t in P.BUILDING_ART) writeStrip('building_' + t, `sprites/buildings/${t}.png`, P.BUILDING_ART[t].flat(), { tiers: 3, perTier: 4 }, { body: 9, part: 4 });
+
 console.log('Painting environment...');
 for (const f in P.FORTRESSES) writeStrip('keep_' + f, `sprites/environment/keep_${f}.png`, P.buildKeepArt(P.FORTRESSES[f]), {}, { body: 14, part: 5, strength: 0.9 });
 writeStrip('soulwell', 'sprites/environment/soulwell.png', P.buildSoulWellArt());

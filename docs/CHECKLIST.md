@@ -44,7 +44,7 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 - [ ] Drifting fog layer (existed in v1 prototype; not yet ported to Phaser)
 
 ## Combat & entities
-- [x] 8 towers × 3 tiers with distinct behaviours and evolved abilities
+- [x] 8 towers × 3 tiers with distinct behaviours and evolved abilities (v0.6: built with materials on the keep's foundations)
 - [x] 13 recruitable undead (3 forms each), 6 summon packs (Legion ×12, Wraiths ×8, Colossus ×2, Abomination ×2, Devourer ×2, Dragon ×1)
 - [x] Autonomous army AI: guard line weighted to hot roads (with formation depth for big hosts), urgency/travel/crowding target assignment, ranged kiting, wounded retreat-and-mend at the keep, flyers hunt flyers, taunters dive, no piecemeal charges into distant boss kill-zones
 - [x] 20 mortal types across 4 factions; 6 bosses with abilities; champions every 5 waves; adaptive crusade
@@ -68,6 +68,20 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 - [ ] Offline/idle progress between sessions (classic incremental feature)
 - [ ] Balance pass with human playtests (see the Balance section for the v0.5 bot baselines)
 - [ ] Squad formations / banner per squad (squads currently dissolve into the host)
+
+## Keep construction (v0.6)
+- [x] **Materials**: slow currency, earned after each wave (1, +1 per 10 waves, +3 for a boss, +1 per Bone Quarry level); start with 6. HUD counter + tooltip
+- [x] **Fixed foundations** (2×2 plots, reserved = 5): front cluster flanking the gate approach, rear clusters hugging the keep ring; candidates on roads are dropped (≈20–24 per map). `makePlots` in mapgen
+- [x] **Towers cost materials only** (`TOWER_MAT`, 5–8 to build, 9–18 per upgrade), are built only on foundations, scale +7%/wave, and a tower that falls leaves a ruin that is rebuilt free after the wave. Dismantle refunds 50% materials
+- [x] **8 keep buildings** (3 levels each, `data/buildings.ts`, `systems/keep.ts`): Bone Forge (+10% dmg), Ossuary Vault (+12% undead HP), Soul Cistern (+10% souls), Barrow Barracks (+1 per squad, existing squads gain theirs), Lich Sanctum (+15% spell dmg, −8% cd), Embalmer's Hall (0.8%/s regen), War Bell (+8% attack speed), Bone Quarry (+1 materials/wave). Effects live in `stats.ts` (`bld()`), so every present and future undead gets them
+- [x] Procedural building sprites (`buildBuildingArt` in painters.mjs → `sprites/buildings/*`, 3 tiers × 4 frames) and a materials icon
+- [x] Drawer tabs: Towers / Buildings / Fortify / Army; foundations overlay while placing; building info panel with upgrade; save v4
+- [x] Bot baseline: no meta mostly waves 10–48 (5/6 runs pass wave 15); max meta wave 53 with ~7k undead (v0.5 was 34–39)
+- [ ] Building/tower lights (forge glow, sanctum window) in the light buffer
+- [ ] Re-run `balance.py` solo sweep with buildings in the policy (unit balance itself is unchanged)
+
+## UI fonts
+- [x] **Lich Numerals** (`assets/fonts/LichNumerals.ttf`, built by `tools/assets/gen-font.py`): pixel digits and number signs only, loaded with a `unicode-range` ahead of every font stack (Pixelify Sans / Jacquard 24), so every number in the DOM UI uses it (flat-topped 5, open 4/9)
 
 ## Balance (v0.5)
 - [x] `tools/test/balance.py`: campaigns restricted to a fixed set of undead types (solo / combo), identical spending policy, no towers/walls; `LICH_PORT` env picks the server

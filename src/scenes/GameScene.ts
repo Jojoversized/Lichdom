@@ -7,9 +7,10 @@ import { CELL, KEEP, WELL_POS, WW, WH } from '../config/constants';
 import { WorldRenderer } from '../render/WorldRenderer';
 import { step, castSpell, resetWorld } from '../systems/campaign';
 import { stepVisual } from '../systems/fx';
-import { placeTower, placeFort } from '../systems/combat';
-import { canBuildAt, worldToCell, cellIdx, generateMap, siteAtCell } from '../world/mapgen';
+import { placeFort } from '../systems/combat';
+import { canBuildAt, worldToCell, cellIdx, generateMap, siteAtCell, plotAtCell } from '../world/mapgen';
 import { upgradeSite, siteById } from '../systems/ramparts';
+import { constructTower, constructBuilding } from '../systems/keep';
 import { loadMeta, saveRun, saveMeta, saveRunSoon } from '../systems/save';
 import { UI } from '../ui/ui';
 import { initAudio, startMusic } from '../audio/audio';
@@ -114,6 +115,14 @@ export class GameScene extends Phaser.Scene {
     const b = G.build; if (!b) return;
     const [wx, wy] = G.mouse.world, r = G.run;
     if (b.kind === 'spell') { if (castSpell(b.type, wx, wy)) G.build = null; return; }
+    if (b.kind === 'tower' || b.kind === 'building') {
+      if (painting) return;
+      const p = plotAtCell(...worldToCell(wx, wy));
+      if (!p) { hooks.sfx('error'); hooks.msg('Towers and buildings rise only on the foundations around the keep.', '#c8b890'); return; }
+      const made = b.kind === 'tower' ? constructTower(b.type, p) : constructBuilding(b.type, p);
+      if (made) { G.build = null; G.selected = made; UI.infoKey = ''; UI.renderBuild(); saveRunSoon(); }
+      return;
+    }
     if (b.kind === 'site') {
       if (painting) return;
       const site = siteAtCell(...worldToCell(wx, wy));
@@ -129,8 +138,7 @@ export class GameScene extends Phaser.Scene {
     if (r.souls < b.cost) { if (!painting) { hooks.sfx('error'); hooks.msg('Not enough souls.', '#ff8080'); } return; }
     if (!canBuildAt(cx, cy, size, size)) { if (!painting) hooks.sfx('error'); return; }
     r.souls -= b.cost;
-    if (b.kind === 'tower') { const t = placeTower(b.type, cx, cy, 0, { invested: b.cost }); G.build = null; G.selected = t; UI.renderBuild(); }
-    else placeFort(b.type, cx, cy);
+    placeFort(b.type, cx, cy);
     hooks.sfx('build');
     saveRunSoon();
   }
@@ -140,6 +148,9 @@ export class GameScene extends Phaser.Scene {
     const s = G.map.struct[cellIdx(cx, cy)] || G.map.struct[cellIdx(...worldToCell(wx, wy + 16))];
     if (s && s.site) { G.selected = siteSel(s.site); UI.infoKey = ''; hooks.sfx('click'); return; }
     if (s) { G.selected = s; UI.infoKey = ''; hooks.sfx('click'); return; }
+    const pl = plotAtCell(...worldToCell(wx, wy));
+    const bd = pl && G.buildings.find((o: any) => o.plot === pl.id);
+    if (bd) { G.selected = bd; UI.infoKey = ''; hooks.sfx('click'); return; }
     const site = siteAtCell(cx, cy);
     if (site) { G.selected = siteSel(site.id); UI.infoKey = ''; hooks.sfx('click'); return; }
     if (dist2(wx, wy, WELL_POS.x, WELL_POS.y) < 26 * 26) { UI.showWell(); return; }

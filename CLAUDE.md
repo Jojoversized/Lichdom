@@ -63,6 +63,7 @@ All art and sound are **procedurally authored** in code and exported to real fil
 - `tools/assets/painters.mjs` — every painter (humanoid generator, horses, dragons, siege engines,
   towers, keeps, props, fortifications, icons) and the sprite specs. **Edit art here.**
 - `tools/assets/gen-sprites.mjs` — writes sheets into `assets/sprites/**` and `assets/data/manifest.json`.
+- `tools/assets/gen-font.py` — builds `assets/fonts/LichNumerals.ttf` (pixel digits; needs Python fontTools; the TTF is committed).
 - `tools/assets/gen-audio.mjs` — synthesizes SFX into `assets/audio/sfx/*.wav` (+ `assets/data/sfx.json`).
 - Output is deterministic (seeded). Commit regenerated assets.
 
@@ -72,7 +73,8 @@ Runtime-only textures (light falloff, enemy ground rings) are made in `src/rende
 
 ```
 assets/
-  sprites/units | enemies | bosses | summons | towers | fortifications | environment(/props) | effects
+  sprites/units | enemies | bosses | summons | towers | buildings | fortifications | environment(/props) | effects
+  fonts (Lich Numerals)
   ui/icons
   audio/sfx | audio/music (ambient score is synthesized live — drop tracks here later)
   data/manifest.json, palette.json, sfx.json
@@ -107,7 +109,9 @@ src/
   data/                   pure game data: units/summons, enemies/bosses, towers/forts, spells/Soul Well, meta tree/achievements/dialogue, fortresses
   world/mapgen.ts         seeded map gen (roads right→left), runtime terrain painting, flow fields, build checks
   systems/                SIMULATION (no Phaser/DOM):
-    stats.ts              derived stats, incremental cost & wave curves, Crusade Fervor
+    stats.ts              derived stats, incremental cost & wave curves, Crusade Fervor, building levels (bld)
+    keep.ts               materials, foundations, tower/building construction & upgrades, ruins
+    ramparts.ts           preset wall sites (build/upgrade/repair)
     combat.ts             spawning, damage, deaths, corpses, projectiles, hazards, status effects
     ai.ts                 mortal AI, autonomous undead army planner, towers, forts, the Lich
     campaign.ts           new/load campaign, wave generation, wave-end revival, spells, Soul Well, step()
@@ -142,6 +146,11 @@ Key rules:
 - After any change: typecheck, run smoke + ui_flow, run the bot for balance changes, update `docs/CHECKLIST.md`.
 
 ## Current status
+
+v0.6 — **keep construction**: towers are no longer bought with souls or placed freely; a slow second
+currency, **materials** (after each wave), builds towers and 8 permanent **keep buildings** (army-wide bonuses)
+on fixed foundations around the keep (`data/buildings.ts`, `systems/keep.ts`, plots in mapgen). New pixel
+numeral web font **Lich Numerals** for every number in the DOM UI (`tools/assets/gen-font.py`).
 
 v0.5 — unit balance pass from solo/combo simulations (investment-based squad cost escalation,
 Vampire/Golem nerfs, Pikeman/Skeleton buffs, boss AoE caps, host commits to bosses shelling the line),

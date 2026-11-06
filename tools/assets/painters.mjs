@@ -588,6 +588,114 @@ function buildTowerArt() {
   }
 }
 
+
+// ------------------------------------------------------------
+// Keep buildings (v0.6): 2×2-cell structures on the keep's plots, 3 tiers × 4 frames
+// ------------------------------------------------------------
+const BUILDING_ART = {};
+function buildBuildingArt() {
+  const defs = {
+    forge:    { tone: '#4a3c36', glow: PAL.fire, glowL: PAL.fireL },
+    vault:    { tone: '#3a3840', glow: PAL.necro, glowL: '#c8ffd0' },
+    cistern:  { tone: '#33313a', glow: '#7dffb0', glowL: '#e3fff0' },
+    barracks: { tone: '#463f38', glow: '#9a1c1c', glowL: '#d04040' },
+    sanctum:  { tone: '#38304a', glow: PAL.arcane, glowL: '#f0dcff' },
+    embalm:   { tone: '#3c3a34', glow: '#9ad04a', glowL: '#e0ffa0' },
+    bell:     { tone: '#4a4038', glow: '#c89a3a', glowL: '#ffe8a0' },
+    quarry:   { tone: '#57524a', glow: PAL.bone, glowL: PAL.white },
+  };
+  for (const type in defs) {
+    BUILDING_ART[type] = [];
+    for (let tier = 0; tier < 3; tier++) {
+      const frames = [];
+      for (let f = 0; f < 4; f++) {
+        const rng = makeRng(type.length * 53 + tier * 11);
+        const [c, ctx] = makeCanvas(32, 44);
+        paintBuildingArt(ctx, type, tier, f, defs[type], rng, 32, 44);
+        outlineCanvas(c);
+        frames.push(c);
+      }
+      BUILDING_ART[type].push(frames);
+    }
+  }
+}
+function paintBuildingArt(ctx, type, tier, f, d, rng, W, Hh) {
+  const R = (x, y, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); };
+  const by = Hh - 1, cx = W / 2, fl = f % 2;
+  const roof = (x, y, w, h, col) => { for (let i = 0; i < h; i++) { const ww = w - i * 2 * (w / 2) / h; R(x + (w - ww) / 2, y - i, ww, 1, i % 2 ? col : shade(col, 1.15)); } };
+  const banner = (x, y, h, col) => { R(x, y - 2, 1, h + 2, '#2a2220'); R(x + 1, y, 3, h, col); R(x + 1, y + h, 1, 1, col); R(x + 3, y + h, 1, 1, col); R(x + 2 + (f % 2), y + 1, 1, h - 2, shade(col, 1.3)); };
+  // shared foundation
+  const bw = 26 + tier * 2; stoneBase(ctx, (W - bw) / 2, by - 4, bw, 4, shade(d.tone, 0.85), rng);
+  const g0 = by - 4;
+  if (type === 'forge') { // squat smithy, chimney, glowing hearth & anvil
+    stoneBase(ctx, 5, g0 - 12, 22, 12, d.tone, rng);
+    roof(4, g0 - 13, 24, 6, '#2a2422');
+    const chH = 10 + tier * 4; stoneBase(ctx, 20, g0 - 13 - chH, 5, chH, shade(d.tone, 1.1), rng);
+    for (let i = 0; i < 3; i++) R(21 + ((i + f) % 2), g0 - 15 - chH - i * 2 - f, 2, 1, i ? '#5a5250' : '#7a6e66');
+    R(9, g0 - 8, 7, 8, '#120c0a'); R(10, g0 - 6 + fl, 5, 6 - fl, d.glow); R(11, g0 - 3, 3, 3, d.glowL);
+    R(18, g0 - 3, 6, 2, '#2e3238'); R(19, g0 - 1, 2, 1, '#2e3238'); R(18, g0 - 3, 6, 1, '#5a6068');
+    if (tier >= 1) for (let i = 0; i < 4; i++) R(6 + i * 6, g0 - 16 - (i % 2), 1, 3, PAL.bone);
+    if (tier >= 2) { R(3, g0 - 6, 2, 6, PAL.boneD); R(27, g0 - 6, 2, 6, PAL.boneD); R(3, g0 - 7, 2, 1, d.glow); R(27, g0 - 7, 2, 1, d.glow); }
+  } else if (type === 'vault') { // ossuary crypt: arched door, skull niches, dome
+    stoneBase(ctx, 6, g0 - 14, 20, 14, d.tone, rng);
+    R(13, g0 - 9, 6, 9, '#0c0b0e'); R(14, g0 - 10, 4, 1, '#0c0b0e'); R(15, g0 - 6 + fl, 2, 2, d.glow);
+    for (let r = 0; r < 2; r++) for (let i = 0; i < 2; i++) { const x = i ? 21 : 8, y = g0 - 12 + r * 5; R(x, y, 3, 3, '#141216'); R(x + 0.5, y + 0.5, 2, 2, PAL.bone); R(x + 1, y + 1.5, 1, 1, '#141216'); }
+    const dh = 5 + tier * 2; for (let i = 0; i < dh; i++) { const ww = 18 * Math.sqrt(1 - (i / dh) ** 2); R(cx - ww / 2, g0 - 15 - i, ww, 1, i % 2 ? shade(d.tone, 1.2) : d.tone); }
+    if (tier >= 1) { R(5, g0 - 15, 2, 15, PAL.boneD); R(25, g0 - 15, 2, 15, PAL.boneD); R(4, g0 - 16, 4, 2, PAL.bone); R(24, g0 - 16, 4, 2, PAL.bone); }
+    if (tier >= 2) { R(cx - 1, g0 - 21 - dh, 2, 6, PAL.bone); R(cx - 3, g0 - 19 - dh, 6, 2, PAL.bone); R(cx - 0.5, g0 - 23 - dh, 1, 1, d.glow); }
+  } else if (type === 'cistern') { // soul basin with a rising column of souls
+    stoneBase(ctx, 4, g0 - 7, 24, 7, d.tone, rng);
+    R(6, g0 - 8, 20, 2, '#0e1a14'); R(7, g0 - 8, 18, 1, f % 2 ? d.glow : shade(d.glow, 0.8));
+    const ph = 8 + tier * 5;
+    for (let i = 0; i < ph; i++) { const w = 2 + (i % 3 === f % 3 ? 1 : 0); R(cx - w / 2 + Math.sin((i + f) * 0.8) * 1.5, g0 - 9 - i, w, 1, i % 2 ? d.glow : d.glowL); }
+    for (let i = 0; i < 3; i++) R(8 + i * 8 + (f % 2), g0 - 12 - ((i * 3 + f * 2) % ph), 1, 1, d.glowL);
+    R(4, g0 - 12, 2, 5, shade(d.tone, 1.1)); R(26, g0 - 12, 2, 5, shade(d.tone, 1.1));
+    if (tier >= 1) { R(3, g0 - 13, 4, 1, PAL.bone); R(25, g0 - 13, 4, 1, PAL.bone); R(4, g0 - 15, 2, 2, PAL.bone); R(26, g0 - 15, 2, 2, PAL.bone); }
+    if (tier >= 2) for (let a = 0; a < 8; a++) { const ang = a / 8 * TAU + f * 0.4; R(cx + Math.cos(ang) * 9, g0 - 10 - ph * 0.6 + Math.sin(ang) * 3, 1, 1, d.glowL); }
+  } else if (type === 'barracks') { // long gabled hall with war banners
+    stoneBase(ctx, 3, g0 - 11, 26, 11, d.tone, rng);
+    roof(2, g0 - 12, 28, 8, '#3a2a22');
+    for (let i = 0; i < 3; i++) { R(6 + i * 8, g0 - 8, 3, 4, '#0c0b0e'); R(7 + i * 8, g0 - 7, 1, 2, fl ? '#7a3a20' : '#5a2a18'); }
+    R(14, g0 - 5, 4, 5, '#1a1210');
+    banner(1, g0 - 18, 7, d.glow);
+    if (tier >= 1) banner(27, g0 - 18, 7, d.glow);
+    if (tier >= 2) { stoneBase(ctx, 10, g0 - 26, 12, 8, shade(d.tone, 1.05), rng); roof(9, g0 - 27, 14, 5, '#3a2a22'); banner(15, g0 - 36, 6, d.glowL); }
+  } else if (type === 'sanctum') { // narrow chapel, tall arcane window, spire
+    const h = 18 + tier * 4;
+    stoneBase(ctx, 9, g0 - h, 14, h, d.tone, rng);
+    R(14, g0 - h + 4, 4, h - 9, '#120a1c'); R(15, g0 - h + 5, 2, h - 11, fl ? d.glowL : d.glow); R(13, g0 - 5, 6, 5, '#0c0b0e');
+    roof(8, g0 - h - 1, 16, 9 + tier * 2, '#241c30');
+    R(cx - 0.5, g0 - h - 12 - tier * 2, 1, 4, PAL.bone);
+    R(cx - 1, g0 - h - 13 - tier * 2, 2, 1, d.glowL);
+    if (tier >= 1) { stoneBase(ctx, 4, g0 - 10, 5, 10, shade(d.tone, 0.9), rng); stoneBase(ctx, 23, g0 - 10, 5, 10, shade(d.tone, 0.9), rng); }
+    if (tier >= 2) for (let a = 0; a < 3; a++) R(5 + a * 11 + (f % 2), g0 - h - 2 - ((a + f) % 3) * 2, 1, 1, d.glowL);
+  } else if (type === 'embalm') { // embalmer's hall: low house, vats of green ichor, coffins
+    stoneBase(ctx, 3, g0 - 10, 16, 10, d.tone, rng);
+    roof(2, g0 - 11, 18, 6, '#2c2a26');
+    R(8, g0 - 6, 4, 6, '#0c0b0e');
+    const vat = (x, y, s) => { R(x, y, s, s, '#3a3632'); R(x + 1, y, s - 2, 1, fl ? d.glowL : d.glow); R(x, y + s - 1, s, 1, '#22201c'); };
+    vat(21, g0 - 7, 7); if (tier >= 1) vat(23, g0 - 14, 5);
+    R(4, g0 - 3, 3, 3, '#3a2a1c'); R(4, g0 - 3, 3, 1, '#5a4430');
+    if (tier >= 2) { R(1, g0 - 9, 2, 9, '#3a2a1c'); R(1, g0 - 9, 2, 1, '#5a4430'); for (let i = 0; i < 2; i++) R(22 + i * 3, g0 - 18 - ((f + i) % 3), 1, 1, d.glowL); }
+  } else if (type === 'bell') { // war bell: timber frame on a stone plinth
+    stoneBase(ctx, 7, g0 - 6, 18, 6, d.tone, rng);
+    const h = 18 + tier * 4;
+    R(9, g0 - 6 - h, 2, h, '#3a2a1c'); R(21, g0 - 6 - h, 2, h, '#3a2a1c'); R(7, g0 - 7 - h, 18, 2, '#4a3624'); R(7, g0 - 7 - h, 18, 1, '#6a4e34');
+    const sw = [0, 1, 0, -1][f];
+    R(cx - 0.5 + sw * 0.5, g0 - 5 - h, 1, 3, '#2a2220');
+    const top = g0 - 3 - h;
+    for (let i = 0; i < 8; i++) { const ww = 4 + i; R(cx - ww / 2 + sw, top + i, ww, 1, i === 7 ? shade(d.glow, 0.7) : i % 3 === 0 ? d.glowL : d.glow); }
+    if (tier >= 1) { R(5, g0 - 7 - h, 3, 3, PAL.bone); R(24, g0 - 7 - h, 3, 3, PAL.bone); }
+    if (tier >= 2) { banner(3, g0 - 20, 6, '#9a1c1c'); banner(25, g0 - 20, 6, '#9a1c1c'); }
+  } else if (type === 'quarry') { // stacked cut stone, bone crane, rubble
+    for (let r = 0; r < 2 + tier; r++) for (let i = 0; i < 3 - (r > 1 ? 1 : 0); i++) stoneBase(ctx, 3 + i * 7 + r * 2, g0 - 5 - r * 5, 6, 5, i % 2 ? d.tone : shade(d.tone, 0.9), rng);
+    const ch = 22 + tier * 3;
+    R(24, g0 - ch, 2, ch, PAL.boneD); R(18, g0 - ch, 12, 2, PAL.boneD); R(18, g0 - ch, 12, 1, PAL.bone);
+    const sw = [0, 1, 2, 1][f]; R(19, g0 - ch + 2, 1, 6 + sw, '#2a2220'); stoneBase(ctx, 17, g0 - ch + 8 + sw, 5, 4, shade(d.tone, 1.1), rng);
+    for (let i = 0; i < 5; i++) R(2 + i * 6 + (i % 2), g0 - 1, 2, 1, i % 2 ? PAL.bone : '#6a645c');
+  }
+}
+
 function paintTowerArt(ctx, type, tier, f, d, rng, W, Hh) {
   const R = (x, y, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); };
   const by = Hh - 1; // ground
@@ -817,6 +925,7 @@ function buildIcons() {
   mk('apocalypse', R => { R(4, 4, 8, 8, PAL.fireD); R(5, 5, 6, 6, PAL.fire); R(6, 6, 4, 4, PAL.fireL); for (let a = 0; a < 8; a++) { const ang = a / 8 * TAU; R(Math.round(8 + Math.cos(ang) * 6.5), Math.round(8 + Math.sin(ang) * 6.5), 1, 1, PAL.necro); } });
   mk('soul', R => { R(6, 3, 4, 2, PAL.necro); R(5, 5, 6, 5, PAL.necro); R(6, 10, 4, 3, PAL.necroD); R(6, 6, 1, 1, '#000'); R(9, 6, 1, 1, '#000'); R(7, 1, 1, 2, PAL.necroD); });
   mk('essence', R => { R(7, 2, 2, 2, '#ff6a8a'); R(5, 4, 6, 6, '#c22a52'); R(6, 10, 4, 2, '#7a1030'); R(7, 12, 2, 2, '#4a0a20'); R(6, 5, 1, 3, '#ffc0d0'); });
+  mk('materials', R => { R(1, 9, 7, 5, '#6a645c'); R(1, 9, 7, 1, '#8e877c'); R(8, 9, 7, 5, '#57524a'); R(8, 9, 7, 1, '#7a7468'); R(4, 4, 8, 5, '#7a7468'); R(4, 4, 8, 1, '#a49c8e'); R(5, 6, 3, 1, '#57524a'); R(2, 14, 13, 1, '#3a3632'); R(10, 2, 5, 2, PAL.bone); R(10, 1, 1, 1, PAL.bone); R(14, 4, 1, 1, PAL.bone); });
   mk('keep', R => { R(2, 6, 12, 8, PAL.stone); R(2, 4, 2, 2, PAL.stone); R(7, 4, 2, 2, PAL.stone); R(12, 4, 2, 2, PAL.stone); R(6, 10, 4, 4, '#111'); R(7, 7, 2, 2, PAL.necro); });
   mk('skull', R => { R(4, 3, 8, 7, PAL.bone); R(5, 10, 6, 3, PAL.boneD); R(5, 6, 2, 2, '#000'); R(9, 6, 2, 2, '#000'); R(6, 11, 1, 1, '#000'); R(9, 11, 1, 1, '#000'); });
   mk('wall', R => { for (let y = 4; y < 14; y += 3) for (let x = 1 + ((y / 3) % 2) * 2; x < 15; x += 5) R(x, y, 4, 2, PAL.stoneL); });
@@ -1053,4 +1162,4 @@ const FORTRESSES = {
 };
 
 
-export { PAL, SPR, TOWER_ART, FORT_ART, ICONS, PROP_ART, SPRITE_SPECS, FORTRESSES, buildHumanoidSet, buildDragonSet, buildRamSet, buildCatapultSet, buildTowerArt, buildKeepArt, buildLichSet, buildSoulWellArt, buildIcons, buildFortArt, buildPropArt, outlineCanvas, shadeCanvas, makeCanvas };
+export { PAL, SPR, TOWER_ART, BUILDING_ART, buildBuildingArt, FORT_ART, ICONS, PROP_ART, SPRITE_SPECS, FORTRESSES, buildHumanoidSet, buildDragonSet, buildRamSet, buildCatapultSet, buildTowerArt, buildKeepArt, buildLichSet, buildSoulWellArt, buildIcons, buildFortArt, buildPropArt, outlineCanvas, shadeCanvas, makeCanvas };

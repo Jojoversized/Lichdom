@@ -22,22 +22,28 @@ BOT = r"""
       const rep = L.siteRepairCost(s); if (rep && r.souls > rep * 2) L.repairSite(s);
       if (r.wave >= 3 && L.siteTier(s) < 2 && r.souls > L.siteUpgradeCost(s) * 2.5) L.upgradeSite(s);
     }
-    // alternate between towers and squads (no army cap any more)
-    while (r.souls > 140 && tries++ < 120) {
-      if (Math.random() < 0.5) {
-        const u = r.unlockedUnits[Math.floor(Math.random() * r.unlockedUnits.length)];
-        if (r.souls >= L.recruitCost(u)) L.recruit(u);
-        continue;
+    // materials: towers on front foundations and keep buildings (souls never buy towers now)
+    for (let guardM = 0; guardM < 20; guardM++) {
+      const free = G.map.plots.filter(p => L.plotFree(p));
+      const opts = [];
+      const tt = r.unlockedTowers[Math.floor(Math.random() * r.unlockedTowers.length)];
+      const fp = free.find(p => p.front);
+      if (fp && G.towers.length < 5 && r.materials >= L.towerMatCost(tt)) opts.push(() => L.constructTower(tt, fp));
+      const bp = free.find(p => !p.front) || free[0];
+      for (const k of ['forge', 'vault', 'quarry', 'barracks', 'bell', 'embalm', 'cistern', 'sanctum']) {
+        const lv = L.bld(k), ent = G.buildings.find(b => b.type === k);
+        if (lv === 0 && bp && r.materials >= 8) { opts.push(() => L.constructBuilding(k, bp)); break; }
+        if (ent && lv < 3 && r.materials >= L.buildingUpgradeCost(ent)) { opts.push(() => L.upgradeBuilding(ent)); break; }
       }
-      const types = r.unlockedTowers, type = types[Math.floor(Math.random() * types.length)];
-      const cx = Math.floor((KEEPX + 40 + Math.random() * 300) / 16), cy = Math.floor((328 + (Math.random() - 0.5) * 380) / 16);
-      let near = false;
-      for (let oy = -2; oy <= 3; oy++) for (let ox = -2; ox <= 3; ox++) { const x = cx + ox, y = cy + oy; if (x >= 0 && y >= 0 && x < 96 && y < 40 && G.map.road[y * 96 + x]) near = true; }
-      if (!near || !L.canBuildAt(cx, cy, 2, 2)) continue;
-      const cost = L.towerCost(type); if (r.souls < cost) continue;
-      r.souls -= cost; L.placeTower(type, cx, cy, 0, { invested: cost });
+      for (const t of G.towers) if (t.def.tiers[t.tier + 1] && (t.tier < 1 || L.metaLv('f_evo')) && r.materials >= L.towerUpgradeCost(t)) { opts.push(() => L.upgradeTowerMat(t)); break; }
+      if (!opts.length) break;
+      opts[Math.floor(Math.random() * opts.length)]();
     }
-    for (const t of G.towers) { const nx = t.def.tiers[t.tier + 1]; if (nx && r.souls > nx.cost * 1.3 && (t.tier < 1 || L.metaLv('f_evo'))) { r.souls -= nx.cost; t.tier++; t.maxHp = L.towerMaxHp(t); t.hp = t.maxHp; } }
+    // souls: squads (no army cap any more)
+    while (r.souls > 140 && tries++ < 200) {
+      const u = r.unlockedUnits[Math.floor(Math.random() * r.unlockedUnits.length)];
+      if (r.souls >= L.recruitCost(u)) L.recruit(u); else if (r.unlockedUnits.every(x => r.souls < L.recruitCost(x))) break;
+    }
     // incremental sinks
     for (let i = 0; i < 4; i++) { if (r.souls > 600) L.buyWell(['asc_dmg', 'asc_hp', 'asc_squad', 'legion'][i]); }
     { const lk = L.lockedUnitTypes(); if (lk.length && r.souls > L.unearthCost(r) * 1.5) L.unearthUnit(lk[Math.floor(Math.random() * lk.length)]); }
@@ -46,7 +52,7 @@ BOT = r"""
     if (G.run.pendingLevels > 0) { const c = L.rollCards(3); if (!L.offerIsClean(c)) dupes++; if (c.length) L.applyCard(c[Math.floor(Math.random() * c.length)]); G.run.pendingLevels--; continue; }
     if (G.phase === 'prep') {
       build();
-      log.push({ w: G.run.wave, keep: Math.round(G.keep.hp), souls: Math.round(G.run.souls), lvl: G.run.level, towers: G.towers.length, units: G.units.length, kinds: G.run.unlockedUnits.length, kills: G.run.kills, fervor: +(G.run.fervor || 1).toFixed(2), ms: Math.round(performance.now() - t0) });
+      log.push({ w: G.run.wave, keep: Math.round(G.keep.hp), souls: Math.round(G.run.souls), lvl: G.run.level, towers: G.towers.length, mat: G.run.materials, blds: G.buildings.map(b => b.type + (b.tier + 1)).join(','), units: G.units.length, kinds: G.run.unlockedUnits.length, kills: G.run.kills, fervor: +(G.run.fervor || 1).toFixed(2), ms: Math.round(performance.now() - t0) });
       L.startWave();
     }
     for (const s of G.run.spells) if (L.canCast(s) && G.enemies.length > 8) { const e = G.enemies[0]; L.castSpell(s, e.x, e.y); }

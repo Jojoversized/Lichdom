@@ -17,18 +17,21 @@ export function dtypeMult(dtype: string) {
   return 1;
 }
 /** Multiplicative "Ascension" bonuses bought repeatedly in the Soul Well. */
+/** Keep building level 0..3 (one building of each kind; see data/buildings.ts). */
+export function bld(id: string): number { const r = G.run; if (!r || !r.buildings) return 0; for (const k in r.buildings) if (r.buildings[k].type === id) return r.buildings[k].tier + 1; return 0; }
 export function ascDmg() { return Math.pow(1.12, G.run.asc.dmg || 0); }
 export function ascHp() { return Math.pow(1.12, G.run.asc.hp || 0); }
-export function ascSouls() { return Math.pow(1.08, G.run.asc.souls || 0); }
-export function globalDmg() { const r = G.run; return (1 + r.m.dmg + fb('allDmg')) * ascDmg(); }
+export function ascSouls() { return Math.pow(1.08, G.run.asc.souls || 0) * (1 + 0.1 * bld('cistern')); }
+export function globalDmg() { const r = G.run; return (1 + r.m.dmg + fb('allDmg')) * ascDmg() * (1 + 0.1 * bld('forge')); }
 export function frenzyMult() { return G.frenzyT > 0 ? 1.6 : 1; }
 
 export function towerStats(t: any) {
   const d = TOWERS[t.type], r = G.run, tier = d.tiers[t.tier];
   let tierDmg = 1, tierRange = 1;
   for (let i = 1; i <= t.tier; i++) { tierDmg = d.tiers[i].dmg || tierDmg; tierRange = d.tiers[i].range || tierRange; }
-  const dmg = d.dmg * tierDmg * (1 + (r.towerDmg[t.type] || 0) + (r.mods.leg_soulfire ? 0.25 : 0)) * globalDmg() * dtypeMult(d.dtype);
-  let as = (1 + r.m.towerAs) * frenzyMult();
+  // towers draw on the keep's growing power (+7%/wave): materials are slow, so a tower must not go stale
+  const dmg = d.dmg * tierDmg * (1 + (r.towerDmg[t.type] || 0) + (r.mods.leg_soulfire ? 0.25 : 0)) * globalDmg() * dtypeMult(d.dtype) * Math.pow(1.07, Math.max(0, r.wave - 1));
+  let as = (1 + r.m.towerAs + 0.08 * bld('bell')) * frenzyMult();
   if (t.hasteT > 0) as *= 1 + t.haste;
   return { dmg, range: d.range * tierRange * (1 + r.m.range), cd: d.cd / as, name: tier.name };
 }
@@ -42,7 +45,7 @@ export function fortMaxHp(f: any) { return Math.round(f.def.hp * (f.type === 'wa
  *  level-up cards (r.m.squad), the Legions meta node and Soul Well Ossuary Expansions. */
 export function squadSize(type: string) {
   const r = G.run;
-  return Math.max(5, UNITS[type].squad + (r ? (r.m.squad || 0) + (r.asc.squad || 0) : 0) + metaLv('m_cap'));
+  return Math.max(5, UNITS[type].squad + (r ? (r.m.squad || 0) + (r.asc.squad || 0) + bld('barracks') : 0) + metaLv('m_cap'));
 }
 /** Incremental costs: a type's price climbs with the souls invested in it, not the number
  *  of squads. A squad's step is ×1.12 per 300 souls of base cost (cheap hordes ~+6%, golems
@@ -88,7 +91,7 @@ export function applyUnitStats(u: any) {
   const d = UNITS[u.type], tier = r.unitTier[u.type] || 0;
   const m: any = { hp: 1, dmg: 1, armor: 0, range: 1, spd: 1, splash: 1, raiser: 1 };
   for (let i = 1; i <= tier; i++) { const t = d.tiers[i]; for (const k in t) if (typeof t[k] === 'number' && k !== 'cost') m[k] = t[k]; }
-  const hpMult = m.hp * (1 + r.m.unitHp + metaLv('n_hp') * 0.1 + fb('unitHp') + (r.unitBuff[u.type] || 0)) * ascHp();
+  const hpMult = m.hp * (1 + r.m.unitHp + metaLv('n_hp') * 0.1 + fb('unitHp') + (r.unitBuff[u.type] || 0)) * ascHp() * (1 + 0.12 * bld('vault'));
   const newMax = Math.round(d.hp * hpMult * (u.raisedMult || 1));
   if (u.maxHp) u.hp = Math.max(1, u.hp + (newMax - u.maxHp)); else u.hp = newMax;
   u.maxHp = newMax;
@@ -97,7 +100,7 @@ export function applyUnitStats(u: any) {
   u.armor = Math.min(0.8, (d.armor || 0) + (tier ? (m.armor || 0) : 0) + (u.type === 'skeleton' && r.mods.skel_shield ? 0.2 : 0));
   u.range = d.range * m.range;
   u.spd = d.spd * m.spd * (1 + r.m.unitSpd);
-  u.cd = d.cd / (1 + r.m.unitAs + metaLv('m_as') * 0.06);
+  u.cd = d.cd / (1 + r.m.unitAs + metaLv('m_as') * 0.06 + 0.08 * bld('bell'));
   u.splash = (d.splash || 0) * m.splash;
   u.raiser = d.raiser ? d.raiser * m.raiser : 0;
   u.tier = tier;

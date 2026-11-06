@@ -9,7 +9,7 @@ import {
   raiseCorpse, removeCorpse, spawnUnit, killEntity, addHazard, healUnit, NEUTRAL_SRC,
 } from './combat';
 import { addParticle, addRing, addFlash, addText, lightningBolt, explosion, addSoulParticle } from './fx';
-import { towerStats, globalDmg, dtypeMult, frenzyMult, fb } from './stats';
+import { towerStats, globalDmg, dtypeMult, frenzyMult, fb, bld } from './stats';
 import { gainXp } from './progression';
 import { bossAbilities } from './bosses';
 import { WALL_TIERS } from '../data/towers';
@@ -269,6 +269,7 @@ export function updateUnit(u: any, dt: number) {
   if (!u.summon && u.hp < u.maxHp * 0.22 && G.phase === 'wave') u.retreat = true;
   if (u.retreat && u.hp > u.maxHp * 0.7) u.retreat = false;
   if (nearKeep && u.hp < u.maxHp) u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.05 * dt);
+  const emb = bld('embalm'); if (emb && u.hp < u.maxHp) u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.008 * emb * dt); // Embalmer's Hall
   if (u.retreat) { if (!nearKeep) { moveToward(u, KEEP.x1 + 14, KEEP.y + 20 + ((u.slot * 50) % 40) - 20, spd * 1.1, dt); setAnim(u, 'walk'); } else setAnim(u, 'idle'); return; }
   if (u.raiser) {
     u.abT = (u.abT ?? u.raiser) - dt;

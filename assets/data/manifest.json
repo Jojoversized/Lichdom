@@ -1468,6 +1468,70 @@
    "tiers": 3,
    "perTier": 4
   },
+  "building_forge": {
+   "file": "sprites/buildings/forge.png",
+   "fw": 68,
+   "fh": 92,
+   "frames": 12,
+   "tiers": 3,
+   "perTier": 4
+  },
+  "building_vault": {
+   "file": "sprites/buildings/vault.png",
+   "fw": 68,
+   "fh": 92,
+   "frames": 12,
+   "tiers": 3,
+   "perTier": 4
+  },
+  "building_cistern": {
+   "file": "sprites/buildings/cistern.png",
+   "fw": 68,
+   "fh": 92,
+   "frames": 12,
+   "tiers": 3,
+   "perTier": 4
+  },
+  "building_barracks": {
+   "file": "sprites/buildings/barracks.png",
+   "fw": 68,
+   "fh": 92,
+   "frames": 12,
+   "tiers": 3,
+   "perTier": 4
+  },
+  "building_sanctum": {
+   "file": "sprites/buildings/sanctum.png",
+   "fw": 68,
+   "fh": 92,
+   "frames": 12,
+   "tiers": 3,
+   "perTier": 4
+  },
+  "building_embalm": {
+   "file": "sprites/buildings/embalm.png",
+   "fw": 68,
+   "fh": 92,
+   "frames": 12,
+   "tiers": 3,
+   "perTier": 4
+  },
+  "building_bell": {
+   "file": "sprites/buildings/bell.png",
+   "fw": 68,
+   "fh": 92,
+   "frames": 12,
+   "tiers": 3,
+   "perTier": 4
+  },
+  "building_quarry": {
+   "file": "sprites/buildings/quarry.png",
+   "fw": 68,
+   "fh": 92,
+   "frames": 12,
+   "tiers": 3,
+   "perTier": 4
+  },
   "keep_haunted": {
    "file": "sprites/environment/keep_haunted.png",
    "fw": 244,
@@ -1679,6 +1743,9 @@
   },
   "icon_essence": {
    "file": "ui/icons/essence.png"
+  },
+  "icon_materials": {
+   "file": "ui/icons/materials.png"
   },
   "icon_keep": {
    "file": "ui/icons/keep.png"

@@ -38,6 +38,7 @@ export function generateMap(seed: number, fortKey: string) {
     }
   }
   M.sites = makeWallSites(M);
+  M.plots = makePlots(M);
   const nearRoad = (x: number, y: number, r: number) => { for (let oy = -r; oy <= r; oy++) for (let ox = -r; ox <= r; ox++) if (inb(x + ox, y + oy) && M.road[cellIdx(x + ox, y + oy)]) return true; return false; };
   const nearKeep = (x: number, y: number, r: number) => x <= KEEP.cx1 + r && y >= KEEP.cy0 - r && y <= KEEP.cy1 + r;
   // obstacles
@@ -108,6 +109,34 @@ function makeWallSites(M: any): WallSite[] {
   add('keep_s', 'Keep Rampart: South', row(sy, 0, fx));
   for (const l of WALL_LINES) for (let s = 0; s < 5; s++) add(`l${l.cx}_${s}`, `${l.name}: ${SEG_NAMES[s]}`, col(l.cx, s * 8, s * 8 + 7));
   return sites;
+}
+export interface Plot { id: string; cx: number; cy: number; x: number; y: number; front: boolean; }
+/** Construction plots (2×2 cells) for towers and keep buildings: a front cluster between the keep
+ *  ring and the Inner Line (covers the approach) and rear clusters behind the ring. Candidates on a
+ *  road are dropped, so the count varies a little per map. Reserved = 5. */
+const PLOT_CANDIDATES: [number, number, boolean][] = [
+  // front: just outside the keep ring, flanking the gate approach (nearest first)
+  [16, 12, true], [16, 26, true], [19, 12, true], [19, 26, true], [16, 9, true], [16, 29, true], [19, 9, true], [19, 29, true],
+  [16, 5, true], [16, 33, true], [19, 5, true], [19, 33, true],
+  // rear: hugging the ring's north and south walls
+  [1, 11, false], [4, 11, false], [7, 11, false], [10, 11, false], [1, 30, false], [4, 30, false], [7, 30, false], [10, 30, false],
+  [2, 7, false], [6, 7, false], [2, 34, false], [6, 34, false],
+];
+function makePlots(M: any): Plot[] {
+  const out: Plot[] = [];
+  for (const [cx, cy, front] of PLOT_CANDIDATES) {
+    let ok = true;
+    for (let y = cy; y < cy + 2; y++) for (let x = cx; x < cx + 2; x++) { const i = cellIdx(x, y); if (M.road[i] || M.reserved[i]) ok = false; }
+    if (!ok) continue;
+    for (let y = cy; y < cy + 2; y++) for (let x = cx; x < cx + 2; x++) M.reserved[cellIdx(x, y)] = 5;
+    out.push({ id: 'p' + out.length, cx, cy, x: (cx + 1) * CELL, y: (cy + 1) * CELL, front });
+  }
+  return out;
+}
+export function plotAtCell(cx: number, cy: number): Plot | null {
+  if (!G.map || !G.map.plots || G.map.reserved[cellIdx(cx, cy)] !== 5) return null;
+  for (const p of G.map.plots) if (cx >= p.cx && cx < p.cx + 2 && cy >= p.cy && cy < p.cy + 2) return p;
+  return null;
 }
 export function siteAtCell(cx: number, cy: number): WallSite | null {
   if (!G.map || !G.map.sites || G.map.reserved[cellIdx(cx, cy)] !== 4) return null;

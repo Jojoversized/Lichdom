@@ -22,7 +22,7 @@ export interface FxParticle { x: number; y: number; vx: number; vy: number; colo
 
 export const G: any = {
   map: null, run: null, meta: null, stats: null, settings: null,
-  units: [] as Ent[], enemies: [] as Ent[], towers: [] as Ent[], forts: [] as Ent[],
+  units: [] as Ent[], enemies: [] as Ent[], towers: [] as Ent[], forts: [] as Ent[], buildings: [] as any[],
   projectiles: [] as any[], particles: [] as FxParticle[], hazards: [] as any[], corpses: [] as any[], dying: [] as Ent[],
   texts: [] as any[], bolts: [] as any[], rings: [] as any[], flashes: [] as any[], netArcs: [] as any[], waveFx: [] as any[],
   /** objects whose Phaser views must be destroyed by the renderer */
@@ -33,7 +33,7 @@ export const G: any = {
   lich: { anim: 'idle', at: 0, castT: 0, cdT: 1, face: 1 },
   hashE: new SpatialHash<Ent>(24), hashU: new SpatialHash<Ent>(16), stepN: 0,
   time: 0, speed: 1, paused: false, modal: null as string | null, phase: 'menu' as 'menu' | 'prep' | 'wave' | 'over',
-  wave: null, shake: 0, flash: 0, selected: null, build: null,
+  wave: null, shake: 0, flash: 0, selected: null, build: null, showPlots: false,
   tdT: 0, frenzyT: 0, stormT: 0, extraRaised: 0, citadelRaised: 0, fleshZombies: 0,
   camera: { x: 400, y: 320 }, mouse: { sx: 0, sy: 0, world: [0, 0] as [number, number], down: false },
   bossBar: null, bossIntro: null, speech: null, lastKeepLine: -99, autoT: 0, timers: [] as any[],

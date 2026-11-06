@@ -9,7 +9,8 @@ import { hexNum, clamp, rnd, rndi, pick, dist, lerp, makeCanvas, TAU } from '../
 import { TOWERS, FORTS, WALL_TIERS, WALL_MAX_TIER } from '../data/towers';
 import { siteTier, siteUpgradeCost } from '../systems/ramparts';
 import { towerStats, metaLv } from '../systems/stats';
-import { cellIdx, canBuildAt, siteAtCell, worldToCell } from '../world/mapgen';
+import { cellIdx, canBuildAt, siteAtCell, plotAtCell, worldToCell } from '../world/mapgen';
+import { plotContent } from '../systems/keep';
 import { SPELLS } from '../data/spells';
 import { animFrameIndex, makeLightTextures, makeShadowTextures, PX_FONT, PX_DIGITS } from './textures';
 import { TEXEL_RES, VIEW } from '../config/zoom';
@@ -76,7 +77,7 @@ export class WorldRenderer {
     const s = this.scene, M = G.map;
     this.worldVersion = G.worldVersion;
     // destroy any view still attached to old entities
-    for (const k of ['units', 'enemies', 'towers', 'forts', 'corpses', 'dying']) for (const o of G[k]) this.destroyView(o);
+    for (const k of ['units', 'enemies', 'towers', 'forts', 'buildings', 'corpses', 'dying']) for (const o of G[k]) this.destroyView(o);
     this.props.forEach(p => p.destroy()); this.props = [];
     this.terrain?.destroy(); this.keep?.destroy(); this.lich?.destroy(); this.well?.destroy();
     if (s.textures.exists('terrain')) s.textures.remove('terrain');
@@ -134,6 +135,7 @@ export class WorldRenderer {
     for (const p of this.props) if ((p as any).animProp) { const n = p.texture.frameTotal - 1; p.setFrame((animF + (p as any).seed) % Math.max(1, n)); }
     // dynamic entities
     for (const t of G.towers) this.syncTower(t, animF);
+    for (const b of G.buildings) this.syncBuilding(b, animF);
     for (const f of G.forts) this.syncFort(f, animF);
     for (const u of G.units) this.syncActor(u);
     for (const e of G.enemies) this.syncActor(e);
@@ -207,6 +209,31 @@ export class WorldRenderer {
     spr.setFrame(t.tier * 4 + ((animF + t.id) % 4));
     if (t.hitT > 0) spr.setTintFill(0xffffff); else if (t.silT > 0) spr.setTint(0xb090ff); else spr.clearTint();
     if (!t.shadow) t.shadow = this.scene.add.image(t.x, t.cy * CELL + 2 * CELL - 4, 'shadow_32').setDepth(DEPTH.shadows).setScale(SC);
+  }
+
+  syncBuilding(b: any, animF: number) {
+    const spr = this.ensureSprite(b, 'building_' + b.type);
+    spr.setPosition(b.x, b.cy * CELL + 2 * CELL + 2).setDepth(b.y + 10).setFrame(b.tier * 4 + ((animF + b.cx) % 4));
+    if (!b.shadow) b.shadow = this.scene.add.image(b.x, b.cy * CELL + 2 * CELL - 4, 'shadow_32').setDepth(DEPTH.shadows).setScale(SC);
+  }
+
+  /** Construction plots: shown while placing a tower/building (free = green/red by cost) or on the Keep tab. */
+  drawPlots(g: Phaser.GameObjects.Graphics) {
+    const b = G.build, placing = b && (b.kind === 'tower' || b.kind === 'building');
+    if (!placing && !G.showPlots) return;
+    const hov = G.mouse.onCanvas ? plotAtCell(...worldToCell(G.mouse.world[0], G.mouse.world[1])) : null;
+    for (const p of G.map.plots || []) {
+      const c = plotContent(p), free = !c.tower && !c.building && !c.ruin;
+      if (!placing && !free) continue;
+      const ok = free && placing && G.run.materials >= b.cost;
+      const col = !placing ? 0xc8b890 : !free ? 0x6a645c : ok ? 0x5dff7a : 0xff5050;
+      const on = hov === p;
+      const X = p.cx * CELL, Y = p.cy * CELL, S = 2 * CELL;
+      g.fillStyle(col, on ? 0.3 : free ? 0.14 : 0.06); g.fillRect(X + 1, Y + 1, S - 2, S - 2);
+      g.fillStyle(col, on ? 1 : 0.75);
+      for (const [dx, dy, w, h] of [[0, 0, 5, SC], [0, 0, SC, 5], [S - 5, 0, 5, SC], [S - SC, 0, SC, 5], [0, S - SC, 5, SC], [0, S - 5, SC, 5], [S - 5, S - SC, 5, SC], [S - SC, S - 5, SC, 5]]) g.fillRect(X + dx, Y + dy, w, h);
+      if (on && placing && free && b.kind === 'tower') { const range = TOWERS[b.type].range * (1 + G.run.m.range); this.ellipse(g, p.x, p.y + 6, range, range * 0.75, ok ? '#c8ffd0' : '#ff8080', 0.7, 2); }
+    }
   }
 
   syncFort(f: any, animF: number) {
@@ -310,7 +337,8 @@ export class WorldRenderer {
 
   drawBuildOverlay(g: Phaser.GameObjects.Graphics) {
     this.drawSites(g);
-    const b = G.build; if (!b || !G.mouse.onCanvas || b.kind === 'site') return;
+    this.drawPlots(g);
+    const b = G.build; if (!b || !G.mouse.onCanvas || b.kind === 'site' || b.kind === 'tower' || b.kind === 'building') return;
     const [wx, wy] = G.mouse.world;
     const size = b.kind === 'tower' ? 2 : 1;
     const cx = Math.floor(wx / CELL - (size === 2 ? 0.5 : 0)), cy = Math.floor(wy / CELL - (size === 2 ? 0.5 : 0));
@@ -458,7 +486,7 @@ export class WorldRenderer {
     for (const f of G.forts) if (f.def.hp && inView(f.x, f.y)) bars(f);
     for (const t of G.texts) { const a = 1 - t.t / t.life; this.text(g, t.s, t.x, t.y - t.t * 14, col(t.color), Math.min(1, a * 2), t.big ? 1.5 : 1); }
     const s = G.selected;
-    if (s && !s.dead && s.kind === 'tower') {
+    if (s && !s.dead && (s.kind === 'tower' || s.kind === 'building')) {
       const x = s.cx * CELL, y = s.cy * CELL; g.fillStyle(0xe8e0c0, 1);
       [[0, 0], [31, 0], [0, 31], [31, 31]].forEach(([dx, dy]) => { g.fillRect(x + dx - (dx ? 2 : 0), y + dy, 3, 1); g.fillRect(x + dx, y + dy - (dy ? 2 : 0), 1, 3); });
     }

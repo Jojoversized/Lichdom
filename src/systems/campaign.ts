@@ -9,7 +9,9 @@ import { SPELLS, SPELL_ORDER, WELL, unearthCost } from '../data/spells';
 import { FORTRESSES } from '../data/world';
 import { msg, lichSay, sfx, hooks } from '../core/events';
 import { generateMap, computeFlow, canBuildAt } from '../world/mapgen';
-import { metaLv, fb, recalcKeep, squadSize, globalDmg, computeFervor, bountyMult, ascSouls, recalcAllStats } from './stats';
+import { metaLv, fb, recalcKeep, squadSize, globalDmg, computeFervor, bountyMult, ascSouls, recalcAllStats, bld } from './stats';
+import { materialsIncome, rebuildRuins, spawnBuilding, plotById } from './keep';
+import { START_MATERIALS } from '../data/buildings';
 import {
   spawnUnit, spawnSummon, spawnEnemy, placeTower, placeFort, fireProjectile, aoeDamage, dealDamage, addHazard, raiseCorpse,
   updateProjectiles, updateHazards, bakeCorpse, NEUTRAL_SRC,
@@ -21,7 +23,8 @@ import { announceBoss } from './bosses';
 import { defaultMods, saveRun, saveMeta, readRunSave } from './save';
 
 export function resetWorld() {
-  for (const k of ['units', 'enemies', 'towers', 'forts', 'projectiles', 'particles', 'hazards', 'corpses', 'dying', 'texts', 'bolts', 'rings', 'flashes', 'netArcs', 'waveFx', 'timers', 'decalQueue']) G[k].length = 0;
+  for (const k of ['units', 'enemies', 'towers', 'forts', 'buildings', 'corpses', 'dying']) for (const o of G[k]) if (o.view || o.shadow) G.retired.push(o);
+  for (const k of ['units', 'enemies', 'towers', 'forts', 'buildings', 'projectiles', 'particles', 'hazards', 'corpses', 'dying', 'texts', 'bolts', 'rings', 'flashes', 'netArcs', 'waveFx', 'timers', 'decalQueue']) G[k].length = 0;
   G.keep.ward = 0; G.tdT = 0; G.frenzyT = 0; G.stormT = 0; G.extraRaised = 0; G.citadelRaised = 0; G.fleshZombies = 0;
   G.selected = null; G.build = null; G.wave = null; G.bossBar = null; G.bossIntro = null; G.speech = null;
   G.worldVersion = (G.worldVersion || 0) + 1; // tells the renderer to rebuild every view
@@ -32,6 +35,7 @@ function newRunState(fortKey: string, seed: number) {
     fortress: fortKey, seed, wave: 0, level: 1, xp: 0, xpNext: xpForLevel(1), pendingLevels: metaLv('i_start'),
     souls: 300 + metaLv('s_start') * 60, soulsEarned: 0, kills: 0, bossesKilled: [] as string[], essenceBonus: 0,
     unlockedTowers: ['brimstone', 'tesla', 'necrotic'], unlockedUnits: [] as string[], walls: {} as Record<string, number>,
+    materials: START_MATERIALS, buildings: {} as Record<string, { type: string; tier: number }>, ruins: {} as Record<string, any>,
     spells: ['deathwave', 'raise'], spellCd: {} as Record<string, number>, unitTier: {} as Record<string, number>, unitBuff: {} as Record<string, number>,
     towerDmg: {} as Record<string, number>, mods: {} as Record<string, number>, picks: {} as Record<string, number>, banished: [] as string[],
     m: defaultMods(), asc: { dmg: 0, hp: 0, souls: 0, squad: 0 }, bought: {} as Record<string, number>, unearthed: 0, rerolls: metaLv('i_reroll') * 2 + 1, banishes: 1 + metaLv('i_reroll'), insightBuys: 0,
@@ -59,7 +63,7 @@ export function newCampaign(fortKey: string) {
   spawnSquad(roster[2], KEEP.x1 + 40, KEEP.y);
   msg(`Your host rises: ${roster.map(t => UNITS[t].tiers[0].name).join(', ')}.`, PAL.necro);
   for (let i = 0; i < metaLv('m_start'); i++) { const t = randomUnitType(false, 3); if (t) spawnSquad(t, KEEP.x1 + 40, KEEP.y + rnd(-50, 50)); }
-  if (metaLv('f_free')) for (const [cx, cy] of [[14, 18], [14, 23], [16, 14], [16, 26]]) if (canBuildAt(cx, cy, 2, 2)) { placeTower('necrotic', cx, cy); break; }
+  if (metaLv('f_free')) for (const p of G.map.plots) if (p.front) { placeTower('necrotic', p.cx, p.cy, 0, { plot: p.id, matInvested: 5 }); break; }
   G.phase = 'prep'; G.speed = 1; G.paused = false;
   G.camera.x = KEEP.x1 + 160; G.camera.y = KEEP.y;
   lichSay('start');
@@ -77,7 +81,10 @@ export function loadRun(): boolean {
   G.run.bought = Object.assign({}, s.run.bought);
   G.run.unearthed = s.run.unearthed || 0;
   G.keep.maxHp = 0; recalcKeep(); G.keep.hp = Math.min(Math.max(1, s.keepHp), G.keep.maxHp);
-  for (const t of s.towers) { const tw = placeTower(t.type, t.cx, t.cy, t.tier, { hp: t.hp, invested: t.invested }); tw.mode = t.mode || 'first'; tw.kills = t.kills || 0; }
+  G.run.materials = s.run.materials ?? START_MATERIALS; G.run.buildings = Object.assign({}, s.run.buildings); G.run.ruins = Object.assign({}, s.run.ruins);
+  for (const id in G.run.buildings) { const p = plotById(id); if (p) spawnBuilding(G.run.buildings[id].type, p, G.run.buildings[id].tier); }
+  recalcKeep();
+  for (const t of s.towers) { const tw = placeTower(t.type, t.cx, t.cy, t.tier, { hp: t.hp, invested: t.invested, plot: t.plot, matInvested: t.mat }); tw.mode = t.mode || 'first'; tw.kills = t.kills || 0; }
   G.run.walls = Object.assign({}, s.run.walls);
   for (const f of s.forts) placeFort(f.type, f.cx, f.cy, { hp: f.hp, site: f.site, wtier: f.wt });
   const summonVals: Record<string, number> = {};
@@ -272,7 +279,10 @@ function waveCleared() {
   let interest = 0;
   if (metaLv('s_interest')) { interest = Math.min(Math.round(metaLv('s_interest') * 80 * bountyMult(r.wave)), Math.floor(r.souls * metaLv('s_interest') * 0.03)); r.souls += interest; }
   const revived = reviveFallen();
-  msg(`Wave ${r.wave} repelled. +${bonus} souls${interest ? `, +${interest} interest` : ''}${revived ? ` · ${revived} fallen undead rise again` : ''}.`, PAL.necro);
+  const mats = materialsIncome(r.wave, !!(G.wave && G.wave.boss));
+  r.materials += mats;
+  const rebuilt = rebuildRuins();
+  msg(`Wave ${r.wave} repelled. +${bonus} souls, +${mats} materials${interest ? `, +${interest} interest` : ''}${revived ? ` · ${revived} fallen undead rise again` : ''}${rebuilt ? ` · ${rebuilt} tower${rebuilt > 1 ? 's' : ''} rebuilt` : ''}.`, PAL.necro);
   if (!G.wave.keepDamaged && G.wave.total >= 10) G.stats.flawless = true;
   G.stats.bestWave = Math.max(G.stats.bestWave, r.wave);
   G.keep.hp = Math.min(G.keep.maxHp, G.keep.hp + G.keep.maxHp * 0.1);
@@ -286,8 +296,8 @@ function waveCleared() {
 }
 
 // ---------------- spells ----------------
-export function spellCd(id: string) { return SPELLS[id].cd * G.run.m.spellCd * (1 - metaLv('a_cd') * 0.05) * (G.run.mods.leg_crown ? 0.6 : 1); }
-export function spellPower() { const r = G.run; return (1 + r.level * 0.08) * Math.pow(1.085, r.wave) * (1 + r.m.spellDmg + metaLv('a_dmg') * 0.12 + (r.mods.leg_crown ? 0.6 : 0)) * globalDmg(); }
+export function spellCd(id: string) { return SPELLS[id].cd * G.run.m.spellCd * (1 - metaLv('a_cd') * 0.05) * (G.run.mods.leg_crown ? 0.6 : 1) * (1 - 0.08 * bld('sanctum')); }
+export function spellPower() { const r = G.run; return (1 + r.level * 0.08) * Math.pow(1.085, r.wave) * (1 + r.m.spellDmg + metaLv('a_dmg') * 0.12 + (r.mods.leg_crown ? 0.6 : 0)) * globalDmg() * (1 + 0.15 * bld('sanctum')); }
 export function canCast(id: string) { const r = G.run; return (G.phase === 'wave' || G.phase === 'prep') && (r.spellCd[id] || 0) <= 0 && r.souls >= SPELLS[id].cost; }
 
 export function castSpell(id: string, x?: number, y?: number) {

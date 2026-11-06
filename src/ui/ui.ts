@@ -8,13 +8,15 @@ import { PAL, KEEP } from '../config/constants';
 import { SHEETS } from '../config/manifest';
 import { TOWERS, TOWER_ORDER, FORTS, FORT_ORDER, WALL_TIERS, WALL_MAX_TIER } from '../data/towers';
 import { siteById, siteTier, siteUpgradeCost, siteRepairCost, siteHp, upgradeSite, repairSite } from '../systems/ramparts';
+import { BUILDINGS, BUILDING_ORDER, TOWER_MAT } from '../data/buildings';
+import { bld, towerMatCost, towerUpgradeCost, upgradeTowerMat, demolishTower, buildingUpgradeCost, upgradeBuilding, materialsIncome } from '../systems/keep';
 import { UNITS, UNIT_ORDER, SUMMONS } from '../data/units';
 import { unearthCost, SPELLS, SPELL_ORDER, WELL } from '../data/spells';
 import { ENEMIES, BOSSES } from '../data/enemies';
 import { META, META_BRANCHES, META_BY_ID, metaCost, ACHIEVEMENTS, CONTENT_GATES } from '../data/meta';
 import { FORTRESSES } from '../data/world';
 import { RARITY, rollCards, applyCard } from '../systems/cards';
-import { metaLv, contentAvailable, towerStats, recruitCost, towerCost, fortCost, squadSize, applyUnitStats, towerMaxHp } from '../systems/stats';
+import { metaLv, contentAvailable, towerStats, recruitCost, fortCost, squadSize, applyUnitStats, towerMaxHp } from '../systems/stats';
 import { spawnUnit, removeStructure, addRing, explosion } from '../systems/combat';
 import { spawnSquad, unearthUnit, lockedUnitTypes, startWave, previewWave, castSpell, canCast, spellCd, buyWell, wellCost, wellAvailable, newCampaign, loadRun } from '../systems/campaign';
 import { essenceBreakdown, buyMeta, endCampaign, checkAchievements, codexSee } from '../systems/progression';
@@ -55,6 +57,8 @@ function spriteIcon(key: string, frame = 0, box = 32) {
 }
 const unitIcon = (type: string, box = 34) => { const t = G.run ? G.run.unitTier[type] || 0 : 0; return spriteIcon(UNITS[type].tiers[t].spr, 0, box); };
 const towerIcon = (type: string, tier = 0, box = 34) => spriteIcon('tower_' + type, tier * 4, box);
+const buildingIcon = (type: string, tier = 0, box = 34) => spriteIcon('building_' + type, tier * 4, box);
+const MAT = () => icon('materials');
 
 export const UI: any = {
   tab: 'towers', collapsed: false, last: 0, lichT: 0, typing: null as any, infoKey: '', cards: null as any[], banishMode: false,
@@ -67,6 +71,7 @@ export const UI: any = {
         <div class="stat" id="s-wave" data-tip="wave"></div>
         <div class="stat lvl" data-tip="level"><span id="s-level"></span><div class="bar"><i id="s-xp"></i></div></div>
         <div class="stat" id="s-souls" data-tip="souls"></div>
+        <div class="stat" id="s-mat" data-tip="materials"></div>
         <div class="stat" id="s-ess" data-tip="essence"></div>
         <div class="stat keep" data-tip="keep">${icon('keep')}<div class="bar big"><i id="s-keep"></i><b id="s-keeptxt"></b></div></div>
         <div class="stat" id="s-enemies" data-tip="enemies"></div>
@@ -86,7 +91,7 @@ export const UI: any = {
       <div id="toasts" class="hud-el"></div>
       <div id="spellbar" class="panel hud-el"></div>
       <div id="buildbar" class="panel hud-el">
-        <div class="tabs"><button data-tab="towers">Towers</button><button data-tab="fort">Fortify</button><button data-tab="army">Army</button><span class="spacer"></span><button class="close" id="b-collapse" title="Show/hide (B)">▼ Hide</button></div>
+        <div class="tabs"><button data-tab="towers" title="Towers on the keep's foundations (materials)">Towers</button><button data-tab="buildings" title="Keep buildings: permanent bonuses (materials)">Buildings</button><button data-tab="fort">Fortify</button><button data-tab="army">Army</button><span class="spacer"></span><button class="close" id="b-collapse" title="Show/hide (B)">▼ Hide</button></div>
         <div id="buildlist"></div>
       </div>
       <div id="speech" class="hidden"></div>
@@ -120,7 +125,8 @@ export const UI: any = {
     switch (k) {
       case 'wave': return `<b>Wave ${r.wave}</b><br>${G.phase === 'prep' ? 'Preparing. Build, recruit, then begin the next wave.' : G.wave ? G.wave.theme.name : ''}`;
       case 'level': return `<b>Level ${r.level}</b><br>XP ${Math.floor(r.xp)} / ${r.xpNext}<br>Each level grants a choice of 3 dark upgrades.`;
-      case 'souls': return `<b>Souls</b><br>Harvested from slain mortals. Spend them on towers, troops and the Soul Well.`;
+      case 'souls': return `<b>Souls</b><br>Harvested from slain mortals. Spend them on your undead host, ramparts, fortifications, spells and the Soul Well.`;
+      case 'materials': return `<b>Materials</b><br>Stone and bone for the keep's builders. Earned slowly after every repelled wave (next: +${materialsIncome(G.run.wave + 1, !!previewWave(G.run.wave + 1).boss)}), more for bosses and with a Bone Quarry.<br>Spend them on <b>towers</b> and <b>keep buildings</b> on the foundations around the keep (Keep tab).`;
       case 'essence': return `<b>Life Essence</b><br>Permanent currency for the Phylactery.<br>Projected from this campaign: ${essenceBreakdown().total}`;
       case 'keep': return `<b>The Keep</b><br>${fmt(G.keep.hp)} / ${fmt(G.keep.maxHp)}<br>If it falls, the campaign ends.`;
       case 'enemies': return `<b>Mortals on the field</b>`;
@@ -161,6 +167,7 @@ export const UI: any = {
     $('#s-level').innerHTML = `<span class="lbl">Lv</span> ${r.level}`;
     ($('#s-xp') as HTMLElement).style.width = (r.xp / r.xpNext) * 100 + '%';
     $('#s-souls').innerHTML = `${SOUL()} ${fmt(r.souls)}`;
+    $('#s-mat').innerHTML = `${MAT()} ${fmt(r.materials)}`;
     $('#s-ess').innerHTML = `${ESS()} ${fmt(G.meta.essence)}`;
     const kp = $('#s-keep'); kp.style.width = clamp((G.keep.hp / G.keep.maxHp) * 100, 0, 100) + '%'; kp.className = G.keep.hp / G.keep.maxHp < 0.3 ? 'low' : '';
     $('#s-keeptxt').textContent = fmt(Math.max(0, Math.ceil(G.keep.hp)));
@@ -178,7 +185,7 @@ export const UI: any = {
     if (bb && !bb.dead) { $('#bossbar').classList.remove('hidden'); $('#b-name').textContent = bb.name; $('#b-title').textContent = bb.title || ''; $('#b-hp').style.width = (bb.hp / bb.maxHp) * 100 + '%'; }
     else $('#bossbar').classList.add('hidden');
     let obj = '';
-    if (G.phase === 'prep') { const pv = previewWave(r.wave + 1); obj = r.wave === 0 ? 'The crusade marches from the <b>east</b>. Build towers along the roads, then <b>Begin Wave 1</b>.' : `Prepare for wave ${r.wave + 1}.` + (pv.boss ? ` <b class="bad">Boss: ${pv.boss}</b>` : '') + (pv.newLane ? ` <b class="bad">New road: ${pv.newLane.name}!</b>` : ''); }
+    if (G.phase === 'prep') { const pv = previewWave(r.wave + 1); obj = r.wave === 0 ? 'The crusade marches from the <b>east</b>. Raise your host (Army tab), spend materials on the keep\'s foundations (Keep tab), then <b>Begin Wave 1</b>.' : `Prepare for wave ${r.wave + 1}.` + (pv.boss ? ` <b class="bad">Boss: ${pv.boss}</b>` : '') + (pv.newLane ? ` <b class="bad">New road: ${pv.newLane.name}!</b>` : ''); }
     else if (G.phase === 'wave') obj = G.wave.boss ? `Destroy <b>${G.wave.boss.name}</b>.` : `Repel the ${G.wave.theme.name}.`;
     const nb = BOSSES.find(b => b.wave > r.wave);
     if (nb) obj += `<br><span class="dim">Next boss: ${nb.name} — wave ${nb.wave}</span>`;
@@ -228,21 +235,32 @@ export const UI: any = {
     document.querySelectorAll('.tabs button[data-tab]').forEach((b: HTMLElement) => b.classList.toggle('on', b.dataset.tab === this.tab && !this.collapsed));
     const L = $('#buildlist'); L.innerHTML = '';
     const r = G.run;
-    const card = (iconHtml: string, name: string, cost: number | null, tip: string, onclick: (e: MouseEvent) => void, extra = '', on = false) => {
-      const b = h('button', 'bitem' + (on ? ' on' : ''), `<div class="bico">${iconHtml}</div><div class="bname">${name}</div><div class="bcost">${cost != null ? SOUL() + fmt(cost) : ''}</div>${extra}`);
-      b.dataset.cost = '' + (cost || 0);
+    const card = (iconHtml: string, name: string, cost: number | null, tip: string, onclick: (e: MouseEvent) => void, extra = '', on = false, mat = false) => {
+      const b = h('button', 'bitem' + (on ? ' on' : ''), `<div class="bico">${iconHtml}</div><div class="bname">${name}</div><div class="bcost${mat ? ' mat' : ''}">${cost != null ? (mat ? MAT() : SOUL()) + fmt(cost) : ''}</div>${extra}`);
+      b.dataset.cost = '' + (cost || 0); if (mat) b.dataset.mat = '1';
       b.onclick = onclick as any;
       b.onmouseenter = () => this.showTip(b, tip); b.onmouseleave = () => this.hideTip();
       L.appendChild(b); return b;
     };
+    G.showPlots = (this.tab === 'towers' || this.tab === 'buildings') && !this.collapsed;
     if (this.tab === 'towers') {
       for (const t of TOWER_ORDER) {
         if (!r.unlockedTowers.includes(t)) continue;
-        const d = TOWERS[t];
-        card(towerIcon(t), d.name, towerCost(t), towerTip(t), () => { G.build = { kind: 'tower', type: t, cost: towerCost(t) }; G.selected = null; sfx('click'); this.renderBuild(); }, '', G.build && G.build.type === t);
+        const d = TOWERS[t], cost = towerMatCost(t);
+        card(towerIcon(t), d.name, cost, towerTip(t), () => { G.build = { kind: 'tower', type: t, cost }; G.selected = null; sfx('click'); this.renderBuild(); }, '', G.build && G.build.kind === 'tower' && G.build.type === t, true);
       }
       const locked = TOWER_ORDER.filter(t => !r.unlockedTowers.includes(t)).length;
-      if (locked) L.appendChild(h('div', 'bnote', `${locked} more tower${locked > 1 ? 's' : ''} can be unlocked through level-ups${TOWER_ORDER.some(t => !contentAvailable('tower', t)) ? ' and the Phylactery' : ''}.`));
+      if (locked) L.appendChild(h('div', 'bnote', `${locked} more tower${locked > 1 ? 's' : ''} can be unlocked through level-ups${TOWER_ORDER.some(t => !contentAvailable('tower', t)) ? ' and the Phylactery' : ''}. Towers cost ${MAT()} materials, earned after each wave.`));
+    } else if (this.tab === 'buildings') {
+      for (const k of BUILDING_ORDER) {
+        const d = BUILDINGS[k], lv = bld(k), ent = G.buildings.find((o: any) => o.type === k);
+        const cost = lv >= 3 ? null : d.cost[lv];
+        const extra = lv ? `<div class="evo">${['I', 'II', 'III'][lv - 1]}</div>` : '';
+        card(buildingIcon(k, Math.max(0, lv - 1)), lv ? d.tiers[lv - 1] : d.name, cost, buildingTip(k), () => {
+          if (ent) { G.selected = ent; G.build = null; this.infoKey = ''; sfx('click'); this.renderBuild(); return; }
+          G.build = { kind: 'building', type: k, cost: d.cost[0] }; G.selected = null; sfx('click'); this.renderBuild();
+        }, extra, !!(G.build && G.build.kind === 'building' && G.build.type === k), true);
+      }
     } else if (this.tab === 'fort') {
       const sites = G.map.sites || [], built = sites.filter((s: any) => siteTier(s) > 0).length;
       card(icon('wall', 2, 'pix'), 'Ramparts', null, `<b>Ramparts</b><br>Walls stand on fixed sites: a ring around the keep and two defensive lines across the field.<br>Click a site to raise a <b>Bone Palisade</b>, click again for a <b>Stone Wall</b>, then a <b>Bone Rampart</b>. Close every segment of a line and the crusade must breach it; leave a gap and they funnel through it.<br><span class="dim">${built}/${sites.length} sites built. Right-click to stop.</span>`,
@@ -273,7 +291,7 @@ export const UI: any = {
   },
   refreshAffordability() {
     if (!G.run) return;
-    document.querySelectorAll('#buildlist .bitem').forEach((b: HTMLElement) => b.classList.toggle('poor', +b.dataset.cost > G.run.souls));
+    document.querySelectorAll('#buildlist .bitem').forEach((b: HTMLElement) => b.classList.toggle('poor', +b.dataset.cost > (b.dataset.mat ? G.run.materials : G.run.souls)));
     document.querySelectorAll('#buildlist .evo[data-evo]').forEach((e: HTMLElement) => { const u = e.dataset.evo, t = G.run.unitTier[u] || 0, nx = UNITS[u].tiers[t + 1]; e.classList.toggle('poor', !nx || nx.cost > G.run.souls); });
   },
 
@@ -297,7 +315,7 @@ export const UI: any = {
     const s = G.selected, P = $('#infopanel');
     if (!s || s.dead) { P.classList.add('hidden'); G.selected = null; return; }
     if (s.kind === 'site') { this.renderSiteInfo(s, P); return; }
-    const key = s.id + ':' + (s.tier || 0) + ':' + Math.round(s.hp) + ':' + (s.mode || '') + ':' + Math.floor(G.run.souls / 10) + ':' + (s.kills || 0) + ':' + (s.silT > 0);
+    const key = s.id + ':' + (s.tier || 0) + ':' + Math.round(s.hp) + ':' + (s.mode || '') + ':' + Math.floor(G.run.souls / 10) + ':' + G.run.materials + ':' + (s.kills || 0) + ':' + (s.silT > 0);
     if (this.infoKey === key && !P.classList.contains('hidden')) return;
     this.infoKey = key;
     P.classList.remove('hidden');
@@ -309,15 +327,21 @@ export const UI: any = {
         <div class="istats">${d.dmg ? `<span>Damage</span><b>${fmt(st.dmg)}</b>` : ''}<span>Range</span><b>${Math.round(st.range)}</b>${d.dmg ? `<span>Attack every</span><b>${st.cd.toFixed(2)}s</b>` : ''}<span>Durability</span><b>${fmt(s.hp)}/${fmt(s.maxHp)}</b></div>
         <div class="idesc">${d.desc}${s.tier ? `<br><span class="good">${d.evo.slice(1, s.tier + 1).join(' ')}</span>` : ''}${s.silT > 0 ? '<br><span class="bad">SILENCED</span>' : ''}</div>
         <div class="ibtns">
-          ${next ? `<button class="btn ${needEvo ? 'locked' : ''}" id="i-up">${s.tier === 1 ? 'Evolve' : 'Upgrade'}: ${next.name}<small>${SOUL()} ${fmt(next.cost)} — ${d.evo[s.tier + 1]}</small></button>` : '<div class="dim">Fully evolved.</div>'}
+          ${next ? `<button class="btn ${needEvo ? 'locked' : ''}" id="i-up">${s.tier === 1 ? 'Evolve' : 'Upgrade'}: ${next.name}<small>${MAT()} ${fmt(towerUpgradeCost(s))} — ${d.evo[s.tier + 1]}</small></button>` : '<div class="dim">Fully evolved.</div>'}
           ${d.dmg && s.type !== 'abomination' ? `<button class="btn sm" id="i-mode">Target: ${s.mode}</button>` : ''}
           ${s.hp < s.maxHp ? `<button class="btn sm" id="i-rep">Repair ${SOUL()}${repairCost}</button>` : ''}
-          <button class="btn sm red" id="i-sell">Dismantle +${fmt(Math.floor(towerInvested(s) * 0.6))}</button>
+          <button class="btn sm red" id="i-sell">Dismantle +${MAT()}${fmt(Math.floor((s.matInvested || towerMatCost(s.type)) * 0.5))}</button>
         </div>`;
-      if (next) $('#i-up').onclick = () => { if (needEvo) { msgFn('Evolution requires Tower Apotheosis (Phylactery).', '#ff8080'); sfx('error'); return; } upgradeTower(s); };
+      if (next) $('#i-up').onclick = () => { if (needEvo) { msgFn('Evolution requires Tower Apotheosis (Phylactery).', '#ff8080'); sfx('error'); return; } if (upgradeTowerMat(s)) { explosion(s.x, s.y - 20, 30, PAL.necro); if (s.tier === 2) checkAchievements(); saveRunSoon(); } this.infoKey = ''; };
       const m = $('#i-mode'); if (m) m.onclick = () => { s.mode = s.mode === 'first' ? 'strongest' : s.mode === 'strongest' ? 'closest' : 'first'; sfx('click'); this.infoKey = ''; };
       const rp = $('#i-rep'); if (rp) rp.onclick = () => { if (G.run.souls < repairCost) { sfx('error'); return; } G.run.souls -= repairCost; s.hp = s.maxHp; sfx('build'); this.infoKey = ''; };
-      $('#i-sell').onclick = () => { G.run.souls += Math.floor(towerInvested(s) * 0.6); removeStructure(s); sfx('crumble'); saveRunSoon(); P.classList.add('hidden'); };
+      $('#i-sell').onclick = () => { demolishTower(s); saveRunSoon(); P.classList.add('hidden'); this.renderBuild(); };
+    } else if (s.kind === 'building') {
+      const d = BUILDINGS[s.type], lv = s.tier + 1, up = buildingUpgradeCost(s);
+      P.innerHTML = `<span class="x" id="i-x">✕</span><div class="ihead">${buildingIcon(s.type, s.tier, 44)}<div><b>${d.tiers[s.tier]}</b><div class="dim">${d.name} · level ${lv}/3</div></div></div>
+        <div class="idesc">${d.desc}<br><span class="good">Now: ${lv} × (${d.per}).</span></div>
+        <div class="ibtns">${up ? `<button class="btn" id="i-up">Upgrade: ${d.tiers[s.tier + 1]}<small>${MAT()} ${fmt(up)} — another ${d.per}</small></button>` : '<div class="dim">Fully built.</div>'}</div>`;
+      const ub = $('#i-up'); if (ub) ub.onclick = () => { if (upgradeBuilding(s)) { explosion(s.x, s.y - 16, 30, PAL.gold); saveRunSoon(); this.renderBuild(); } this.infoKey = ''; };
     } else if (s.kind === 'fort') {
       const d = s.def, repairCost = d.hp ? Math.ceil(((s.maxHp - s.hp) / s.maxHp) * d.cost * 0.6) : 0;
       P.innerHTML = `<span class="x" id="i-x">✕</span><div class="ihead">${icon(d.icon, 3, 'pix')}<div><b>${d.name}</b></div></div>
@@ -574,9 +598,10 @@ export const UI: any = {
   showHelp(fromGame?: boolean) {
     this.screen(`<h1>How to Rule Eternally</h1><div class="help">
       <p><b>Goal.</b> The crusade marches from the <b>east</b> along the roads toward your keep on the far west. If the keep falls the campaign ends — but Life Essence lets your next stronghold rise stronger.</p>
-      <p><b>Build.</b> Pick a tower in the bottom drawer and click the battlefield. Walls reroute enemies (they batter through if you seal a road). Hold the mouse to paint walls. The drawer can be hidden with ▼ Hide or the B key.</p>
+      <p><b>The keep (materials).</b> After every repelled wave you earn a few <b>materials</b> (more for bosses). Spend them in the <b>Towers</b> and <b>Buildings</b> tabs: pick one, then click a free foundation around the keep. Towers grow stronger every wave and are rebuilt after a wave if they fall. Buildings give permanent bonuses to every undead you have and will have (damage, health, souls, squad size, spells, regeneration, attack speed, more materials). Click a building or tower to upgrade it.</p>
+      <p><b>Fortify (souls).</b> <b>Ramparts</b> stand on fixed sites: a ring around the keep and two lines across the field. Click a site to build, click again to upgrade. A closed line must be breached; gaps funnel the crusade. Barricades, traps and wards are painted freely. The drawer can be hidden with ▼ Hide or the B key.</p>
       <p><b>Army.</b> Recruit undead in the <b>Army</b> tab — each purchase raises a whole squad (5 or more) and there is no army limit. They fight on their own and can strike anything, flying or not: they hold a line before the gate, rush to wherever mortals press hardest, ranged troops stay behind the melee, and wounded soldiers fall back to the keep to mend. Every undead slain during a wave rises again when the wave is repelled.</p>
-      <p><b>Souls & the Soul Well (E).</b> Kills give souls and experience. Each level offers three upgrades. In the Soul Well, <b>Ascensions</b> multiply your power and can be bought endlessly; <b>Call of the Crypt</b> raises a squad of a random undead type, and <b>summons</b> raise packs of great creatures that stay forever — but the crusade's <b>Fervor</b> rises to match your whole host. Upgrade offers never show two tiers of the same upgrade.</p>
+      <p><b>Souls & the Soul Well (E).</b> Kills give souls and experience. Each level offers three upgrades. In the Soul Well, <b>Ascensions</b> multiply your power and can be bought endlessly; <b>Unearth a Crypt</b> lets you choose a new undead type, and <b>summons</b> raise packs of great creatures that stay forever. The crusade's <b>Fervor</b> rises a fixed amount every wave, whatever the size of your host. Upgrade offers never show two tiers of the same upgrade.</p>
       <p><b>Spells.</b> Keys 1–8. Some need a target area.</p>
       <p><b>Controls.</b> Drag with right/middle mouse or use WASD/arrows to pan. Wheel zooms. Space pauses, F cycles speed, Enter begins the wave, Esc closes windows.</p>
     </div><div class="center"><button class="btn big" id="h-ok">${fromGame ? 'To war' : 'Back'}</button></div>`, 'helpscreen');
@@ -638,11 +663,15 @@ export const UI: any = {
 import { DIALOGUE } from '../data/meta';
 const DIALOGUE_REF = DIALOGUE;
 
-function towerInvested(t: any) { let c = t.invested || TOWERS[t.type].cost; for (let i = 1; i <= t.tier; i++) c += TOWERS[t.type].tiers[i].cost; return c; }
 function evoText(t: any) { const p: string[] = []; if (t.hp) p.push(`HP ×${t.hp}`); if (t.dmg) p.push(`Damage ×${t.dmg}`); if (t.armor) p.push(`+${Math.round(t.armor * 100)}% armor`); if (t.range) p.push(`Range ×${t.range}`); if (t.spd) p.push(`Speed ×${t.spd}`); return p.join(' · '); }
 function towerTip(type: string) {
   const d = TOWERS[type];
-  return `<b>${d.name}</b><br>${d.desc}<br><span class="dim">${d.dmg ? `Damage ${d.dmg} · ` : ''}Range ${d.range}${d.dmg ? ` · every ${d.cd}s` : ''} · ${d.dtype}</span><br><span class="dim">Evolves: ${d.tiers.slice(1).map((t: any) => t.name).join(' → ')}</span>`;
+  const m = TOWER_MAT[type];
+  return `<b>${d.name}</b><br>${d.desc}<br><span class="dim">${d.dmg ? `Damage ${d.dmg} · ` : ''}Range ${d.range}${d.dmg ? ` · every ${d.cd}s` : ''} · ${d.dtype}</span><br><span class="dim">Evolves: ${d.tiers.slice(1).map((t: any, i: number) => `${t.name} (${m[i + 1]})`).join(' → ')}</span><br><span class="dim">Built on a foundation near the keep for ${m[0]} materials. Grows stronger every wave; if it falls, it is rebuilt after the wave.</span>`;
+}
+function buildingTip(type: string) {
+  const d = BUILDINGS[type], lv = bld(type);
+  return `<b>${lv ? d.tiers[lv - 1] : d.name}</b>${lv ? ` <span class="dim">(level ${lv}/3)</span>` : ''}<br>${d.desc}<br><span class="good">Each level: ${d.per}.</span><br><span class="dim">Applies to every undead you command now and later. Levels: ${d.cost.join(' / ')} materials.${lv ? ' Click to select and upgrade.' : ' Click, then a free foundation.'}</span>`;
 }
 // ---------------- unit information (tooltips, details, comparisons) ----------------
 function unitNow(type: string) {
@@ -752,17 +781,6 @@ function evolveUnit(type: string) {
   G.units.filter((u: any) => u.type === type && !u.summon).forEach((u: any) => { applyUnitStats(u); addRing(u.x, u.y, 2, 16, PAL.necro, 0.5); });
   msgFn(`Your ${d.name}s become ${next.name}!`, PAL.necro); sfx('levelup');
   UI.renderBuild(); saveRunSoon();
-}
-export function upgradeTower(t: any) {
-  const d = t.def, next = d.tiers[t.tier + 1], r = G.run;
-  if (!next) return;
-  if (r.souls < next.cost) { sfx('error'); msgFn('Not enough souls.', '#ff8080'); return; }
-  r.souls -= next.cost; t.tier++;
-  const old = t.maxHp; t.maxHp = towerMaxHp(t); t.hp += t.maxHp - old;
-  if (t.tier === 2) { G.stats.evolved = true; checkAchievements(); }
-  explosion(t.x, t.y - 20, 30, PAL.necro);
-  msgFn(`${next.name} awakens.`, PAL.necro); sfx('levelup');
-  UI.infoKey = ''; saveRunSoon();
 }
 export function toMenu() {
   UI.closeModal();

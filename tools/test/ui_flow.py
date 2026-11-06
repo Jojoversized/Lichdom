@@ -19,10 +19,22 @@ with sync_playwright() as p:
         pg.mouse.move(sx, sy); pg.wait_for_timeout(60); pg.mouse.down(button=button); pg.mouse.up(button=button); pg.wait_for_timeout(80)
     # build a tower with real clicks
     pg.click('#buildlist .bitem >> nth=0'); pg.wait_for_timeout(100)
-    sx, sy = pg.evaluate("() => window.__LICH.game.scene.getScene('game').worldToScreen(300, 260)")
+    px, py = pg.evaluate("() => { const G = window.__LICH.G, d = p => (p.x - G.camera.x) ** 2 + (p.y - G.camera.y) ** 2; const p = G.map.plots.filter(p => p.front).sort((a, b) => d(a) - d(b))[0]; return [p.x, p.y]; }")
+    sx, sy = pg.evaluate(f"() => window.__LICH.game.scene.getScene('game').worldToScreen({px}, {py})")
     pg.mouse.move(sx, sy); pg.wait_for_timeout(200); shot(pg, 'a_ghost')
-    world_click(300, 260)
-    st = pg.evaluate("() => ({towers: window.__LICH.G.towers.length, sel: !!window.__LICH.G.selected})"); print('after tower click', st)
+    world_click(px, py)
+    st = pg.evaluate("() => ({towers: window.__LICH.G.towers.length, sel: !!window.__LICH.G.selected, mat: window.__LICH.G.run.materials})"); print('after tower click', st); assert st['towers'] == 1
+    # a keep building on a rear foundation (materials topped up for the test)
+    pg.evaluate("() => { window.__LICH.G.run.materials += 20; window.__LICH.UI.renderBuild(); }")
+    bx, by = pg.evaluate("() => { const G = window.__LICH.G, d = p => (p.x - G.camera.x) ** 2 + (p.y - G.camera.y) ** 2; const p = G.map.plots.filter(p => !p.front).sort((a, b) => d(a) - d(b))[0]; return [p.x, p.y]; }")
+    pg.click('.tabs button[data-tab=buildings]'); pg.wait_for_timeout(120)
+    pg.click('#buildlist .bitem >> nth=0'); pg.wait_for_timeout(100)   # first building card (Bone Forge)
+    world_click(bx, by)
+    bs = pg.evaluate("() => ({buildings: window.__LICH.G.run.buildings, forge: window.__LICH.bld('forge'), sel: window.__LICH.G.selected && window.__LICH.G.selected.kind})"); print('building:', bs); assert bs['forge'] == 1
+    pg.click('#i-up'); pg.wait_for_timeout(150)
+    print('forge after upgrade:', pg.evaluate("() => window.__LICH.bld('forge')"))
+    shot(pg, 'a2_building')
+    pg.click('.tabs button[data-tab=towers]'); pg.wait_for_timeout(100)
     shot(pg, 'b_info')
     # collapse the drawer via its button, then reopen with a tab
     pg.click('#b-collapse'); pg.wait_for_timeout(150)
@@ -71,7 +83,7 @@ with sync_playwright() as p:
     pg.reload(); pg.wait_for_timeout(2500)
     print('continue button:', pg.evaluate("() => !!document.querySelector('#m-cont')"))
     pg.click('#m-cont'); pg.wait_for_timeout(800)
-    print('resumed', pg.evaluate("() => { const G = window.__LICH.G; return {wave: G.run.wave, towers: G.towers.length, units: G.units.length, summons: G.units.filter(u=>u.summon).length, walls: G.run.walls, wallCells: G.forts.filter(f=>f.site).length} }"))
+    print('resumed', pg.evaluate("() => { const G = window.__LICH.G; return {wave: G.run.wave, towers: G.towers.length, units: G.units.length, summons: G.units.filter(u=>u.summon).length, walls: G.run.walls, wallCells: G.forts.filter(f=>f.site).length, mat: G.run.materials, buildings: G.run.buildings, bviews: G.buildings.length} }"))
     pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
     if pg.evaluate("() => !!document.querySelector('#p-codex')"):
         pg.click('#p-codex'); pg.wait_for_timeout(300); shot(pg, 'i_codex')

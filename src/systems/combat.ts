@@ -105,7 +105,7 @@ function championName() {
 
 // ---------------- structures ----------------
 export function placeTower(type: string, cx: number, cy: number, tier = 0, opts: any = {}): Ent {
-  const t = Object.assign(baseEnt('tower', (cx + 1) * CELL, (cy + 1) * CELL + 6), { type, def: TOWERS[type], tier, cx, cy, team: 'u' as const, blocks: true, mode: 'first', kills: 0, silT: 0, hasteT: 0, haste: 0, abT: 3, abT2: 5, rad: 12, invested: opts.invested || TOWERS[type].cost });
+  const t = Object.assign(baseEnt('tower', (cx + 1) * CELL, (cy + 1) * CELL + 6), { type, def: TOWERS[type], tier, cx, cy, team: 'u' as const, blocks: true, mode: 'first', kills: 0, silT: 0, hasteT: 0, haste: 0, abT: 3, abT2: 5, rad: 12, invested: opts.invested || TOWERS[type].cost, plot: opts.plot || null, matInvested: opts.matInvested || 0 });
   t.maxHp = towerMaxHp(t); t.hp = opts.hp ?? t.maxHp;
   for (let y = cy; y < cy + 2; y++) for (let x = cx; x < cx + 2; x++) G.map.struct[cellIdx(x, y)] = t;
   G.map.dirty = true;
@@ -218,10 +218,12 @@ export function killEntity(t: any, src: any, dtype?: string) {
   if (t.kind === 'enemy') onEnemyDeath(t, src, dtype);
   else if (t.kind === 'unit') onUnitDeath(t);
   else if (t.kind === 'tower' || t.kind === 'fort') {
+    // a fallen tower leaves a ruin on its plot; it rises again when the wave is repelled
+    if (t.kind === 'tower' && t.plot && G.run) G.run.ruins[t.plot] = { type: t.type, tier: t.tier, mat: t.matInvested || 0, mode: t.mode, kills: t.kills };
     t.dead = false; removeStructure(t);
     for (let i = 0; i < 24; i++) addParticle(t.x + rnd(-10, 10), t.y - rnd(0, 20), rnd(-40, 40), rnd(-60, -10), pick([PAL.stone, PAL.stoneL, PAL.stoneD]), 1.2, 'p', 2, 140);
     addRing(t.x, t.y, 4, 30, '#888888', 0.4); sfx('crumble');
-    if (t.kind === 'tower') { msg(`${towerStats(t).name} has been destroyed!`, '#ff6060'); G.shake = 4; }
+    if (t.kind === 'tower') { msg(`${towerStats(t).name} has fallen: it will be rebuilt after the wave.`, '#ff6060'); G.shake = 4; }
     stampDecal(t.x, t.y, 'rubble');
   }
 }

@@ -4,7 +4,7 @@
    cover the HUD, so popups are never overlapped by other interface pieces. */
 :root { --stone: none; --green: #5dff7a; --greenD: #1f9c3e; --gold: #d6a940; --panel: #121115; --edge: #2e2b33; --edgeL: #46424d; }
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; background: #050506; overflow: hidden; color: #cfc8b8; font-family: 'Pixelify Sans', 'Courier New', monospace; font-size: 14px; user-select: none; }
+html, body { margin: 0; height: 100%; background: #050506; overflow: hidden; color: #cfc8b8; font-family: 'Lich Numerals', 'Pixelify Sans', 'Courier New', monospace; font-size: 14px; user-select: none; }
 #game-root { position: absolute; inset: 0; }
 #game-root canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
 img.pix { image-rendering: pixelated; image-rendering: crisp-edges; vertical-align: middle; }
@@ -46,7 +46,7 @@ b { color: #eee6d4; font-weight: 600; }
 .bar.big b { position: absolute; inset: 0; text-align: center; font-size: 11px; line-height: 12px; color: #fff; text-shadow: 1px 1px 0 #000; }
 .lvl .bar i { background: var(--gold); }
 #bossbar { position: absolute; top: 52px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; pointer-events: none; }
-#bossbar .bname { font-family: 'Jacquard 24', Georgia, serif; font-size: 26px; color: #ffe8a0; text-shadow: 2px 2px 0 #000; }
+#bossbar .bname { font-family: 'Lich Numerals', 'Jacquard 24', Georgia, serif; font-size: 26px; color: #ffe8a0; text-shadow: 2px 2px 0 #000; }
 #bossbar .btitle { font-size: 12px; color: #b0a888; }
 .bar.boss { width: 100%; height: 12px; } .bar.boss i { background: #d8b040; }
 #lichbox { position: absolute; top: 52px; left: 12px; display: flex; gap: 10px; align-items: center; padding: 8px 12px 8px 8px; width: 360px; pointer-events: none; }
@@ -95,7 +95,7 @@ b { color: #eee6d4; font-weight: 600; }
 .ibtns .btn:first-child:not(.sm) { width: 100%; }
 #speech { position: fixed; transform: translate(-50%, -100%); background: #f0e8d0; color: #1a1410; padding: 4px 8px; font-size: 13px; border: 2px solid #000; pointer-events: none; white-space: nowrap; z-index: 40; }
 #bossintro { position: fixed; left: 0; right: 0; top: 30%; text-align: center; pointer-events: none; z-index: 35; }
-.bi-name { font-family: 'Jacquard 24', Georgia, serif; font-size: 64px; color: #ffe8a0; text-shadow: 4px 4px 0 #000; }
+.bi-name { font-family: 'Lich Numerals', 'Jacquard 24', Georgia, serif; font-size: 64px; color: #ffe8a0; text-shadow: 4px 4px 0 #000; }
 .bi-title { font-size: 20px; color: #d0c8a8; text-shadow: 2px 2px 0 #000; }
 #tooltip { position: fixed; z-index: 300; max-width: 300px; background: #0c0b0e; border: 2px solid #3a3640; box-shadow: 0 0 0 1px #000; padding: 7px 10px; font-size: 12px; line-height: 1.35; pointer-events: none; }
 
@@ -105,14 +105,14 @@ b { color: #eee6d4; font-weight: 600; }
 .mbox .x { position: absolute; top: 6px; right: 10px; font-size: 18px; cursor: pointer; color: #8a8478; }
 .mbox .x:hover { color: #fff; }
 body.modal-open #topbar, body.modal-open #bossbar, body.modal-open #objective, body.modal-open #lichbox, body.modal-open #toasts, body.modal-open #infopanel, body.modal-open #speech, body.modal-open #bossintro { visibility: hidden; }
-h1, h2, h3 { font-family: 'Jacquard 24', Georgia, serif; font-weight: normal; color: #e8e0c8; margin: 4px 0 10px; text-align: center; }
+h1, h2, h3 { font-family: 'Lich Numerals', 'Jacquard 24', Georgia, serif; font-weight: normal; color: #e8e0c8; margin: 4px 0 10px; text-align: center; }
 h1 { font-size: 44px; } h2 { font-size: 32px; } h3 { font-size: 22px; color: #b8b0a0; }
 .cards { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
 .card { position: relative; width: 230px; min-height: 270px; background: #161419; border: 2px solid var(--rc); padding: 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; transition: transform .1s; }
 .card:hover { transform: translateY(-4px); box-shadow: 0 0 18px var(--rc); }
 .card .rar { font-size: 11px; color: var(--rc); text-transform: uppercase; letter-spacing: 1px; }
 .card .cico { min-height: 64px; display: flex; align-items: flex-end; }
-.card .cname { font-family: 'Jacquard 24', Georgia, serif; font-size: 26px; color: #f0e8d4; line-height: 1; }
+.card .cname { font-family: 'Lich Numerals', 'Jacquard 24', Georgia, serif; font-size: 26px; color: #f0e8d4; line-height: 1; }
 .card .cdesc { font-size: 13px; }
 .card .key { position: absolute; top: 6px; left: 8px; color: #6a6458; font-size: 12px; }
 .lvbtns { display: flex; gap: 10px; justify-content: center; align-items: center; margin-top: 12px; }
@@ -131,8 +131,8 @@ h1 { font-size: 44px; } h2 { font-size: 32px; } h3 { font-size: 22px; color: #b8
 #screen.menuscreen { background: rgba(5,5,7,.35); display: flex; flex-direction: column; align-items: center; justify-content: center; }
 body.menu .hud-el { display: none !important; }
 .title { text-align: center; margin-bottom: 18px; }
-.title .t1 { font-family: 'Jacquard 24', Georgia, serif; font-size: 140px; line-height: .85; color: #d8cfb4; text-shadow: 6px 6px 0 #000, 0 0 40px rgba(93,255,122,.35); letter-spacing: 6px; }
-.title .t2 { font-family: 'Jacquard 24', Georgia, serif; font-size: 40px; color: var(--green); text-shadow: 3px 3px 0 #000; }
+.title .t1 { font-family: 'Lich Numerals', 'Jacquard 24', Georgia, serif; font-size: 140px; line-height: .85; color: #d8cfb4; text-shadow: 6px 6px 0 #000, 0 0 40px rgba(93,255,122,.35); letter-spacing: 6px; }
+.title .t2 { font-family: 'Lich Numerals', 'Jacquard 24', Georgia, serif; font-size: 40px; color: var(--green); text-shadow: 3px 3px 0 #000; }
 .menu .btn { min-width: 300px; }
 .mstats { margin-top: 18px; color: #8a8478; text-shadow: 1px 1px 0 #000; }
 .lore { max-width: 560px; text-align: center; color: #a8a090; font-style: italic; margin: 10px auto; text-shadow: 1px 1px 0 #000; line-height: 1.4; }
@@ -193,3 +193,6 @@ img.pixd { image-rendering: auto; vertical-align: middle; }
 .uname { font-weight: bold; margin-top: 4px; }
 .udesc { font-size: 11px; color: #aaa; margin-top: 4px; }
 .btn.small { padding: 3px 8px; font-size: 11px; margin-top: 6px; }
+/* v0.6 materials */
+.bcost.mat { color: #e6d6ac; }
+#buildlist .bnote b { color: #e8dcc0; }
