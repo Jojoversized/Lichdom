@@ -15,7 +15,19 @@ npm run dev        # http://localhost:5173
 npm run build      # production build in dist/
 ```
 
-Pushes to `main` deploy automatically to GitHub Pages.
+Pushes to `main` deploy automatically to GitHub Pages (enable *Settings → Pages → Source: GitHub Actions* once).
+
+### Local setup (folder copied without git metadata)
+If your project folder was populated by Claude, turn it into a working copy of this repo:
+
+```bash
+cd "C:\Games\Lich Claude"
+git init -b main
+git remote add origin https://github.com/Jojoversized/Lichdom.git
+git fetch origin
+git reset origin/main      # keeps the files, adopts the repo history
+npm install && npm run dev
+```
 
 ## Highlights
 - 8 evolving towers, 13 undead troop types, 6 permanent summon packs (uncapped)

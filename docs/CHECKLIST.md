@@ -51,6 +51,11 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 - [x] 39 synthesized SFX as WAV assets; live ambient score with war drums during waves
 - [ ] Recorded/composed music tracks in `assets/audio/music`
 
+## Repository / workflow
+- [x] GitHub repo `Jojoversized/Lichdom`; CI build verified on GitHub Actions (npm install → assets → tsc → vite build)
+- [ ] **Enable GitHub Pages** (repo Settings → Pages → Source: *GitHub Actions*) so the deploy job can publish the playable build
+- [ ] Link the local folder `C:\Games\Lich Claude` to git (Claude's tools cannot write `.git/`): see README "Local setup"
+
 ## Known issues
 - Fonts load from Google Fonts; offline they fall back to Georgia/Courier.
 - Large summons and bosses use a scaled humanoid painter and look chunkier than small units.
