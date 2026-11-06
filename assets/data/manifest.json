@@ -1,0 +1,1749 @@
+{
+ "version": 1,
+ "generated": "tools/assets/gen-sprites.mjs",
+ "sheets": {
+  "skeleton": {
+   "file": "sprites/units/skeleton.png",
+   "fw": 26,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "units"
+  },
+  "skeleton2": {
+   "file": "sprites/units/skeleton2.png",
+   "fw": 26,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "units"
+  },
+  "skeleton3": {
+   "file": "sprites/units/skeleton3.png",
+   "fw": 26,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "units"
+  },
+  "archer": {
+   "file": "sprites/units/archer.png",
+   "fw": 26,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "units"
+  },
+  "archer2": {
+   "file": "sprites/units/archer2.png",
+   "fw": 26,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "units"
+  },
+  "archer3": {
+   "file": "sprites/units/archer3.png",
+   "fw": 26,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "units"
+  },
+  "zombie": {
+   "file": "sprites/units/zombie.png",
+   "fw": 26,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "units"
+  },
+  "zombie2": {
+   "file": "sprites/units/zombie2.png",
+   "fw": 30,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "units"
+  },
+  "zombie3": {
+   "file": "sprites/units/zombie3.png",
+   "fw": 41,
+   "fh": 39,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 26,
+   "flying": false,
+   "category": "units"
+  },
+  "pikeman": {
+   "file": "sprites/units/pikeman.png",
+   "fw": 34,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "units"
+  },
+  "pikeman2": {
+   "file": "sprites/units/pikeman2.png",
+   "fw": 34,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "units"
+  },
+  "deathknight": {
+   "file": "sprites/units/deathknight.png",
+   "fw": 30,
+   "fh": 37,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 25,
+   "flying": false,
+   "category": "units"
+  },
+  "deathknight2": {
+   "file": "sprites/units/deathknight2.png",
+   "fw": 40,
+   "fh": 49,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 26,
+   "flying": false,
+   "category": "units"
+  },
+  "bonemage": {
+   "file": "sprites/units/bonemage.png",
+   "fw": 26,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "units"
+  },
+  "acolyte": {
+   "file": "sprites/units/acolyte.png",
+   "fw": 26,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "units"
+  },
+  "wraith": {
+   "file": "sprites/units/wraith.png",
+   "fw": 26,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": true,
+   "category": "units"
+  },
+  "banshee": {
+   "file": "sprites/units/banshee.png",
+   "fw": 26,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": true,
+   "category": "units"
+  },
+  "vampire": {
+   "file": "sprites/units/vampire.png",
+   "fw": 26,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "units"
+  },
+  "abomination": {
+   "file": "sprites/units/abomination.png",
+   "fw": 64,
+   "fh": 44,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 30,
+   "flying": false,
+   "category": "units"
+  },
+  "golem": {
+   "file": "sprites/units/golem.png",
+   "fw": 64,
+   "fh": 47,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 32,
+   "flying": false,
+   "category": "units"
+  },
+  "colossus": {
+   "file": "sprites/summons/colossus.png",
+   "fw": 115,
+   "fh": 78,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 54,
+   "flying": false,
+   "category": "summons"
+  },
+  "devourer": {
+   "file": "sprites/summons/devourer.png",
+   "fw": 78,
+   "fh": 64,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 44,
+   "flying": true,
+   "category": "summons"
+  },
+  "sumabom": {
+   "file": "sprites/summons/sumabom.png",
+   "fw": 104,
+   "fh": 61,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 42,
+   "flying": false,
+   "category": "summons"
+  },
+  "militia": {
+   "file": "sprites/enemies/militia.png",
+   "fw": 34,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "enemies"
+  },
+  "footman": {
+   "file": "sprites/enemies/footman.png",
+   "fw": 26,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "enemies"
+  },
+  "shield": {
+   "file": "sprites/enemies/shield.png",
+   "fw": 26,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "enemies"
+  },
+  "knight": {
+   "file": "sprites/enemies/knight.png",
+   "fw": 27,
+   "fh": 34,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 23,
+   "flying": false,
+   "category": "enemies"
+  },
+  "cavalry": {
+   "file": "sprites/enemies/cavalry.png",
+   "fw": 42,
+   "fh": 42,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "enemies"
+  },
+  "crossbow": {
+   "file": "sprites/enemies/crossbow.png",
+   "fw": 26,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "enemies"
+  },
+  "priest": {
+   "file": "sprites/enemies/priest.png",
+   "fw": 26,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "enemies"
+  },
+  "paladin": {
+   "file": "sprites/enemies/paladin.png",
+   "fw": 28,
+   "fh": 36,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 24,
+   "flying": false,
+   "category": "enemies"
+  },
+  "inquisitor": {
+   "file": "sprites/enemies/inquisitor.png",
+   "fw": 28,
+   "fh": 36,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 24,
+   "flying": false,
+   "category": "enemies"
+  },
+  "battlemage": {
+   "file": "sprites/enemies/battlemage.png",
+   "fw": 26,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "enemies"
+  },
+  "elementalist": {
+   "file": "sprites/enemies/elementalist.png",
+   "fw": 26,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "enemies"
+  },
+  "spellbreaker": {
+   "file": "sprites/enemies/spellbreaker.png",
+   "fw": 26,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "enemies"
+  },
+  "construct": {
+   "file": "sprites/enemies/construct.png",
+   "fw": 64,
+   "fh": 47,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 32,
+   "flying": false,
+   "category": "enemies"
+  },
+  "ranger": {
+   "file": "sprites/enemies/ranger.png",
+   "fw": 26,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "enemies"
+  },
+  "assassin": {
+   "file": "sprites/enemies/assassin.png",
+   "fw": 26,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": false,
+   "category": "enemies"
+  },
+  "hunter": {
+   "file": "sprites/enemies/hunter.png",
+   "fw": 27,
+   "fh": 34,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 23,
+   "flying": false,
+   "category": "enemies"
+  },
+  "angel": {
+   "file": "sprites/enemies/angel.png",
+   "fw": 46,
+   "fh": 33,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": true,
+   "category": "enemies"
+  },
+  "griffon": {
+   "file": "sprites/enemies/griffon.png",
+   "fw": 54,
+   "fh": 42,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "flying": true,
+   "category": "enemies"
+  },
+  "b_inquisitor": {
+   "file": "sprites/bosses/b_inquisitor.png",
+   "fw": 47,
+   "fh": 58,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 40,
+   "flying": false,
+   "category": "bosses"
+  },
+  "b_archmage": {
+   "file": "sprites/bosses/b_archmage.png",
+   "fw": 47,
+   "fh": 58,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 40,
+   "flying": false,
+   "category": "bosses"
+  },
+  "b_dragonslayer": {
+   "file": "sprites/bosses/b_dragonslayer.png",
+   "fw": 57,
+   "fh": 61,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 42,
+   "flying": false,
+   "category": "bosses"
+  },
+  "b_saint": {
+   "file": "sprites/bosses/b_saint.png",
+   "fw": 69,
+   "fh": 58,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 40,
+   "flying": true,
+   "category": "bosses"
+  },
+  "b_kings": {
+   "file": "sprites/bosses/b_kings.png",
+   "fw": 62,
+   "fh": 75,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 40,
+   "flying": false,
+   "category": "bosses"
+  },
+  "b_champion": {
+   "file": "sprites/bosses/b_champion.png",
+   "fw": 79,
+   "fh": 67,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 46,
+   "flying": false,
+   "category": "bosses"
+  },
+  "wyvern": {
+   "file": "sprites/units/wyvern.png",
+   "fw": 43,
+   "fh": 34,
+   "frames": 15,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     4
+    ]
+   },
+   "H": 24,
+   "flying": true,
+   "category": "units"
+  },
+  "infdragon": {
+   "file": "sprites/summons/infdragon.png",
+   "fw": 83,
+   "fh": 64,
+   "frames": 15,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     4
+    ]
+   },
+   "H": 46,
+   "flying": true,
+   "category": "summons"
+  },
+  "ram": {
+   "file": "sprites/enemies/ram.png",
+   "fw": 40,
+   "fh": 30,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "category": "enemies"
+  },
+  "catapult": {
+   "file": "sprites/enemies/catapult.png",
+   "fw": 40,
+   "fh": 34,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 22,
+   "category": "enemies"
+  },
+  "lich": {
+   "file": "sprites/units/lich.png",
+   "fw": 35,
+   "fh": 44,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 30,
+   "category": "units"
+  },
+  "tower_brimstone": {
+   "file": "sprites/towers/brimstone.png",
+   "fw": 32,
+   "fh": 52,
+   "frames": 12,
+   "tiers": 3,
+   "perTier": 4
+  },
+  "tower_tesla": {
+   "file": "sprites/towers/tesla.png",
+   "fw": 32,
+   "fh": 52,
+   "frames": 12,
+   "tiers": 3,
+   "perTier": 4
+  },
+  "tower_necrotic": {
+   "file": "sprites/towers/necrotic.png",
+   "fw": 32,
+   "fh": 52,
+   "frames": 12,
+   "tiers": 3,
+   "perTier": 4
+  },
+  "tower_frost": {
+   "file": "sprites/towers/frost.png",
+   "fw": 32,
+   "fh": 52,
+   "frames": 12,
+   "tiers": 3,
+   "perTier": 4
+  },
+  "tower_artillery": {
+   "file": "sprites/towers/artillery.png",
+   "fw": 32,
+   "fh": 52,
+   "frames": 12,
+   "tiers": 3,
+   "perTier": 4
+  },
+  "tower_harvester": {
+   "file": "sprites/towers/harvester.png",
+   "fw": 32,
+   "fh": 52,
+   "frames": 12,
+   "tiers": 3,
+   "perTier": 4
+  },
+  "tower_arcane": {
+   "file": "sprites/towers/arcane.png",
+   "fw": 32,
+   "fh": 52,
+   "frames": 12,
+   "tiers": 3,
+   "perTier": 4
+  },
+  "tower_abomination": {
+   "file": "sprites/towers/abomination.png",
+   "fw": 32,
+   "fh": 52,
+   "frames": 12,
+   "tiers": 3,
+   "perTier": 4
+  },
+  "keep_haunted": {
+   "file": "sprites/environment/keep_haunted.png",
+   "fw": 120,
+   "fh": 116,
+   "frames": 4
+  },
+  "keep_volcanic": {
+   "file": "sprites/environment/keep_volcanic.png",
+   "fw": 120,
+   "fh": 116,
+   "frames": 4
+  },
+  "keep_frozen": {
+   "file": "sprites/environment/keep_frozen.png",
+   "fw": 120,
+   "fh": 116,
+   "frames": 4
+  },
+  "keep_cathedral": {
+   "file": "sprites/environment/keep_cathedral.png",
+   "fw": 120,
+   "fh": 116,
+   "frames": 4
+  },
+  "keep_abyssal": {
+   "file": "sprites/environment/keep_abyssal.png",
+   "fw": 120,
+   "fh": 116,
+   "frames": 4
+  },
+  "soulwell": {
+   "file": "sprites/environment/soulwell.png",
+   "fw": 40,
+   "fh": 34,
+   "frames": 6
+  },
+  "prop_tree0": {
+   "file": "sprites/environment/props/tree0.png",
+   "fw": 40,
+   "fh": 48,
+   "frames": 1
+  },
+  "prop_tree1": {
+   "file": "sprites/environment/props/tree1.png",
+   "fw": 40,
+   "fh": 48,
+   "frames": 1
+  },
+  "prop_tree2": {
+   "file": "sprites/environment/props/tree2.png",
+   "fw": 40,
+   "fh": 48,
+   "frames": 1
+  },
+  "prop_rock": {
+   "file": "sprites/environment/props/rock.png",
+   "fw": 18,
+   "fh": 13,
+   "frames": 1
+  },
+  "prop_rock2": {
+   "file": "sprites/environment/props/rock2.png",
+   "fw": 26,
+   "fh": 16,
+   "frames": 1
+  },
+  "prop_pillar": {
+   "file": "sprites/environment/props/pillar.png",
+   "fw": 18,
+   "fh": 46,
+   "frames": 1
+  },
+  "prop_ruinwall": {
+   "file": "sprites/environment/props/ruinwall.png",
+   "fw": 34,
+   "fh": 22,
+   "frames": 1
+  },
+  "prop_grave": {
+   "file": "sprites/environment/props/grave.png",
+   "fw": 10,
+   "fh": 14,
+   "frames": 1
+  },
+  "prop_grave2": {
+   "file": "sprites/environment/props/grave2.png",
+   "fw": 12,
+   "fh": 10,
+   "frames": 1
+  },
+  "prop_cross": {
+   "file": "sprites/environment/props/cross.png",
+   "fw": 10,
+   "fh": 16,
+   "frames": 1
+  },
+  "prop_skullpole": {
+   "file": "sprites/environment/props/skullpole.png",
+   "fw": 10,
+   "fh": 26,
+   "frames": 1
+  },
+  "prop_brazier": {
+   "file": "sprites/environment/props/brazier.png",
+   "fw": 14,
+   "fh": 30,
+   "frames": 4
+  },
+  "prop_torch": {
+   "file": "sprites/environment/props/torch.png",
+   "fw": 6,
+   "fh": 20,
+   "frames": 4
+  },
+  "prop_crystal": {
+   "file": "sprites/environment/props/crystal.png",
+   "fw": 12,
+   "fh": 18,
+   "frames": 2
+  },
+  "prop_cart": {
+   "file": "sprites/environment/props/cart.png",
+   "fw": 30,
+   "fh": 18,
+   "frames": 1
+  },
+  "prop_fence": {
+   "file": "sprites/environment/props/fence.png",
+   "fw": 22,
+   "fh": 12,
+   "frames": 1
+  },
+  "prop_banner": {
+   "file": "sprites/environment/props/banner.png",
+   "fw": 12,
+   "fh": 28,
+   "frames": 4
+  },
+  "fort_wall": {
+   "file": "sprites/fortifications/wall.png",
+   "fw": 16,
+   "fh": 24,
+   "frames": 3
+  },
+  "fort_wall2": {
+   "file": "sprites/fortifications/wall_reinforced.png",
+   "fw": 16,
+   "fh": 24,
+   "frames": 3
+  },
+  "fort_spikes": {
+   "file": "sprites/fortifications/spikes.png",
+   "fw": 16,
+   "fh": 18,
+   "frames": 1
+  },
+  "fort_lava": {
+   "file": "sprites/fortifications/lava.png",
+   "fw": 16,
+   "fh": 16,
+   "frames": 4
+  },
+  "fort_rune": {
+   "file": "sprites/fortifications/rune.png",
+   "fw": 16,
+   "fh": 16,
+   "frames": 4
+  },
+  "fort_cauldron": {
+   "file": "sprites/fortifications/cauldron.png",
+   "fw": 16,
+   "fh": 18,
+   "frames": 4
+  },
+  "fort_ward": {
+   "file": "sprites/fortifications/ward.png",
+   "fw": 16,
+   "fh": 24,
+   "frames": 4
+  }
+ },
+ "images": {
+  "icon_deathwave": {
+   "file": "ui/icons/deathwave.png"
+  },
+  "icon_meteor": {
+   "file": "ui/icons/meteor.png"
+  },
+  "icon_raise": {
+   "file": "ui/icons/raise.png"
+  },
+  "icon_prison": {
+   "file": "ui/icons/prison.png"
+  },
+  "icon_time": {
+   "file": "ui/icons/time.png"
+  },
+  "icon_blood": {
+   "file": "ui/icons/blood.png"
+  },
+  "icon_resurrect": {
+   "file": "ui/icons/resurrect.png"
+  },
+  "icon_apocalypse": {
+   "file": "ui/icons/apocalypse.png"
+  },
+  "icon_soul": {
+   "file": "ui/icons/soul.png"
+  },
+  "icon_essence": {
+   "file": "ui/icons/essence.png"
+  },
+  "icon_keep": {
+   "file": "ui/icons/keep.png"
+  },
+  "icon_skull": {
+   "file": "ui/icons/skull.png"
+  },
+  "icon_wall": {
+   "file": "ui/icons/wall.png"
+  },
+  "icon_spikes": {
+   "file": "ui/icons/spikes.png"
+  },
+  "icon_lava": {
+   "file": "ui/icons/lava.png"
+  },
+  "icon_rune": {
+   "file": "ui/icons/rune.png"
+  },
+  "icon_ward": {
+   "file": "ui/icons/ward.png"
+  },
+  "icon_oil": {
+   "file": "ui/icons/oil.png"
+  },
+  "icon_cauldron": {
+   "file": "ui/icons/cauldron.png"
+  },
+  "icon_level": {
+   "file": "ui/icons/level.png"
+  },
+  "icon_heal": {
+   "file": "ui/icons/heal.png"
+  },
+  "icon_frenzy": {
+   "file": "ui/icons/frenzy.png"
+  },
+  "icon_shield": {
+   "file": "ui/icons/shield.png"
+  },
+  "icon_bomb": {
+   "file": "ui/icons/bomb.png"
+  },
+  "icon_storm": {
+   "file": "ui/icons/storm.png"
+  },
+  "icon_rally": {
+   "file": "ui/icons/rally.png"
+  },
+  "shadow_8": {
+   "file": "sprites/effects/shadow_8.png"
+  },
+  "shadow_12": {
+   "file": "sprites/effects/shadow_12.png"
+  },
+  "shadow_16": {
+   "file": "sprites/effects/shadow_16.png"
+  },
+  "shadow_24": {
+   "file": "sprites/effects/shadow_24.png"
+  },
+  "shadow_32": {
+   "file": "sprites/effects/shadow_32.png"
+  },
+  "shadow_48": {
+   "file": "sprites/effects/shadow_48.png"
+  }
+ }
+}

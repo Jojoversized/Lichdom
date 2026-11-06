@@ -1,0 +1,21 @@
+{
+  "name": "lichdom",
+  "version": "0.2.0",
+  "private": true,
+  "description": "LICH — Eternal Dominion: a dark-fantasy incremental roguelite tower defense (Phaser 3 + TypeScript).",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "assets": "node tools/assets/gen-sprites.mjs && node tools/assets/gen-audio.mjs"
+  },
+  "dependencies": {
+    "phaser": "3.80.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vite": "^5.4.0"
+  }
+}

@@ -1,0 +1,27 @@
+# LICH — Eternal Dominion
+
+A dark-fantasy **incremental roguelite tower defense** where you are the final boss.
+Defend your keep on the western edge of the world against the united crusade of humanity,
+harvest souls, command an autonomous undead host and grow an ever more apocalyptic fortress.
+
+Built with **Phaser 3 + TypeScript + Vite**. All pixel art and sound effects are generated
+by the project's own asset pipeline (`npm run assets`).
+
+## Play / develop
+
+```bash
+npm install
+npm run dev        # http://localhost:5173
+npm run build      # production build in dist/
+```
+
+Pushes to `main` deploy automatically to GitHub Pages.
+
+## Highlights
+- 8 evolving towers, 13 undead troop types, 6 permanent summon packs (uncapped)
+- Undead fight on their own — no flags, no micromanagement
+- 20 mortal unit types in 4 factions, 6 bosses, an adaptive crusade
+- Three-choice roguelite level-ups, repeatable Soul Well Ascensions, a 49-node permanent Phylactery tree
+- Dithered pixel lighting, persistent battlefield carnage
+
+See `CLAUDE.md` for architecture and `docs/CHECKLIST.md` for progress.
