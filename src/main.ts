@@ -1,6 +1,7 @@
 // Entry point. Fixed integer-zoom pixel rendering: the canvas is sized to the
 // window divided by the largest integer zoom that shows at least
 // VIEW_TARGET_W x VIEW_TARGET_H world pixels; no texture smoothing anywhere.
+import { unearthCost } from './data/spells';
 import * as Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
@@ -34,4 +35,4 @@ const game = new Phaser.Game({
 });
 window.addEventListener('resize', () => applyZoom(game));
 // Debug/test handle (used by tools/test/*.py; harmless in production).
-(window as any).__LICH = { G, game, UI, recruit, canBuildAt, stepVisual, META_BY_ID, ...campaign, ...combat, ...cards, ...stats, ...progression };
+(window as any).__LICH = { G, game, UI, recruit, unearthCost, canBuildAt, stepVisual, META_BY_ID, ...campaign, ...combat, ...cards, ...stats, ...progression };

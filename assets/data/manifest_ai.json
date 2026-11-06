@@ -5,24 +5,24 @@
  "sheets": {
   "ai_skeleton_warrior": {
    "file": "sprites/units/ai/ai_skeleton_warrior.png",
-   "fw": 92,
+   "fw": 96,
    "fh": 106,
-   "frames": 11,
+   "frames": 13,
    "anims": {
     "idle": [
      0,
-     2
+     4
     ],
     "walk": [
-     2,
+     4,
      4
     ],
     "atk": [
-     6,
+     8,
      3
     ],
     "cast": [
-     9,
+     11,
      2
     ]
    },
@@ -34,24 +34,24 @@
   },
   "ai_zombie_rotting": {
    "file": "sprites/units/ai/ai_zombie_rotting.png",
-   "fw": 78,
+   "fw": 82,
    "fh": 102,
-   "frames": 11,
+   "frames": 13,
    "anims": {
     "idle": [
      0,
-     2
+     4
     ],
     "walk": [
-     2,
+     4,
      4
     ],
     "atk": [
-     6,
+     8,
      3
     ],
     "cast": [
-     9,
+     11,
      2
     ]
    },
@@ -63,24 +63,24 @@
   },
   "ai_skeleton_cleric": {
    "file": "sprites/units/ai/ai_skeleton_cleric.png",
-   "fw": 91,
+   "fw": 95,
    "fh": 114,
-   "frames": 11,
+   "frames": 13,
    "anims": {
     "idle": [
      0,
-     2
+     4
     ],
     "walk": [
-     2,
+     4,
      4
     ],
     "atk": [
-     6,
+     8,
      3
     ],
     "cast": [
-     9,
+     11,
      2
     ]
    },
@@ -92,24 +92,24 @@
   },
   "ai_haunted_armor": {
    "file": "sprites/units/ai/ai_haunted_armor.png",
-   "fw": 93,
+   "fw": 97,
    "fh": 118,
-   "frames": 11,
+   "frames": 13,
    "anims": {
     "idle": [
      0,
-     2
+     4
     ],
     "walk": [
-     2,
+     4,
      4
     ],
     "atk": [
-     6,
+     8,
      3
     ],
     "cast": [
-     9,
+     11,
      2
     ]
    },
@@ -121,24 +121,24 @@
   },
   "wendigo": {
    "file": "sprites/units/ai/wendigo.png",
-   "fw": 122,
+   "fw": 126,
    "fh": 94,
-   "frames": 11,
+   "frames": 13,
    "anims": {
     "idle": [
      0,
-     2
+     4
     ],
     "walk": [
-     2,
+     4,
      4
     ],
     "atk": [
-     6,
+     8,
      3
     ],
     "cast": [
-     9,
+     11,
      2
     ]
    },

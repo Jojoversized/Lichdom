@@ -49,7 +49,10 @@ export const UNITS: Record<string, any> = {
     tiers: [{ name: 'Skeletal Wyverns', spr: 'wyvern' }, { name: 'Bone Drakes', spr: 'wyvern', cost: 320, hp: 1.7, dmg: 1.7 }, { name: 'Undead Dragons', spr: 'wyvern', cost: 640, hp: 2.6, dmg: 2.6, splash: 1.5 }],
     desc: 'Flying beasts spitting corrosive bone shards.' },
 };
-export const UNIT_ORDER = ['skeleton', 'archer', 'zombie', 'pikeman', 'acolyte', 'bonemage', 'deathknight', 'wraith', 'banshee', 'vampire', 'wyvern', 'abomination', 'golem'];
+const BASE_ORDER = ['skeleton', 'archer', 'zombie', 'pikeman', 'wendigo', 'acolyte', 'bonemage', 'deathknight', 'wraith', 'banshee', 'vampire', 'wyvern', 'abomination', 'golem'];
+/** Display order of recruitable undead. Any unit added to UNITS but missing from the
+ *  preferred order is appended, so a new unit can never be unlocked yet unrecruitable. */
+export const UNIT_ORDER = [...BASE_ORDER.filter(k => UNITS[k]), ...Object.keys(UNITS).filter(k => !BASE_ORDER.includes(k))];
 
 // ---------------- Summons (Soul Well) ----------------
 export const SUMMONS: Record<string, any> = {

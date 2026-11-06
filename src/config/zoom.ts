@@ -27,8 +27,12 @@ export function computeZoom() {
 }
 export function applyZoom(game: Phaser.Game) {
   const v = computeZoom();
+  // resize first, then zoom: in scale mode NONE, setZoom-then-resize leaves the canvas CSS
+  // size at the old zoom (half the screen went black when zooming out). Pin it explicitly too.
+  const w = Math.ceil(window.innerWidth / v.pz), h = Math.ceil(window.innerHeight / v.pz);
+  game.scale.resize(w, h);
   game.scale.setZoom(v.pz);
-  game.scale.resize(Math.ceil(window.innerWidth / v.pz), Math.ceil(window.innerHeight / v.pz));
+  const c = game.canvas; if (c) { c.style.width = w * v.pz + 'px'; c.style.height = h * v.pz + 'px'; }
   const cam = game.scene.getScene('game')?.cameras?.main;
   if (cam) cam.setOrigin(0, 0).setZoom(v.cz);
 }

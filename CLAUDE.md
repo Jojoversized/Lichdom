@@ -142,6 +142,9 @@ Key rules:
 
 ## Current status
 
+v0.4.1 — crypt picker (choose unit unlocks), unit detail sheets (hover/right-click), field-filling formation
+with post hysteresis (no walk/idle flicker), reworked derived animations, zoom-out black-screen fix.
+
 v0.4 — Dreamina art pipeline adopted (5 AI-art units, res-4 detail tier), new Undead Wendigo unit,
 random 3-type starting roster per campaign (front-line + ranged + wild card; more via level-ups and the Soul Well).
 

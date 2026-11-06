@@ -24,7 +24,16 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 ## Roster
 - [x] Random starting roster per campaign: 1 front-line + 1 ranged + 1 wild card (`startingRoster` in campaign.ts)
 - [x] Undead Wendigo: fastest undead, lifesteal, hunts ranged/caster/healer mortals first
+- [x] Unit unlocks: Soul Well "Unearth a Crypt" opens a picker (choose the type; a squad rises). Cost (450 + 400×opened) × 1.07^wave
+- [x] Unit details: hover = summary with roster comparison bars; right-click (Army cards, crypt picker) or "Unit details" on a selected undead = full sheet (squad totals, value per 100 souls, abilities, evolutions)
+- [x] `UNIT_ORDER` auto-appends any unit missing from the preferred order (fixed: Wendigo was unlockable but not recruitable)
 - [ ] Wendigo-specific card modifiers
+
+## Army behaviour & animation
+- [x] Field-filling formation: stable R2 posts per unit id, grows with the host up to midfield; melee front, ranged rear, flyers over the front; collapses to the gate while a boss is on the field
+- [x] Post hysteresis (arrive ≤3 px, march again only when >12 px away) + slow drift: no walk/idle flicker
+- [x] Per-unit animation phase; AI sprites: 4-frame breathing idle, striding walk, wind-up/lunge attack
+- [x] Fixed: zooming out left part of the screen black (canvas CSS size / camera viewport)
 
 ## Battlefield
 - [x] Keep on far left; crusade enters from the right (3 roads → 5 at waves 12 and 20)

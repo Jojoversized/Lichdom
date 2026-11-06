@@ -33,7 +33,8 @@ BOT = r"""
     }
     for (const t of G.towers) { const nx = t.def.tiers[t.tier + 1]; if (nx && r.souls > nx.cost * 1.3 && (t.tier < 1 || L.metaLv('f_evo'))) { r.souls -= nx.cost; t.tier++; t.maxHp = L.towerMaxHp(t); t.hp = t.maxHp; } }
     // incremental sinks
-    for (let i = 0; i < 5; i++) { if (r.souls > 600) L.buyWell(['asc_dmg', 'asc_hp', 'crypt', 'asc_squad', 'legion'][i]); }
+    for (let i = 0; i < 4; i++) { if (r.souls > 600) L.buyWell(['asc_dmg', 'asc_hp', 'asc_squad', 'legion'][i]); }
+    { const lk = L.lockedUnitTypes(); if (lk.length && r.souls > L.unearthCost(r) * 1.5) L.unearthUnit(lk[Math.floor(Math.random() * lk.length)]); }
   }
   while (G.phase !== 'over' && G.run.wave < maxWave && guard++ < 400000) {
     if (G.run.pendingLevels > 0) { const c = L.rollCards(3); if (!L.offerIsClean(c)) dupes++; if (c.length) L.applyCard(c[Math.floor(Math.random() * c.length)]); G.run.pendingLevels--; continue; }

@@ -170,3 +170,26 @@ body.menu .hud-el { display: none !important; }
 /* icons are 32-texel art: at 16 css px they are shown downsampled smoothly */
 img.ico { image-rendering: auto; }
 img.pixd { image-rendering: auto; vertical-align: middle; }
+
+/* ---- unit information ---- */
+.sbar { display: grid; grid-template-columns: 70px 1fr auto; align-items: center; gap: 6px; font-size: 11px; margin: 2px 0; }
+.sbar i { display: block; height: 6px; background: #1a1a1c; border: 1px solid #333; }
+.sbar i b { display: block; height: 100%; background: linear-gradient(90deg, #2e7d3c, #5dff7a); }
+.sbar em { font-style: normal; color: #aaa; min-width: 44px; text-align: right; }
+.tipbars { margin: 4px 0; min-width: 220px; }
+.udetail { display: flex; gap: 18px; align-items: flex-start; max-width: 720px; }
+.udart { min-width: 140px; display: flex; justify-content: center; align-items: flex-end; padding: 8px; background: radial-gradient(circle at 50% 70%, #1d2a1f, #0d0e0f 70%); border: 1px solid #2a2a2a; }
+.udinfo h2 { margin: 0 0 2px; text-align: left; }
+.udinfo h3 { margin: 10px 0 4px; font-size: 13px; color: #9fd8a8; }
+.udinfo ul { margin: 0; padding-left: 18px; font-size: 12px; }
+.urole { color: #9fd8a8; font-size: 12px; margin-bottom: 4px; }
+.ud-grid { grid-template-columns: auto auto; column-gap: 14px; margin-top: 8px; }
+.evopath { font-size: 12px; line-height: 1.6; }
+.ugrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin: 12px 0; max-height: 60vh; overflow-y: auto; }
+.ucard { background: #141516; border: 1px solid #2f2f2f; color: #ddd; padding: 8px; text-align: left; cursor: pointer; font: inherit; }
+.ucard:hover { border-color: #5dff7a; background: #18201a; }
+.ucard.poor { opacity: 0.55; }
+.uart { display: flex; justify-content: center; align-items: flex-end; height: 80px; }
+.uname { font-weight: bold; margin-top: 4px; }
+.udesc { font-size: 11px; color: #aaa; margin-top: 4px; }
+.btn.small { padding: 3px 8px; font-size: 11px; margin-top: 6px; }

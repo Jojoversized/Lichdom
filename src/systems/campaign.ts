@@ -4,8 +4,8 @@ import { G } from '../core/state';
 import { rnd, rndi, pick, dist2, TAU } from '../core/util';
 import { KEEP, LANES, PAL, WW, WH, CELL } from '../config/constants';
 import { ENEMIES, BOSSES } from '../data/enemies';
-import { UNITS, SUMMONS } from '../data/units';
-import { SPELLS, SPELL_ORDER, WELL } from '../data/spells';
+import { UNITS, UNIT_ORDER, SUMMONS } from '../data/units';
+import { SPELLS, SPELL_ORDER, WELL, unearthCost } from '../data/spells';
 import { FORTRESSES } from '../data/world';
 import { msg, lichSay, sfx, hooks } from '../core/events';
 import { generateMap, computeFlow, canBuildAt } from '../world/mapgen';
@@ -34,7 +34,7 @@ function newRunState(fortKey: string, seed: number) {
     unlockedTowers: ['brimstone', 'tesla', 'necrotic'], unlockedUnits: [] as string[],
     spells: ['deathwave', 'raise'], spellCd: {} as Record<string, number>, unitTier: {} as Record<string, number>, unitBuff: {} as Record<string, number>,
     towerDmg: {} as Record<string, number>, mods: {} as Record<string, number>, picks: {} as Record<string, number>, banished: [] as string[],
-    m: defaultMods(), asc: { dmg: 0, hp: 0, souls: 0, squad: 0 }, bought: {} as Record<string, number>, rerolls: metaLv('i_reroll') * 2 + 1, banishes: 1 + metaLv('i_reroll'), insightBuys: 0,
+    m: defaultMods(), asc: { dmg: 0, hp: 0, souls: 0, squad: 0 }, bought: {} as Record<string, number>, unearthed: 0, rerolls: metaLv('i_reroll') * 2 + 1, banishes: 1 + metaLv('i_reroll'), insightBuys: 0,
     phylUsed: false, adapt: {}, spellsCastWave: 0, fervor: 1, startTime: Date.now(),
   };
 }
@@ -75,6 +75,7 @@ export function loadRun(): boolean {
   G.run = Object.assign(newRunState(s.run.fortress, s.run.seed), s.run, { m: Object.assign(defaultMods(), s.run.m), spellCd: {} });
   G.run.asc = Object.assign({ dmg: 0, hp: 0, souls: 0, squad: 0 }, s.run.asc);
   G.run.bought = Object.assign({}, s.run.bought);
+  G.run.unearthed = s.run.unearthed || 0;
   G.keep.maxHp = 0; recalcKeep(); G.keep.hp = Math.min(Math.max(1, s.keepHp), G.keep.maxHp);
   for (const t of s.towers) { const tw = placeTower(t.type, t.cx, t.cy, t.tier, { hp: t.hp, invested: t.invested }); tw.mode = t.mode || 'first'; tw.kills = t.kills || 0; }
   for (const f of s.forts) placeFort(f.type, f.cx, f.cy, { hp: f.hp });
@@ -100,6 +101,23 @@ export function spawnSquad(type: string, x: number, y: number, opts: any = {}) {
   }
   return out;
 }
+/** Soul Well "Unearth a Crypt": the player picks which locked undead type to unlock;
+ *  a full squad of it rises immediately. */
+export function lockedUnitTypes(): string[] { return UNIT_ORDER.filter(k => !G.run.unlockedUnits.includes(k)); }
+export function unearthUnit(type: string): boolean {
+  const r = G.run, c = unearthCost(r);
+  if (!UNITS[type] || r.unlockedUnits.includes(type)) return false;
+  if (r.souls < c) { sfx('error'); return false; }
+  r.souls -= c; r.unearthed = (r.unearthed || 0) + 1;
+  r.unlockedUnits.push(type);
+  const made = spawnSquad(type, KEEP.x1 + 40, KEEP.y + rnd(-40, 40));
+  sfx('well');
+  msg(`A crypt is unearthed: ${made.length}× ${UNITS[type].tiers[r.unitTier[type] || 0].name} rise, and more can now be recruited.`, PAL.necro);
+  if (G.phase === 'wave') r.fervor = Math.max(r.fervor, computeFervor());
+  hooks.refreshBuild();
+  return true;
+}
+
 /** Front-line and ranged pools for the opening draft (small, cheap bodies only). */
 const START_MELEE = ['skeleton', 'zombie', 'pikeman', 'wendigo'];
 const START_RANGED = ['archer', 'bonemage', 'acolyte', 'banshee'];
@@ -329,10 +347,11 @@ export function wellCost(item: any) {
   if (item.summon) c *= 1 - fb('summonCost');
   return Math.round(c);
 }
-export function wellAvailable(item: any) { return !item.meta || metaLv(item.meta) > 0; }
+export function wellAvailable(item: any) { if (item.id === 'unearth' && !lockedUnitTypes().length) return false; return !item.meta || metaLv(item.meta) > 0; }
 export function buyWell(id: string): boolean {
   const item = WELL.find(w => w.id === id), r = G.run;
   if (!item || !wellAvailable(item)) return false;
+  if (id === 'unearth') return false; // needs a choice: the UI opens the crypt picker → unearthUnit(type)
   const c = wellCost(item);
   if (r.souls < c) { sfx('error'); return false; }
   r.souls -= c;
@@ -341,15 +360,6 @@ export function buyWell(id: string): boolean {
     case 'asc_dmg': r.asc.dmg++; recalcAllStats(); msg(`Dark Empowerment ${r.asc.dmg}: all damage ×${Math.pow(1.12, r.asc.dmg).toFixed(2)}`, PAL.necro); break;
     case 'asc_hp': r.asc.hp++; recalcAllStats(); msg(`Bone Fortitude ${r.asc.hp}: health ×${Math.pow(1.12, r.asc.hp).toFixed(2)}`, PAL.necro); break;
     case 'asc_squad': r.asc.squad++; msg(`Ossuary Expansion ${r.asc.squad}: every squad raises +${r.asc.squad} more undead.`, PAL.necro); break;
-    case 'crypt': {
-      const t = randomUnitType(false) || 'skeleton';
-      if (!r.unlockedUnits.includes(t)) r.unlockedUnits.push(t);
-      const made = spawnSquad(t, KEEP.x1 + 40, KEEP.y + rnd(-40, 40));
-      msg(`The crypt opens: ${made.length}× ${UNITS[t].tiers[r.unitTier[t] || 0].name} answer the call!`, PAL.necro);
-      if (G.phase === 'wave') r.fervor = Math.max(r.fervor, computeFervor());
-      hooks.refreshBuild();
-      break;
-    }
     case 'asc_souls': r.asc.souls++; msg(`Soul Tithe ${r.asc.souls}: souls ×${Math.pow(1.08, r.asc.souls).toFixed(2)}`, PAL.necro); break;
     case 'insight': r.insightBuys++; r.pendingLevels++; break;
     case 'mend':

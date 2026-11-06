@@ -54,7 +54,8 @@ export class WorldRenderer {
     const tw = this.viewW * T, th = this.viewH * T;
     this.dark.resize?.(tw, th); this.glow.resize?.(tw, th);
     this.dark.setSize(tw, th); this.glow.setSize(tw, th);
-    this.scene.cameras.main.setOrigin(0, 0).setZoom(VIEW.cz);
+    // the camera viewport must follow the canvas, or zooming out leaves the rest of the screen black
+    this.scene.cameras.main.setSize(w, h).setOrigin(0, 0).setZoom(VIEW.cz);
     this.updateDetailFilters();
   }
   /** High-density sheets (AI art, res 4) show every texel crisply once a texel covers at
@@ -157,7 +158,7 @@ export class WorldRenderer {
     const spr = this.ensureSprite(e, e.spr);
     const bob = e.flying ? Math.sin(G.time * 3 + e.id) * 2 : 0;
     spr.setPosition(snap(e.x), snap(e.y - e.alt + bob + 1));
-    spr.setFrame(animFrameIndex(meta, e.anim, e.at));
+    spr.setFrame(animFrameIndex(meta, e.anim, e.at, ((e.id * 0.6180339) % 1) * 2));
     spr.setFlipX(e.face < 0);
     spr.setDepth(e.y + (e.flying ? 40 : 0));
     let alpha = 1;

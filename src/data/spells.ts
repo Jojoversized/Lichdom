@@ -15,6 +15,9 @@ export const SPELLS: Record<string, any> = {
 export const SPELL_ORDER = ['deathwave', 'raise', 'meteor', 'prison', 'time', 'blood', 'resurrect', 'apocalypse'];
 
 // ---------------- Soul Well ----------------
+/** Unlocking a new undead type is a major purchase: it rises with every crypt opened and with the wave. */
+export function unearthCost(r: any) { return Math.round((450 + 400 * (r.unearthed || 0)) * Math.pow(1.07, Math.max(0, r.wave - 1))); }
+
 export const WELL: any[] = [
   { id: 'asc_dmg', cat: 'Ascension', name: 'Dark Empowerment', icon: 'frenzy', repeat: true, desc: 'Permanently (this campaign) multiply ALL damage by ×1.12. Repeatable.', cost: (r: any) => Math.round(80 * Math.pow(1.42, r.asc.dmg || 0)) },
   { id: 'asc_hp', cat: 'Ascension', name: 'Bone Fortitude', icon: 'shield', repeat: true, desc: 'Multiply undead and keep health by ×1.12. Repeatable.', cost: (r: any) => Math.round(70 * Math.pow(1.42, r.asc.hp || 0)) },
@@ -24,7 +27,7 @@ export const WELL: any[] = [
   { id: 'mend', cat: 'Reinforcement', name: 'Mend the Dead', icon: 'heal', desc: 'Fully heal all units. Repair walls, towers and 10% keep.', cost: (r: any) => 40 + r.wave * 6 },
   { id: 'revive', cat: 'Reinforcement', name: 'Mass Resurrection', icon: 'raise', desc: 'Resurrect every unit that has fallen this wave, right now.', cost: (r: any) => 60 + r.wave * 5 },
   { id: 'frenzy', cat: 'Reinforcement', name: 'Bloodfrenzy', icon: 'frenzy', desc: '+60% attack speed for all towers and units for 20s.', cost: (r: any) => 50 + r.wave * 5 },
-  { id: 'crypt', cat: 'Summoning', name: 'Call of the Crypt', icon: 'raise', desc: 'A full squad of a random undead type rises — even types you have not unlocked (they become recruitable).', cost: (r: any) => Math.round(110 * Math.pow(1.07, r.wave)) },
+  { id: 'unearth', cat: 'Summoning', name: 'Unearth a Crypt', icon: 'raise', desc: 'Choose an undead type to unlock for recruiting. A full squad of it rises at once. Each crypt opened costs more.', cost: (r: any) => unearthCost(r) },
   { id: 'legion', cat: 'Summoning', name: 'Skeleton Legion', icon: 'raise', summon: 'legion', desc: SUMMONS.legion.desc, cost: (r: any) => Math.round(SUMMONS.legion.cost * Math.pow(1.06, r.wave)) },
   { id: 'wraiths', cat: 'Summoning', name: 'Wraith Swarm', icon: 'soul', summon: 'wraiths', meta: 'n_wraith', desc: SUMMONS.wraiths.desc, cost: (r: any) => Math.round(SUMMONS.wraiths.cost * Math.pow(1.06, r.wave)) },
   { id: 'colossus', cat: 'Summoning', name: 'Bone Colossus', icon: 'skull', summon: 'colossus', desc: SUMMONS.colossus.desc, cost: (r: any) => Math.round(SUMMONS.colossus.cost * Math.pow(1.06, r.wave)) },

@@ -8,14 +8,14 @@ import { PAL, KEEP } from '../config/constants';
 import { SHEETS } from '../config/manifest';
 import { TOWERS, TOWER_ORDER, FORTS, FORT_ORDER } from '../data/towers';
 import { UNITS, UNIT_ORDER, SUMMONS } from '../data/units';
-import { SPELLS, SPELL_ORDER, WELL } from '../data/spells';
+import { unearthCost, SPELLS, SPELL_ORDER, WELL } from '../data/spells';
 import { ENEMIES, BOSSES } from '../data/enemies';
 import { META, META_BRANCHES, META_BY_ID, metaCost, ACHIEVEMENTS, CONTENT_GATES } from '../data/meta';
 import { FORTRESSES } from '../data/world';
 import { RARITY, rollCards, applyCard } from '../systems/cards';
 import { metaLv, contentAvailable, towerStats, recruitCost, towerCost, fortCost, squadSize, applyUnitStats, towerMaxHp } from '../systems/stats';
 import { spawnUnit, removeStructure, addRing, explosion } from '../systems/combat';
-import { spawnSquad, startWave, previewWave, castSpell, canCast, spellCd, buyWell, wellCost, wellAvailable, newCampaign, loadRun } from '../systems/campaign';
+import { spawnSquad, unearthUnit, lockedUnitTypes, startWave, previewWave, castSpell, canCast, spellCd, buyWell, wellCost, wellAvailable, newCampaign, loadRun } from '../systems/campaign';
 import { essenceBreakdown, buyMeta, endCampaign, checkAchievements, codexSee } from '../systems/progression';
 import { saveRun, saveRunSoon, saveMeta, saveMetaSoon, hasRunSave, clearRunSave, loadMeta, store, SAVE_META, SAVE_RUN } from '../systems/save';
 import { startMusic, applyMusicVolume } from '../audio/audio';
@@ -256,13 +256,14 @@ export const UI: any = {
         const canEvo = next && (tier < 1 || metaLv('n_evo'));
         const evoBtn = next ? `<div class="evo ${canEvo ? '' : 'locked'}" data-evo="${u}">⇧ ${fmt(next.cost)}</div>` : '';
         const b = card(unitIcon(u), `${d.tiers[tier].name} <span class="sq">×${squadSize(u)}</span>`, recruitCost(u), unitTip(u), (ev) => { if ((ev.target as HTMLElement).closest('.evo')) return; recruit(u); }, evoBtn);
+        b.oncontextmenu = (ev) => { ev.preventDefault(); this.showUnitDetail(u); };
         const eb = $('.evo', b);
         if (eb) {
           eb.onclick = (ev) => { ev.stopPropagation(); evolveUnit(u); };
           eb.onmouseenter = (ev) => { ev.stopPropagation(); this.showTip(eb, `<b>Evolve: ${next.name}</b><br>All ${d.name}s (present and future) are transformed.<br>${evoText(next)}${canEvo ? '' : '<br><span class="bad">Requires Rite of Ascension (Phylactery)</span>'}<br>${SOUL()} ${fmt(next.cost)}`); };
         }
       }
-      L.appendChild(h('div', 'bnote', 'Each purchase raises a whole squad and there is no army limit. Your undead pick their own battles: they hold the gate and rush to wherever the crusade presses hardest.'));
+      L.appendChild(h('div', 'bnote', 'Hover a card for a summary, right-click it for full details. Each purchase raises a whole squad and there is no army limit. Your undead pick their own battles: they hold the gate and rush to wherever the crusade presses hardest.'));
     }
     this.refreshAffordability();
   },
@@ -307,7 +308,8 @@ export const UI: any = {
     } else if (s.kind === 'unit') {
       const nm = s.summon ? SUMMONS[s.type].name : UNITS[s.type].tiers[s.tier || 0].name;
       P.innerHTML = `<span class="x" id="i-x">✕</span><div class="ihead">${spriteIcon(s.spr, 0, 44)}<div><b>${nm}</b><div class="dim">${s.summon ? 'Summoned · permanent' : s.temp ? 'Raised · temporary' : 'Recruited'}</div></div></div>
-        <div class="istats"><span>Health</span><b>${fmt(s.hp)}/${fmt(s.maxHp)}</b><span>Damage</span><b>${fmt(s.dmg)}</b><span>Orders</span><b>${s.retreat ? 'mending at keep' : s.plan ? 'engaging' : 'guarding the gate'}</b></div>`;
+        <div class="istats"><span>Health</span><b>${fmt(s.hp)}/${fmt(s.maxHp)}</b><span>Damage</span><b>${fmt(s.dmg)}</b><span>Orders</span><b>${s.retreat ? 'mending at keep' : s.plan ? 'engaging' : 'holding its post'}</b></div>${s.summon ? '' : '<button class="btn small" id="i-det">Unit details</button>'}`;
+      const db = $('#i-det'); if (db) db.onclick = () => this.showUnitDetail(s.type);
     }
     const x = $('#i-x'); if (x) x.onclick = () => { G.selected = null; P.classList.add('hidden'); };
   },
@@ -398,15 +400,41 @@ export const UI: any = {
           const av = wellAvailable(w), cost = wellCost(w);
           const lv = w.id.startsWith('asc_') ? r.asc[w.id.slice(4)] || 0 : null;
           const cnt = w.summon ? ` ×${Math.max(1, Math.round(SUMMONS[w.summon].count * (1 + metaLv('m_reinforce') * 0.5)))}` : '';
-          return `<button class="witem ${av ? '' : 'locked'} ${cost > r.souls ? 'poor' : ''}" data-id="${w.id}">${icon(w.icon, 2, 'pix')}<div><b>${w.name}${cnt}${lv != null ? ` <span class="dim">(${lv})</span>` : ''}</b><div class="wdesc">${av ? w.desc : 'Unlock in the Phylactery: ' + META_BY_ID[w.meta].name}</div></div><div class="wcost">${SOUL()} ${fmt(cost)}</div></button>`;
+          return `<button class="witem ${av ? '' : 'locked'} ${cost > r.souls ? 'poor' : ''}" data-id="${w.id}">${icon(w.icon, 2, 'pix')}<div><b>${w.name}${cnt}${lv != null ? ` <span class="dim">(${lv})</span>` : ''}</b><div class="wdesc">${av ? w.desc : w.id === 'unearth' ? 'Every undead type already answers to you.' : 'Unlock in the Phylactery: ' + META_BY_ID[w.meta].name}</div></div><div class="wcost">${SOUL()} ${fmt(cost)}</div></button>`;
         }).join('')}</div>`).join('')}</div><div class="center"><button class="btn" id="w-close">Close [E]</button></div>`, 'wellm');
       m.querySelectorAll('.witem').forEach((b: HTMLElement) => b.onclick = () => {
         const it = WELL.find(w => w.id === b.dataset.id); if (!wellAvailable(it)) return;
+        if (it.id === 'unearth') { if (wellCost(it) > r.souls) { sfx('error'); return; } this.showUnearth(render); return; }
         if (buyWell(b.dataset.id)) { if (it.id === 'insight') this.closeModal(); else render(); }
       });
       $('#w-close').onclick = () => this.closeModal();
     };
     render();
+  },
+
+  /** Soul Well → Unearth a Crypt: choose which locked undead type to unlock (and raise a squad of). */
+  showUnearth(back?: () => void) {
+    const r = G.run, cost = unearthCost(r), locked = lockedUnitTypes();
+    const m = this.openModal(`<h2>${icon('raise', 2, 'pix')} Unearth a Crypt</h2>
+      <div class="dim center">Unlock one undead type for recruiting — a full squad rises at once. Cost ${SOUL()} <b>${fmt(cost)}</b> (you have ${fmt(r.souls)}). Each crypt opened costs more.<br>Hover for a summary · right-click for full details.</div>
+      <div class="ugrid">${locked.map(k => { const d = UNITS[k]; return `<button class="ucard ${cost > r.souls ? 'poor' : ''}" data-u="${k}">
+        <div class="uart">${spriteIcon(d.tiers[0].spr, 0, 72)}</div><div class="uname">${d.tiers[0].name}</div><div class="urole">${unitRole(k)}</div>
+        <div class="ustat">${statBars(k, true)}</div><div class="udesc">${d.desc}</div></button>`; }).join('')}</div>
+      <div class="center"><button class="btn" id="u-back">${back ? '← Back to the Soul Well' : 'Close'}</button></div>`, 'unearthm');
+    m.querySelectorAll('.ucard').forEach((b: HTMLElement) => {
+      const k = b.dataset.u;
+      b.onclick = () => { if (unearthUnit(k)) { this.closeModal(); this.renderBuild(); saveRunSoon(); } };
+      b.oncontextmenu = (ev) => { ev.preventDefault(); this.showUnitDetail(k, () => this.showUnearth(back)); };
+      b.onmouseenter = () => this.showTip(b, unitTip(k)); b.onmouseleave = () => this.hideTip();
+    });
+    $('#u-back').onclick = () => { if (back) back(); else this.closeModal(); };
+  },
+
+  /** Full unit sheet: role, squad totals, per-soul value, specials, evolutions, comparison bars. */
+  showUnitDetail(type: string, back?: () => void) {
+    const m = this.openModal(unitDetailHtml(type) + `<div class="center"><button class="btn" id="ud-back">${back ? '← Back' : 'Close'}</button></div>`, 'unitdetail');
+    $('#ud-back').onclick = () => { if (back) back(); else this.closeModal(); };
+    return m;
   },
 
   showPause() {
@@ -596,10 +624,93 @@ function towerTip(type: string) {
   const d = TOWERS[type];
   return `<b>${d.name}</b><br>${d.desc}<br><span class="dim">${d.dmg ? `Damage ${d.dmg} · ` : ''}Range ${d.range}${d.dmg ? ` · every ${d.cd}s` : ''} · ${d.dtype}</span><br><span class="dim">Evolves: ${d.tiers.slice(1).map((t: any) => t.name).join(' → ')}</span>`;
 }
-function unitTip(type: string) {
-  const d = UNITS[type], t = G.run.unitTier[type] || 0;
+// ---------------- unit information (tooltips, details, comparisons) ----------------
+function unitNow(type: string) {
+  const d = UNITS[type];
   const u: any = { type, def: d, st: {} }; applyUnitStats(u);
-  return `<b>${d.tiers[t].name}</b>${d.flying ? ' <span class="good">flying</span>' : ''}<br>${d.desc}<br><span class="dim">HP ${fmt(u.maxHp)} · DMG ${fmt(u.dmg)} · ${d.ranged ? 'Range ' + Math.round(u.range) : 'Melee'} · Armor ${Math.round(u.armor * 100)}%</span><br>Click to raise a squad of <b>${squadSize(type)}</b>. No army limit.`;
+  return u;
+}
+function unitRole(type: string) {
+  const d = UNITS[type], tags: string[] = [];
+  if (d.taunt) tags.push('Tank');
+  else if (d.raiser) tags.push('Support caster');
+  else if (d.ranged) tags.push(d.splash ? 'Ranged · area damage' : 'Ranged');
+  else if (d.hunter) tags.push('Hunter');
+  else tags.push(d.size >= 3 ? 'Heavy front-line' : 'Front-line');
+  if (d.flying) tags.push('Flying');
+  return tags.join(' · ');
+}
+function unitSpecials(type: string) {
+  const d = UNITS[type], out: string[] = [];
+  if (d.lifesteal) out.push(`Heals ${Math.round(d.lifesteal * 100)}% of damage dealt`);
+  if (d.drain) out.push(`Drains life (${Math.round(d.drain * 100)}%)`);
+  if (d.splash) out.push(`Hits groups (${d.splash}px blast)`);
+  if (d.cleave) out.push(`Cleaves crowds (${d.cleave}px)`);
+  if (d.slow) out.push(`Slows by ${Math.round(d.slow * 100)}%`);
+  if (d.pierce) out.push(`Ignores ${Math.round(d.pierce * 100)}% of armor`);
+  if (d.antiCav) out.push(`${Math.round(d.antiCav * 100)}% damage to cavalry`);
+  if (d.raiser) out.push(`Raises a corpse as a skeleton every ${d.raiser}s`);
+  if (d.taunt) out.push('Draws enemy attacks onto itself');
+  if (d.hunter) out.push('Hunts archers, casters and healers first');
+  if (d.aura) out.push(`Necrotic aura (${d.aura}px)`);
+  if (d.flying) out.push('Flies over walls');
+  if (d.dtype && d.dtype !== 'phys') out.push(`${d.dtype === 'necro' ? 'Necrotic' : d.dtype} damage`);
+  return out;
+}
+let ROSTER_MAX: any = null;
+function rosterMax() {
+  if (ROSTER_MAX) return ROSTER_MAX;
+  const m = { hp: 1, dps: 1, range: 1, spd: 1 };
+  for (const k of UNIT_ORDER) { const d = UNITS[k]; m.hp = Math.max(m.hp, d.hp); m.dps = Math.max(m.dps, (d.dmg / d.cd) * (d.splash || d.cleave ? 1.6 : 1)); m.range = Math.max(m.range, d.range); m.spd = Math.max(m.spd, d.spd); }
+  return (ROSTER_MAX = m);
+}
+/** Comparison bars against the whole roster (base stats), so units can be weighed at a glance. */
+function statBars(type: string, compact = false) {
+  const d = UNITS[type], mx = rosterMax();
+  const rows: [string, number, string][] = [
+    ['Toughness', d.hp * (1 + (d.armor || 0)) / (mx.hp * 1.2), fmt(d.hp)],
+    ['Damage', (d.dmg / d.cd) * (d.splash || d.cleave ? 1.6 : 1) / mx.dps, (d.dmg / d.cd).toFixed(1) + '/s'],
+    ['Reach', d.range / mx.range, d.ranged ? String(d.range) : 'melee'],
+    ['Speed', d.spd / mx.spd, String(d.spd)],
+  ];
+  return rows.map(([n, v, t]) => `<div class="sbar"><span>${n}</span><i><b style="width:${Math.round(Math.max(0.04, Math.min(1, v)) * 100)}%"></b></i>${compact ? '' : `<em>${t}</em>`}</div>`).join('');
+}
+function unitTip(type: string) {
+  const d = UNITS[type], t = G.run.unitTier[type] || 0, u = unitNow(type), n = squadSize(type);
+  const unlocked = G.run.unlockedUnits.includes(type);
+  return `<b>${d.tiers[t].name}</b> <span class="dim">${unitRole(type)}</span><br>${d.desc}
+    <div class="tipbars">${statBars(type, true)}</div>
+    <span class="dim">Squad of <b>${n}</b> · squad HP ${fmt(u.maxHp * n)} · squad damage ${fmt((u.dmg / u.cd) * n)}/s</span>
+    ${unitSpecials(type).length ? `<br><span class="good">${unitSpecials(type).slice(0, 3).join(' · ')}</span>` : ''}
+    <br><span class="dim">${unlocked ? 'Click to raise a squad.' : 'Locked — unearth it in the Soul Well.'} Right-click for full details.</span>`;
+}
+function unitDetailHtml(type: string) {
+  const d = UNITS[type], r = G.run, t = r.unitTier[type] || 0, u = unitNow(type), n = squadSize(type);
+  const unlocked = r.unlockedUnits.includes(type);
+  const cost = unlocked ? recruitCost(type) : 0;
+  const dps = u.dmg / u.cd, sDps = dps * n, sHp = u.maxHp * n;
+  const spdWord = u.spd >= 55 ? 'very fast' : u.spd >= 40 ? 'fast' : u.spd >= 28 ? 'average' : 'slow';
+  const evo = d.tiers.map((tt: any, i: number) => `<span class="${i === t ? 'good' : i < t ? 'dim' : ''}">${tt.name}${i > 0 ? ` <span class="dim">(${fmt(tt.cost)}: ${evoText(tt)})</span>` : ''}</span>`).join(' → ');
+  return `<div class="udetail"><div class="udart">${spriteIcon(d.tiers[t].spr, 0, 128)}</div><div class="udinfo">
+    <h2>${d.tiers[t].name}</h2><div class="urole">${unitRole(type)}${unlocked ? '' : ' · <span class="bad">locked</span>'}</div>
+    <p>${d.desc}</p>
+    <div class="ustat">${statBars(type)}</div>
+    <div class="istats ud-grid">
+      <span>Squad size</span><b>${n}</b>
+      <span>Health (each)</span><b>${fmt(u.maxHp)}</b>
+      <span>Damage (each)</span><b>${fmt(u.dmg)} every ${u.cd.toFixed(1)}s</b>
+      <span>Armor</span><b>${Math.round(u.armor * 100)}%</b>
+      <span>Range</span><b>${d.ranged ? Math.round(u.range) + ' px' : 'melee'}</b>
+      <span>Speed</span><b>${Math.round(u.spd)} (${spdWord})</b>
+      <span>Squad health</span><b>${fmt(sHp)}</b>
+      <span>Squad damage</span><b>${fmt(sDps)}/s</b>
+      ${unlocked ? `<span>Next squad costs</span><b>${fmt(cost)} souls</b>
+      <span>Value per 100 souls</span><b>${fmt(sHp / cost * 100)} HP · ${(sDps / cost * 100).toFixed(1)} dmg/s</b>` : ''}
+    </div>
+    ${unitSpecials(type).length ? `<h3>Abilities</h3><ul>${unitSpecials(type).map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
+    <h3>Evolutions</h3><div class="evopath">${evo}</div>
+    <div class="dim">Your undead pick their own fights; ${d.ranged ? 'ranged troops stay behind the front line.' : d.hunter ? 'hunters slip past the line toward enemy archers and priests.' : 'melee troops hold the front and rush to wherever the crusade presses hardest.'}</div>
+  </div></div>`;
 }
 export function recruit(type: string) {
   const r = G.run, c = recruitCost(type), d = UNITS[type];

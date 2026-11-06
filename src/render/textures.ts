@@ -47,9 +47,12 @@ export function makeShadowTextures(scene: Phaser.Scene, T = 2) {
   }
 }
 
-export function animFrameIndex(meta: SheetMeta, anim: string, at: number) {
+/** phase: per-entity offset (seconds) so a squad never breathes or marches in lockstep. */
+export function animFrameIndex(meta: SheetMeta, anim: string, at: number, phase = 0) {
   const a = (meta.anims && (meta.anims[anim] || meta.anims.idle)) || [0, 1];
-  const speed = anim === 'walk' ? 7 : anim === 'atk' ? 10 : anim === 'cast' ? 6 : 2.2;
+  // idle cycles last ~1.4s regardless of frame count; walk 8 fps; attack plays once
+  const speed = anim === 'walk' ? 8 : anim === 'atk' ? 10 : anim === 'cast' ? 6 : Math.max(1.4, a[1] / 1.4);
+  if (anim !== 'atk') at += phase;
   const f = Math.floor(at * speed);
   return a[0] + (anim === 'atk' ? Math.min(f, a[1] - 1) : f % Math.max(1, a[1]));
 }

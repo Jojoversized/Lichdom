@@ -176,23 +176,32 @@ let planT = 0;
 const laneHeat: Record<string, number> = {};
 
 function isRanged(u: any) { return !!u.def.ranged; }
-function guardPosition(u: any, idx: number, count: number) {
-  // weight guard spread toward hot lanes
+/** Where an idle undead stands. The host fills the player's half of the field: each unit
+ *  gets a stable post from its own id on a low-discrepancy (R2) sequence, so posts are
+ *  evenly spread, never stack, and don't reshuffle when others die. The formation grows
+ *  with the host — a tight block at the gate for a small army, out toward midfield for a
+ *  large one — melee in front, ranged mixed into the rear ranks, flyers above the front. */
+const FIELD_X0 = KEEP.x1 + 34, FIELD_X1 = 720, FIELD_Y0 = 46, FIELD_Y1 = 600;
+function guardPosition(u: any, _idx: number, count: number) {
+  // with a boss on the field the host falls back into a tight block at the gate, inside
+  // tower cover, instead of standing spread out in the boss's kill-zone
+  const fallback = G.enemies.some((e: any) => e.boss);
+  const cell = fallback ? 13 : u.flying ? 34 : 30;                       // personal space per body (px): an open, field-filling host
+  const area = Math.max(1, count) * cell * cell;
+  const hgt = clamp(Math.sqrt(area * 1.3), 110, FIELD_Y1 - FIELD_Y0);
+  const wid = clamp(area / hgt, 40, FIELD_X1 - FIELD_X0);
+  // lean the block toward the roads that carried recent pressure
   const lanes = LANES.filter(l => l.minWave <= Math.max(1, G.run.wave + 1));
-  let tot = 0; for (const l of lanes) tot += 1 + (laneHeat[l.id] || 0);
-  let acc = 0; const k = (idx + 0.5) / Math.max(1, count);
-  let y = KEEP.y;
-  for (const l of lanes) {
-    const w = (1 + (laneHeat[l.id] || 0)) / tot;
-    if (k <= acc + w) { const lk = (k - acc) / w; y = l.cy * CELL + 8 + (lk - 0.5) * 60; break; }
-    acc += w;
-  }
-  // lanes converge on the gate; keep guards within a band around it
-  y = KEEP.y + (y - KEEP.y) * 0.55;
-  // big hosts form up in depth (rows every 9 px) instead of piling onto one line
-  const depth = Math.max(1, Math.ceil(count / 70)), row = idx % depth;
-  const x = GUARD_LINE_X + (isRanged(u) ? -26 - row * 9 : 14 + row * 9) + (u.flying ? 30 : 0) + ((u.slot * 997) % 1) * 18;
-  return { x, y: clamp(y, 60, 600) };
+  let wy = 0, ws = 0; for (const l of lanes) { const w = 1 + (laneHeat[l.id] || 0); wy += (l.cy * CELL + 8) * w; ws += w; }
+  const cy = clamp(KEEP.y + ((ws ? wy / ws : KEEP.y) - KEEP.y) * 0.4, FIELD_Y0 + hgt / 2, FIELD_Y1 - hgt / 2);
+  const n = u.id + 1;
+  const fx = (0.5 + n * 0.7548776662) % 1, fy = (0.5 + n * 0.5698402910) % 1;
+  let x: number;
+  if (isRanged(u)) x = FIELD_X0 + fx * Math.max(30, wid * 0.55);          // rear ranks
+  else if (u.flying) x = FIELD_X0 + 20 + wid * 0.35 + fx * wid * 0.65;      // over the front
+  else x = FIELD_X0 + 12 + wid * 0.15 + fx * wid * 0.85;                   // front ranks
+  const y = cy - hgt / 2 + fy * hgt;
+  return { x: clamp(x, FIELD_X0, fallback ? GUARD_LINE_X + 70 : FIELD_X1), y: clamp(y, FIELD_Y0, FIELD_Y1) };
 }
 
 export function planArmy(dt: number) {
@@ -286,6 +295,7 @@ export function updateUnit(u: any, dt: number) {
   }
   if (u.engage && !u.engage.dead) t = u.engage;
   if (t) {
+    u.atPost = false;
     const td = dist(u.x, u.y, t.x, t.y) - (t.rad || 4);
     // ranged undead kite away from mortal melee that closes in
     if (isRanged(u) && td < 16 && t.def.melee && !u.flying) { moveToward(u, u.x - 20, u.y + (u.slot > 0.5 ? 8 : -8), spd, dt); setAnim(u, 'walk'); }
@@ -299,13 +309,19 @@ export function updateUnit(u: any, dt: number) {
     const dx = t.x - u.x, dy = t.y - u.y, dd = Math.hypot(dx, dy) || 1;
     moveToward(u, t.x - (dx / dd) * want, t.y - (dy / dd) * want, spd, dt); setAnim(u, 'walk');
   } else {
+    // hold the post with hysteresis: arrive within 3px, only march again when pushed >12px
+    // away; small nudges (crowding, a post shifting as the host grows) are absorbed by a
+    // slow drift without switching to the walk cycle — no more walk/idle flicker
     const g = u.guard || { x: GUARD_LINE_X, y: KEEP.y };
-    if (dist2(u.x, u.y, g.x, g.y) > 9) { moveToward(u, g.x, g.y, spd, dt); setAnim(u, 'walk'); }
-    else if (u.anim === 'walk') setAnim(u, 'idle');
+    const gd = dist2(u.x, u.y, g.x, g.y);
+    if (u.atPost && gd > 144) u.atPost = false;
+    if (!u.atPost && gd <= 9) u.atPost = true;
+    if (!u.atPost) { moveToward(u, g.x, g.y, spd, dt); setAnim(u, 'walk'); }
+    else { if (gd > 1) moveToward(u, g.x, g.y, Math.min(spd, 6), dt); if (u.anim === 'walk') setAnim(u, 'idle'); }
   }
   // crowd separation: staggered over 3 steps (3x strength) and capped at 5 neighbours,
   // so an uncapped host of thousands stays cheap
-  if (!u.flying && (u.id + G.stepN) % 3 === 0) {
+  if (!u.flying && !u.atPost && (u.id + G.stepN) % 3 === 0) {
     let n = 0;
     G.hashU.query(u.x, u.y, 6, (o: any) => {
       if (o === u || o.flying) return;

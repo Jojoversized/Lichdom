@@ -103,44 +103,56 @@ def sel_outline(rgba):
     return out
 
 
-def place(frame_w, frame_h, img, dx=0, dy=0, shear=0.0, squash=1.0):
-    """Paste img with feet on the frame bottom. shear: texels of horizontal lean at the top
-    (positive = forward/right); squash: vertical scale anchored at the feet."""
+def place(frame_w, frame_h, img, dx=0, dy=0, shear=0.0, breathe=0, legs_dx=0, split=0.45, legs=0.3):
+    """Paste img with feet on the frame bottom.
+    shear: texels of lean at the top (positive = forward/right), fading to 0 at the feet;
+    breathe: upper body (above `split` of the height) sinks by this many texels;
+    legs_dx: the bottom `legs` fraction shifts sideways (a stride), the rest stays planted."""
     h, w = img.shape[:2]
     canvas = np.zeros((frame_h, frame_w, 4), np.uint8)
-    nh = max(1, round(h * squash))
-    src = img if nh == h else np.array(Image.fromarray(img, 'RGBA').resize((w, nh), Image.NEAREST))
     x0 = (frame_w - w) // 2 + dx
-    y0 = frame_h - 1 - nh + dy  # leave 1 texel under the feet for the outline
-    for yy in range(nh):
-        t = 1 - yy / max(1, nh - 1)  # 1 at the top, 0 at the feet
-        sx = int(round(shear * t))
+    y0 = frame_h - 1 - h + dy  # 1 texel under the feet for the outline
+    split_row = int(h * (1 - split))  # rows above this are "upper body"
+    legs_row = int(h * (1 - legs))
+    # paint lower body first, then upper body so a sinking chest overlaps the waist cleanly
+    order = list(range(split_row, h)) + list(range(0, split_row))
+    for yy in order:
+        t = 1 - yy / max(1, h - 1)
+        sx = int(round(shear * t)) + (legs_dx if yy >= legs_row else 0)
+        sy = breathe if yy < split_row else 0
+        row = img[yy]
         for xx in range(w):
-            p = src[yy, xx]
+            p = row[xx]
             if p[3] == 0:
                 continue
-            X, Y = x0 + xx + sx, y0 + yy
+            X, Y = x0 + xx + sx, y0 + yy + sy
             if 0 <= X < frame_w and 0 <= Y < frame_h:
                 canvas[Y, X] = p
     return canvas
 
 
 def build_strip(spr, k=1.0):
-    """k scales the motion offsets (texels) with the sheet's texel density."""
+    """Derived animation from one pose. k scales offsets with texel density (res/2).
+    idle(4): slow breathing — the upper body sinks 1-2 texels and rises again
+    walk(4): planted/striding legs alternate with a small body bob and forward lean
+    atk(3): wind-up lean back, lunge forward, recover
+    cast(2): straighten + breathe"""
     h, w = spr.shape[:2]
-    fw, fh = w + int(10 * k), h + int(4 * k)
+    fw, fh = w + int(12 * k), h + int(4 * k)
+    b = max(1, round(1 * k))  # one "pixel" of motion at this density
     frames = {
-        'idle': [place(fw, fh, spr), place(fw, fh, spr, squash=0.97)],
-        'walk': [place(fw, fh, spr, dy=round(0 * k), shear=1 * k), place(fw, fh, spr, dy=round(-1 * k), shear=1.5 * k), place(fw, fh, spr, dy=round(0 * k), shear=1 * k), place(fw, fh, spr, dy=round(-1 * k), shear=0.5 * k)],
-        'atk': [place(fw, fh, spr, shear=-2 * k, dx=round(-1 * k)), place(fw, fh, spr, shear=4 * k, dx=round(2 * k)), place(fw, fh, spr, shear=2 * k, dx=round(1 * k))],
-        'cast': [place(fw, fh, spr), place(fw, fh, spr, squash=0.97)],
+        'idle': [place(fw, fh, spr), place(fw, fh, spr, breathe=b), place(fw, fh, spr, breathe=b), place(fw, fh, spr)],
+        'walk': [place(fw, fh, spr, legs_dx=b, shear=0.5 * k), place(fw, fh, spr, dy=-b, shear=1 * k),
+                 place(fw, fh, spr, legs_dx=-b, shear=0.5 * k), place(fw, fh, spr, dy=-b, shear=1 * k)],
+        'atk': [place(fw, fh, spr, shear=-2.5 * k, dx=-b), place(fw, fh, spr, shear=5 * k, dx=2 * b, legs_dx=b), place(fw, fh, spr, shear=2 * k, dx=b)],
+        'cast': [place(fw, fh, spr, dy=-b), place(fw, fh, spr, breathe=b)],
     }
     order = ['idle', 'walk', 'atk', 'cast']
     anims, strip, i = {}, [], 0
-    for k in order:
-        anims[k] = [i, len(frames[k])]
-        strip += frames[k]
-        i += len(frames[k])
+    for kk in order:
+        anims[kk] = [i, len(frames[kk])]
+        strip += frames[kk]
+        i += len(frames[kk])
     sheet = np.concatenate(strip, 1)
     return sheet, fw, fh, anims
 
