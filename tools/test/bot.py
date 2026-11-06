@@ -11,12 +11,18 @@ BOT = r"""
   const L = window.__LICH, G = L.G;
   if (metamax) for (const m of Object.values(L.META_BY_ID || {})) G.meta.lv[m.id] = m.max;
   L.newCampaign('haunted');
-  const log = []; const t0 = performance.now(); let guard = 0;
+  const log = []; const t0 = performance.now(); let guard = 0, dupes = 0;
   const KEEPX = 156;
   function build() {
     const r = G.run;
     let tries = 0;
-    while (r.souls > 140 && tries++ < 80) {
+    // alternate between towers and squads (no army cap any more)
+    while (r.souls > 140 && tries++ < 120) {
+      if (Math.random() < 0.5) {
+        const u = r.unlockedUnits[Math.floor(Math.random() * r.unlockedUnits.length)];
+        if (r.souls >= L.recruitCost(u)) L.recruit(u);
+        continue;
+      }
       const types = r.unlockedTowers, type = types[Math.floor(Math.random() * types.length)];
       const cx = Math.floor((KEEPX + 40 + Math.random() * 300) / 16), cy = Math.floor((328 + (Math.random() - 0.5) * 380) / 16);
       let near = false;
@@ -26,22 +32,20 @@ BOT = r"""
       r.souls -= cost; L.placeTower(type, cx, cy, 0, { invested: cost });
     }
     for (const t of G.towers) { const nx = t.def.tiers[t.tier + 1]; if (nx && r.souls > nx.cost * 1.3 && (t.tier < 1 || L.metaLv('f_evo'))) { r.souls -= nx.cost; t.tier++; t.maxHp = L.towerMaxHp(t); t.hp = t.maxHp; } }
-    let k = 0;
-    while (r.souls > 80 && L.capUsed() < L.unitCap() && k++ < 12) { const u = r.unlockedUnits[Math.floor(Math.random() * r.unlockedUnits.length)]; if (!L.recruit(u)) break; }
     // incremental sinks
-    for (let i = 0; i < 4; i++) { if (r.souls > 600) L.buyWell(['asc_dmg', 'asc_hp', 'legion', 'asc_dmg'][i]); }
+    for (let i = 0; i < 5; i++) { if (r.souls > 600) L.buyWell(['asc_dmg', 'asc_hp', 'crypt', 'asc_squad', 'legion'][i]); }
   }
   while (G.phase !== 'over' && G.run.wave < maxWave && guard++ < 400000) {
-    if (G.run.pendingLevels > 0) { const c = L.rollCards(3); if (c.length) L.applyCard(c[Math.floor(Math.random() * c.length)]); G.run.pendingLevels--; continue; }
+    if (G.run.pendingLevels > 0) { const c = L.rollCards(3); if (!L.offerIsClean(c)) dupes++; if (c.length) L.applyCard(c[Math.floor(Math.random() * c.length)]); G.run.pendingLevels--; continue; }
     if (G.phase === 'prep') {
       build();
-      log.push({ w: G.run.wave, keep: Math.round(G.keep.hp), souls: Math.round(G.run.souls), lvl: G.run.level, towers: G.towers.length, units: G.units.length, kills: G.run.kills, fervor: +(G.run.fervor || 1).toFixed(2), ms: Math.round(performance.now() - t0) });
+      log.push({ w: G.run.wave, keep: Math.round(G.keep.hp), souls: Math.round(G.run.souls), lvl: G.run.level, towers: G.towers.length, units: G.units.length, kinds: G.run.unlockedUnits.length, kills: G.run.kills, fervor: +(G.run.fervor || 1).toFixed(2), ms: Math.round(performance.now() - t0) });
       L.startWave();
     }
     for (const s of G.run.spells) if (L.canCast(s) && G.enemies.length > 8) { const e = G.enemies[0]; L.castSpell(s, e.x, e.y); }
     L.step(1 / 30); L.stepVisual(1 / 30, 186, 416);
   }
-  return { log, phase: G.phase, wave: G.run.wave, keep: Math.round(G.keep.hp), ms: Math.round(performance.now() - t0) };
+  return { log, dupes, phase: G.phase, wave: G.run.wave, keep: Math.round(G.keep.hp), ms: Math.round(performance.now() - t0) };
 }
 """
 errs = []

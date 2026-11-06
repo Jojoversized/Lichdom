@@ -95,7 +95,7 @@ export function updateEnemy(e: any, dt: number) {
   if (d.charge && !e.charged) spd *= 1.2;
   const tx = ncx * CELL + 8 + ((e.id * 7) % 9 - 4), ty = ncy * CELL + 8 + ((e.id * 13) % 9 - 4);
   moveToward(e, tx, ty, spd, dt);
-  G.hashE.query(e.x, e.y, 7, (o: any) => { if (o !== e && !o.flying) { const dx = e.x - o.x, dy = e.y - o.y, dd = Math.hypot(dx, dy) || 1; e.x += (dx / dd) * 8 * dt; e.y += (dy / dd) * 8 * dt; } });
+  if ((e.id + G.stepN) % 2 === 0) { let n = 0; G.hashE.query(e.x, e.y, 7, (o: any) => { if (o !== e && !o.flying) { const dx = e.x - o.x, dy = e.y - o.y, dd = Math.hypot(dx, dy) || 1; e.x += (dx / dd) * 16 * dt; e.y += (dy / dd) * 16 * dt; return ++n >= 5; } }); }
   setAnim(e, 'walk');
 }
 
@@ -113,7 +113,7 @@ function enemyFindTarget(e: any) {
     return e.target && e.target.kind !== 'unit' ? e.target : null;
   }
   let taunt: any = null;
-  G.hashU.query(e.x, e.y, 60, (u: any) => { if (u.def.taunt && !u.flying) { taunt = u; return true; } });
+  G.hashU.query(e.x, e.y, 60, (u: any) => { if (u.def.taunt) { taunt = u; return true; } });
   if (!taunt) for (const t of G.towers) if (t.def.taunt && dist2(t.x, t.y, e.x, e.y) < 3600) { taunt = t; break; }
   if (taunt && !d.ranged) return taunt;
   if (d.hunter === 'struct') {
@@ -121,10 +121,9 @@ function enemyFindTarget(e: any) {
     for (const t of G.towers) { const dd = dist2(t.x, t.y, e.x, e.y); if (dd < bd) { bd = dd; best = t; } }
     if (best) return best;
   }
-  const canHitAir = !!d.ranged || e.flying;
   const aggro = d.ranged ? e.range : 26;
   let best: any = null, bd = Infinity;
-  G.hashU.query(e.x, e.y, aggro, (u: any) => { if (u.flying && !canHitAir) return; const dd = dist2(u.x, u.y, e.x, e.y); if (dd < bd) { bd = dd; best = u; } });
+  G.hashU.query(e.x, e.y, aggro, (u: any) => { const dd = dist2(u.x, u.y, e.x, e.y); if (dd < bd) { bd = dd; best = u; } });
   if (best) return best;
   if (d.ranged) {
     let bt: any = null; bd = e.range * e.range;
@@ -190,7 +189,9 @@ function guardPosition(u: any, idx: number, count: number) {
   }
   // lanes converge on the gate; keep guards within a band around it
   y = KEEP.y + (y - KEEP.y) * 0.55;
-  const x = GUARD_LINE_X + (isRanged(u) ? -26 : 14) + (u.flying ? 30 : 0) + ((u.slot * 997) % 1) * 18;
+  // big hosts form up in depth (rows every 9 px) instead of piling onto one line
+  const depth = Math.max(1, Math.ceil(count / 70)), row = idx % depth;
+  const x = GUARD_LINE_X + (isRanged(u) ? -26 - row * 9 : 14 + row * 9) + (u.flying ? 30 : 0) + ((u.slot * 997) % 1) * 18;
   return { x, y: clamp(y, 60, 600) };
 }
 
@@ -204,22 +205,30 @@ export function planArmy(dt: number) {
   const ground = G.units.filter((u: any) => !isRanged(u) && !u.flying).length;
   // enemies sorted by urgency (closest to keep first)
   const threats = G.enemies.map((e: any) => ({ e, fd: e.flying ? Math.max(0, e.x - KEEP.x1) / CELL : flowDist(e.x, e.y) }));
+  // only the most urgent threats are worth planning around (keeps huge hosts cheap)
+  threats.sort((a: any, b: any) => a.fd - b.fd);
+  if (threats.length > 90) threats.length = 90;
+  // bosses carry kill-zones (purges, slams). Far from the keep, ordinary undead do not
+  // trickle into them squad by squad; they hold the line and fight the boss together
+  // once it reaches the guard line and the towers.
+  const bosses = G.enemies.filter((e: any) => e.boss);
+  const dangerous = (e: any) => e.x > GUARD_LINE_X + 170 && bosses.some((b: any) => dist2(b.x, b.y, e.x, e.y) < 150 * 150);
+  for (const t of threats) t.danger = bosses.length ? dangerous(t.e) : false;
   let gi = 0, ri = 0;
   const nRanged = G.units.filter((u: any) => isRanged(u)).length;
   for (const u of G.units) {
     u.guard = isRanged(u) ? guardPosition(u, ri++, nRanged) : guardPosition(u, gi++, Math.max(1, ground));
     if (u.retreat) { u.plan = null; continue; }
     let best: any = null, bc = Infinity;
-    const canAir = !!u.def.ranged || !!u.def.antiAir || u.flying;
     const reach = u.summon ? 9999 : u.flying ? 900 : ENGAGE_MAX_X;
     for (const t of threats) {
       const e = t.e;
-      if (e.flying && !canAir) continue;
       if (e.x > reach && dist2(u.x, u.y, e.x, e.y) > 180 * 180) continue;
+      if (t.danger && !u.summon) continue;
       const travel = dist(u.x, u.y, e.x, e.y);
       const c = crowd.get(e) || 0;
       let cost = travel * 0.8 + t.fd * CELL * 0.6 + c * (u.def.taunt ? 5 : 22);
-      if (e.boss || e.champion) cost -= 60;
+      if ((e.boss && !t.danger) || e.champion) cost -= 60;
       if (u.flying && e.flying) cost -= 120;
       if (u.def.antiCav && e.def.cav) cost -= 80;
       if (u.type === 'deathknight' && e.armor > 0.3) cost -= 50;
@@ -271,8 +280,7 @@ export function updateUnit(u: any, dt: number) {
   u.retT -= dt;
   if (u.retT <= 0) {
     u.retT = 0.25;
-    const canAir = !!d.ranged || !!d.antiAir || u.flying;
-    const near = G.hashE.nearest(u.x, u.y, (u.range || 14) + 6, (e: any) => !e.flying || canAir);
+    const near = G.hashE.nearest(u.x, u.y, (u.range || 14) + 6);
     if (near) u.engage = near; else u.engage = null;
   }
   if (u.engage && !u.engage.dead) t = u.engage;
@@ -294,7 +302,17 @@ export function updateUnit(u: any, dt: number) {
     if (dist2(u.x, u.y, g.x, g.y) > 9) { moveToward(u, g.x, g.y, spd, dt); setAnim(u, 'walk'); }
     else if (u.anim === 'walk') setAnim(u, 'idle');
   }
-  if (!u.flying) G.hashU.query(u.x, u.y, 6, (o: any) => { if (o !== u && !o.flying) { const dx = u.x - o.x, dy = u.y - o.y, dd = Math.hypot(dx, dy) || 1; u.x += (dx / dd) * 10 * dt; u.y += (dy / dd) * 10 * dt; } });
+  // crowd separation: staggered over 3 steps (3x strength) and capped at 5 neighbours,
+  // so an uncapped host of thousands stays cheap
+  if (!u.flying && (u.id + G.stepN) % 3 === 0) {
+    let n = 0;
+    G.hashU.query(u.x, u.y, 6, (o: any) => {
+      if (o === u || o.flying) return;
+      const dx = u.x - o.x, dy = u.y - o.y, dd = Math.hypot(dx, dy) || 1;
+      u.x += (dx / dd) * 30 * dt; u.y += (dy / dd) * 30 * dt;
+      return ++n >= 5;
+    });
+  }
 }
 
 function unitAttack(u: any, t: any) {
@@ -320,9 +338,9 @@ function unitAttack(u: any, t: any) {
   startAttack(u);
   if (d.cleave || u.splash) {
     const cr = d.cleave || u.splash;
-    aoeDamage(t.x, t.y, cr, u.dmg, d.dtype, u, { groundOnly: !u.flying, onHit: (e: any) => { if (u.type === 'golem' && r.mods.golem_quake) applyStun(e, 1); } });
+    aoeDamage(t.x, t.y, cr, u.dmg, d.dtype, u, { onHit: (e: any) => { if (u.type === 'golem' && r.mods.golem_quake) applyStun(e, 1); } });
     addRing(t.x, t.y, 2, cr, u.summon ? PAL.necro : '#bbbbaa', 0.25);
-    if (u.def.cap >= 3 || u.summon) { G.shake = Math.max(G.shake, 1.5); sfx('slam', 0.35); }
+    if (u.def.size >= 3 || u.summon) { G.shake = Math.max(G.shake, 1.5); sfx('slam', 0.35); }
   } else {
     let dmg = u.dmg;
     if (d.antiCav && t.def.cav) dmg *= d.antiCav;
@@ -498,15 +516,15 @@ export function updateTower(t: any, dt: number) {
     }
     case 'abomination': {
       if (t.cdT <= 0) {
-        const e = G.hashE.nearest(t.x, t.y, st.range + 8, (o: any) => !o.flying);
-        if (e) { t.cdT = st.cd; t.fireT = 0.25; aoeDamage(e.x, e.y, d.cleave, st.dmg, 'phys', t, { groundOnly: true }); addRing(e.x, e.y, 2, d.cleave, '#a06050', 0.25); sfx('slam', 0.3); }
+        const e = G.hashE.nearest(t.x, t.y, st.range + 8);
+        if (e) { t.cdT = st.cd; t.fireT = 0.25; aoeDamage(e.x, e.y, d.cleave, st.dmg, 'phys', t); addRing(e.x, e.y, 2, d.cleave, '#a06050', 0.25); sfx('slam', 0.3); }
       }
       t.abT -= dt;
       if (t.abT <= 0) {
         t.abT = 2;
         if (t.hp < t.maxHp) { const c = G.corpses.find((c: any) => dist2(c.x, c.y, t.x, t.y) < 80 * 80); if (c) { removeCorpse(c); t.hp = Math.min(t.maxHp, t.hp + t.maxHp * 0.15); addText(t.x, t.y - 40, 'devours', '#c08070'); } }
       }
-      if (t.tier >= 1 || r.mods.abom_hook) { t.hookT = (t.hookT ?? 5) - dt; if (t.hookT <= 0) { t.hookT = 5; const e = G.hashE.nearest(t.x, t.y, 120, (o: any) => !o.flying && !o.boss && dist(o.x, o.y, t.x, t.y) > 40); if (e) { lightningBolt(t.x, t.y - 16, e.x, e.y - 8, '#9a7a60', 0.3, 1, 1); const a = Math.atan2(e.y - t.y, e.x - t.x); e.x = t.x + Math.cos(a) * 26; e.y = t.y + Math.sin(a) * 18; applyStun(e, 0.8); sfx('hook', 0.3); } } }
+      if (t.tier >= 1 || r.mods.abom_hook) { t.hookT = (t.hookT ?? 5) - dt; if (t.hookT <= 0) { t.hookT = 5; const e = G.hashE.nearest(t.x, t.y, 120, (o: any) => !o.boss && dist(o.x, o.y, t.x, t.y) > 40); if (e) { lightningBolt(t.x, t.y - 16, e.x, e.y - 8, '#9a7a60', 0.3, 1, 1); const a = Math.atan2(e.y - t.y, e.x - t.x); e.x = t.x + Math.cos(a) * 26; e.y = t.y + Math.sin(a) * 18; applyStun(e, 0.8); sfx('hook', 0.3); } } }
       if (t.tier >= 2) { t.abT2 -= dt; if (t.abT2 <= 0) { t.abT2 = 12; if (G.fleshZombies < 8) { spawnUnit('zombie', t.x + rnd(-10, 10), t.y + 14, { free: true }); G.fleshZombies++; } } }
       break;
     }
@@ -551,7 +569,7 @@ export function updateFort(f: any, dt: number) {
     if (f.abT <= 0) {
       f.abT = 2;
       let any = false;
-      G.hashE.query(f.x, f.y, f.def.radius, (e: any) => { if (!e.flying) { any = true; dealDamage(e, f.def.pour * Math.pow(1.09, G.run.wave) * globalDmg(), 'fire', NEUTRAL_SRC, { aoe: true, noCrit: true }); e.st.shredT = 3; } });
+      G.hashE.query(f.x, f.y, f.def.radius, (e: any) => { { any = true; dealDamage(e, f.def.pour * Math.pow(1.09, G.run.wave) * globalDmg(), 'fire', NEUTRAL_SRC, { aoe: true, noCrit: true }); e.st.shredT = 3; } });
       if (any) { for (let i = 0; i < 14; i++) addParticle(f.x + rnd(-f.def.radius, f.def.radius) * 0.7, f.y + rnd(-10, 10), rnd(-10, 10), rnd(-30, 5), pick(['#7fff5a', '#c8ff9a', '#d0a040']), 0.6, 'p', 1); addRing(f.x, f.y, 4, f.def.radius, '#7fff5a', 0.35); sfx('sizzle', 0.25); }
     }
   }

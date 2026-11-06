@@ -29,7 +29,11 @@ with sync_playwright() as p:
     print('collapsed:', pg.evaluate("() => document.querySelector('#buildbar').classList.contains('collapsed')"))
     shot(pg, 'c_collapsed')
     pg.click('.tabs button[data-tab=army]'); pg.wait_for_timeout(150)
+    n0 = pg.evaluate("() => window.__LICH.G.units.length")
     pg.click('#buildlist .bitem >> nth=0'); pg.wait_for_timeout(100)
+    n1 = pg.evaluate("() => window.__LICH.G.units.length")
+    print('squad recruited:', n1 - n0, 'undead (must be >= 5)'); assert n1 - n0 >= 5
+    shot(pg, 'c2_army_tab')
     pg.click('#b-wave'); pg.wait_for_timeout(6000); shot(pg, 'd_wave')
     # force level up, check modal covers HUD
     pg.evaluate("() => { window.__LICH.G.run.pendingLevels = 1; }"); pg.wait_for_timeout(500); shot(pg, 'e_levelup')
@@ -38,6 +42,9 @@ with sync_playwright() as p:
     pg.keyboard.press('e'); pg.wait_for_timeout(300); shot(pg, 'f_well')
     pg.click('.witem[data-id=legion]'); pg.wait_for_timeout(200)
     pg.click('.witem[data-id=colossus]'); pg.wait_for_timeout(200)
+    k0 = pg.evaluate("() => window.__LICH.G.units.length")
+    pg.click('.witem[data-id=crypt]'); pg.wait_for_timeout(200)
+    print('call of the crypt:', pg.evaluate("() => window.__LICH.G.units.length") - k0)
     pg.click('#m-x'); pg.wait_for_timeout(200)
     print('host', pg.evaluate("() => ({units: window.__LICH.G.units.length, summons: window.__LICH.G.units.filter(u=>u.summon).length})"))
     pg.wait_for_timeout(6000); shot(pg, 'g_army')

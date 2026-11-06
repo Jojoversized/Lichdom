@@ -10,7 +10,7 @@ export const store = {
 };
 
 export function defaultMods() {
-  return { dmg: 0, towerAs: 0, range: 0, unitHp: 0, unitDmg: 0, unitAs: 0, unitSpd: 0, crit: 0.05, critMult: 2, souls: 0, xp: 0, cap: 0, keep: 0, wallHp: 0, towerHp: 0, spellCd: 1, spellDmg: 0, lichDmg: 0, lichAs: 0, lichBolts: 1 };
+  return { dmg: 0, towerAs: 0, range: 0, unitHp: 0, unitDmg: 0, unitAs: 0, unitSpd: 0, crit: 0.05, critMult: 2, souls: 0, xp: 0, squad: 0, keep: 0, wallHp: 0, towerHp: 0, spellCd: 1, spellDmg: 0, lichDmg: 0, lichAs: 0, lichBolts: 1 };
 }
 export function defaultMeta() { return { essence: 0, totalEssence: 0, lv: {} as Record<string, number> }; }
 export function defaultStats() { return { totalKills: 0, bestWave: 0, bosses: {}, maxArmy: 0, maxTowers: 0, evolved: false, legendary: false, castApoc: false, runs: 0, flawless: false, seenHelp: false, ach: {}, codex: { enemy: {}, tower: {}, unit: {}, spell: {} } }; }

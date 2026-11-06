@@ -97,86 +97,115 @@ function valueNoise(seed: number) {
   };
 }
 
-/** Paints the static ground layer: noise soil, cobbled roads, dead grass, debris. */
+/** Paints the static ground layer at texel resolution (TEXEL_RES per world px):
+ *  dithered soil bands, rounded cobblestones with lit/shaded faces, single-texel
+ *  grass blades, pebbles, bones and old battle scars. The renderer draws it at 1/TEXEL_RES. */
+export const TERRAIN_RES = 2;
+const BAYER4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 export function paintTerrain(M: any, rng: Rng): HTMLCanvasElement {
-  const th = M.theme;
-  const [c, ctx] = makeCanvas(WW, WH);
-  const img = ctx.createImageData(WW, WH), d = img.data;
-  const n1 = valueNoise(M.seed + 1), n2 = valueNoise(M.seed + 2), n3 = valueNoise(M.seed + 3);
+  const T = TERRAIN_RES, th = M.theme, TW = WW * T, TH = WH * T;
+  const [c, ctx] = makeCanvas(TW, TH);
+  const img = ctx.createImageData(TW, TH), d = img.data;
+  const n1 = valueNoise(M.seed + 1), n2 = valueNoise(M.seed + 2), n3 = valueNoise(M.seed + 3), n4 = valueNoise(M.seed + 4);
   const g = th.ground.map(hexToRgb);
-  for (let y = 0; y < WH; y++) for (let x = 0; x < WW; x++) {
-    const v = n1(x / 60, y / 60) * 0.6 + n2(x / 14, y / 14) * 0.3 + n3(x / 3, y / 3) * 0.25 + (rng() - 0.5) * 0.18;
-    const col = g[v < 0.42 ? 3 : v < 0.6 ? 0 : v < 0.78 ? 1 : 2];
-    const i = (y * WW + x) * 4;
-    d[i] = col[0]; d[i + 1] = col[1]; d[i + 2] = col[2]; d[i + 3] = 255;
+  const order = [g[3], g[0], g[1], g[2]];
+  // soil: 4 tones with Bayer-dithered transitions (no salt-and-pepper noise)
+  for (let y = 0; y < TH; y++) for (let x = 0; x < TW; x++) {
+    const wx = x / T, wy = y / T;
+    let v = n1(wx / 60, wy / 60) * 0.62 + n2(wx / 14, wy / 14) * 0.28 + n3(wx / 4, wy / 4) * 0.16;
+    v += (BAYER4[(y & 3) * 4 + (x & 3)] / 16 - 0.5) * 0.09;
+    const band = v < 0.43 ? 0 : v < 0.6 ? 1 : v < 0.77 ? 2 : 3;
+    const col = order[band];
+    // faint large-scale moisture tint
+    const wet = n4(wx / 90, wy / 90) > 0.62 ? 0.9 : 1;
+    const i = (y * TW + x) * 4;
+    d[i] = col[0] * wet; d[i + 1] = col[1] * wet; d[i + 2] = col[2] * wet; d[i + 3] = 255;
   }
   ctx.putImageData(img, 0, 0);
-  const R = (x: number, y: number, w: number, h: number, col: string) => { ctx.fillStyle = col; ctx.fillRect(Math.round(x), Math.round(y), w, h); };
+  // all coordinates below are in texels
+  const R = (x: number, y: number, w: number, h: number, col: string) => { ctx.fillStyle = col; ctx.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); };
+  // dark erosion patches (stepped ellipses)
   for (let i = 0; i < 90; i++) {
-    const x = rng() * WW, y = rng() * WH, r = 6 + rng() * 22;
-    for (let yy = -r; yy < r; yy++) { const w = Math.sqrt(r * r - yy * yy) * (1.4 + rng() * 0.2); R(x - w, y + yy * 0.55, w * 2, 1, 'rgba(10,10,8,0.18)'); }
+    const x = rng() * TW, y = rng() * TH, r = (6 + rng() * 22) * T;
+    for (let yy = -r; yy < r; yy += 1) { const w = Math.sqrt(r * r - yy * yy) * (1.4 + rng() * 0.15); if ((yy | 0) % 2 && rng() < 0.3) continue; R(x - w, y + yy * 0.55, w * 2, 1, 'rgba(10,10,8,0.10)'); }
   }
-  const st = th.stone;
+  // cobbled roads: rounded stones with lit top-left faces and shaded bottom-right
+  const st = th.stone, C = CELL * T;
   for (let cy = 0; cy < MH; cy++) for (let cx = 0; cx < MW; cx++) {
     if (!M.road[cellIdx(cx, cy)]) continue;
-    const x0 = cx * CELL, y0 = cy * CELL;
-    R(x0, y0, CELL, CELL, shade(th.ground[3], 0.95));
+    const x0 = cx * C, y0 = cy * C;
+    R(x0, y0, C, C, shade(th.ground[3], 0.82));
+    const edgeL = cx > 0 && !M.road[cellIdx(cx - 1, cy)], edgeR = cx < MW - 1 && !M.road[cellIdx(cx + 1, cy)];
+    const edgeT = cy > 0 && !M.road[cellIdx(cx, cy - 1)], edgeB = cy < MH - 1 && !M.road[cellIdx(cx, cy + 1)];
     let yy = 0;
-    while (yy < CELL) {
-      const rh = 3 + Math.floor(rng() * 3); let xx = -Math.floor(rng() * 3);
-      while (xx < CELL) {
-        const rw = 4 + Math.floor(rng() * 4);
-        const edge = (xx < 2 && cx > 0 && !M.road[cellIdx(cx - 1, cy)]) || (xx > CELL - 5 && cx < MW - 1 && !M.road[cellIdx(cx + 1, cy)]) || (yy < 2 && cy > 0 && !M.road[cellIdx(cx, cy - 1)]) || (yy > CELL - 5 && cy < MH - 1 && !M.road[cellIdx(cx, cy + 1)]);
-        if (rng() < (edge ? 0.3 : 0.6)) {
-          const tone = shade(st, 0.55 + rng() * 0.4);
-          const sx = Math.max(0, xx), sw = Math.min(rw - 1, CELL - sx);
-          if (sw > 0) { R(x0 + sx, y0 + yy, sw, Math.min(rh - 1, CELL - yy), tone); R(x0 + sx, y0 + yy, sw, 1, shade(tone, 1.18)); }
+    while (yy < C) {
+      const rh = 6 + Math.floor(rng() * 5); let xx = -Math.floor(rng() * 6);
+      while (xx < C) {
+        const rw = 8 + Math.floor(rng() * 7);
+        const edge = (xx < 4 && edgeL) || (xx > C - 10 && edgeR) || (yy < 4 && edgeT) || (yy > C - 10 && edgeB);
+        if (rng() < (edge ? 0.35 : 0.8)) {
+          const sx = Math.max(0, xx), sw = Math.min(rw - 2, C - sx), sh = Math.min(rh - 2, C - yy);
+          if (sw > 2 && sh > 2) stone(x0 + sx, y0 + yy, sw, sh, shade(st, 0.55 + rng() * 0.38));
         }
         xx += rw;
       }
       yy += rh;
     }
   }
+  function stone(x: number, y: number, w: number, h: number, tone: string) {
+    R(x + 1, y, w - 2, h, tone); R(x, y + 1, w, h - 2, tone);              // rounded body
+    R(x + 1, y, w - 2, 1, shade(tone, 1.22)); R(x, y + 1, 1, h - 3, shade(tone, 1.12)); // lit edges
+    R(x + 1, y + h - 1, w - 2, 1, shade(tone, 0.62)); R(x + w - 1, y + 2, 1, h - 3, shade(tone, 0.72)); // shade
+    if (w > 8 && rng() < 0.35) R(x + 2 + Math.floor(rng() * (w - 5)), y + 2 + Math.floor(rng() * (h - 4)), 2, 1, shade(tone, 0.8)); // pit
+  }
+  // dead grass: tufts of 1-texel blades that lean, with lit tips
   const gc = th.grass;
-  for (let i = 0; i < 7500; i++) {
-    const x = rng() * WW, y = rng() * WH;
-    const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
+  for (let i = 0; i < 9000; i++) {
+    const x = rng() * TW, y = rng() * TH;
+    const cx = Math.floor(x / C), cy = Math.floor(y / C);
     if (M.road[cellIdx(cx, cy)] || M.reserved[cellIdx(cx, cy)] === 2) continue;
-    if (n1(x / 40 + 9, y / 40 + 3) < 0.45 && rng() < 0.85) continue;
-    const strands = 3 + Math.floor(rng() * 5);
-    for (let s = 0; s < strands; s++) {
-      const sx = x + s - strands / 2 + (rng() - 0.5) * 2, h = 2 + Math.floor(rng() * 5);
+    if (n1(x / T / 40 + 9, y / T / 40 + 3) < 0.45 && rng() < 0.85) continue;
+    const blades = 4 + Math.floor(rng() * 7), lean = (rng() - 0.5) * 0.6;
+    R(x - blades, y + 1, blades * 2, 1, 'rgba(0,0,0,0.28)');
+    for (let s = 0; s < blades; s++) {
+      const bx = x + (s - blades / 2) * 1.4 + (rng() - 0.5) * 2, h = 3 + Math.floor(rng() * 9);
       const col = gc[Math.floor(rng() * gc.length)];
-      R(sx, y - h, 1, h, col);
-      if (h > 3 && rng() < 0.5) R(sx + (rng() < 0.5 ? -1 : 1), y - h - 1, 1, 1, shade(col, 1.2));
+      for (let k = 0; k < h; k++) R(bx + lean * k, y - k, 1, 1, k > h - 3 ? shade(col, 1.18) : k < 2 ? shade(col, 0.7) : col);
     }
-    R(x - strands / 2, y, strands, 1, 'rgba(0,0,0,0.3)');
   }
-  for (let i = 0; i < 520; i++) {
-    const x = rng() * WW, y = rng() * WH, w = 3 + Math.floor(rng() * 7), h = 2 + Math.floor(rng() * 3), tone = shade(st, 0.6 + rng() * 0.4);
-    R(x, y, w, h, tone); R(x, y, w, 1, shade(tone, 1.25)); R(x + 1, y + h, w, 1, 'rgba(0,0,0,0.45)');
+  // pebbles and loose rocks
+  for (let i = 0; i < 700; i++) {
+    const x = rng() * TW, y = rng() * TH, w = 3 + Math.floor(rng() * 9), h = 2 + Math.floor(rng() * 5), tone = shade(st, 0.6 + rng() * 0.4);
+    R(x + 1, y + h, w, 1, 'rgba(0,0,0,0.4)');
+    R(x + 1, y, w - 2, h, tone); R(x, y + 1, w, h - 2, tone);
+    R(x + 1, y, Math.max(1, w - 3), 1, shade(tone, 1.25)); R(x + w - 1, y + 1, 1, Math.max(1, h - 2), shade(tone, 0.7));
   }
-  for (let i = 0; i < 360; i++) R(rng() * WW, rng() * WH, 1 + (rng() < 0.3 ? 1 : 0), 1, rng() < 0.7 ? '#8a1c18' : '#5a1210');
-  for (let i = 0; i < 300; i++) {
-    const x = rng() * WW, y = rng() * WH, t = rng();
-    if (t < 0.4) { R(x, y, 5, 1, PAL.boneD); R(x - 1, y - 1, 2, 3, PAL.bone); R(x + 4, y - 1, 2, 3, PAL.bone); }
-    else if (t < 0.6) { R(x, y, 4, 3, PAL.bone); R(x + 1, y + 1, 1, 1, '#111'); R(x + 3, y + 1, 1, 1, '#111'); R(x + 1, y + 3, 2, 1, PAL.boneD); }
-    else if (t < 0.8) { R(x, y, 7, 1, '#7a7e84'); R(x - 1, y - 1, 1, 3, '#5a4a30'); }
-    else { R(x, y, 4, 4, '#4a4040'); R(x + 1, y + 1, 2, 2, '#6a6060'); }
+  // old blood
+  for (let i = 0; i < 420; i++) { const x = rng() * TW, y = rng() * TH; R(x, y, 1 + Math.floor(rng() * 3), 1 + (rng() < 0.4 ? 1 : 0), rng() < 0.6 ? '#7a1a16' : '#4e100e'); }
+  // bones, skulls, broken blades, rubble
+  for (let i = 0; i < 320; i++) {
+    const x = rng() * TW, y = rng() * TH, t = rng();
+    R(x - 1, y + 4, 12, 1, 'rgba(0,0,0,0.3)');
+    if (t < 0.4) { R(x + 1, y + 1, 8, 2, PAL.boneD); R(x + 1, y + 1, 8, 1, PAL.bone); R(x - 1, y, 3, 4, PAL.bone); R(x + 8, y, 3, 4, PAL.bone); R(x - 1, y + 3, 3, 1, PAL.boneD); R(x + 8, y + 3, 3, 1, PAL.boneD); }
+    else if (t < 0.6) { R(x + 1, y, 6, 6, PAL.bone); R(x, y + 1, 8, 4, PAL.bone); R(x + 1, y, 5, 1, '#efe8d4'); R(x + 1, y + 2, 2, 2, '#14100c'); R(x + 5, y + 2, 2, 2, '#14100c'); R(x + 2, y + 6, 4, 1, PAL.boneD); R(x + 7, y + 3, 1, 3, PAL.boneD); }
+    else if (t < 0.8) { R(x, y, 14, 1, '#9aa0a6'); R(x, y + 1, 14, 1, '#5e6268'); R(x - 2, y - 2, 2, 5, '#5a4a30'); R(x - 3, y, 4, 1, '#8a6a3a'); }
+    else { R(x, y, 7, 6, '#4a4040'); R(x + 1, y + 1, 4, 3, '#6a6060'); R(x + 6, y + 1, 1, 5, '#2e2828'); }
   }
+  // fallen soldiers' remains
   for (let i = 0; i < 22; i++) {
-    const x = rng() * WW, y = rng() * WH;
-    for (let k = 0; k < 18; k++) R(x + (rng() - 0.5) * 20, y + (rng() - 0.5) * 9, 2 + rng() * 3, 1, rng() < 0.5 ? '#3a0c0a' : '#2a0808');
-    R(x - 6, y - 1, 13, 3, '#3c2a24'); R(x - 6, y - 1, 13, 1, '#5a3a30'); R(x + 5, y - 2, 4, 4, '#6a4a3a');
+    const x = rng() * TW, y = rng() * TH;
+    for (let k = 0; k < 30; k++) R(x + (rng() - 0.5) * 40, y + (rng() - 0.5) * 18, 2 + rng() * 5, 1 + (rng() < 0.3 ? 1 : 0), rng() < 0.5 ? '#3a0c0a' : '#2a0808');
+    R(x - 12, y - 2, 26, 6, '#3c2a24'); R(x - 12, y - 2, 26, 1, '#5a3a30'); R(x - 12, y + 3, 26, 1, '#24180f'); R(x + 10, y - 4, 8, 8, '#6a4a3a'); R(x + 11, y - 4, 6, 1, '#8a6a52');
   }
+  // scorched craters
   for (let i = 0; i < 8; i++) {
-    const x = 300 + rng() * (WW - 380), y = 50 + rng() * (WH - 100), len = 14 + rng() * 14;
-    for (let yy = -6; yy < 6; yy++) {
-      const w = (Math.sqrt(36 - yy * yy) * len) / 6;
+    const x = (300 + rng() * (WW - 380)) * T, y = (50 + rng() * (WH - 100)) * T, len = (14 + rng() * 14) * T;
+    for (let yy = -12; yy < 12; yy++) {
+      const w = (Math.sqrt(144 - yy * yy) * len) / 12;
       for (let xx = -w; xx < w; xx++) {
-        const edge = Math.abs(xx) > w - 3 || yy < -4 || yy > 3;
-        if (edge && rng() < 0.45) continue;
-        R(x + xx + yy * 1.2, y + yy, 1, 1, yy < -3 ? (rng() < 0.5 ? '#1e1814' : '#16110e') : yy < 3 ? (rng() < 0.15 ? '#2a0c0a' : '#100b09') : rng() < 0.5 ? '#4a2618' : '#3a1e14');
+        const edge = Math.abs(xx) > w - 6 || yy < -8 || yy > 7;
+        if (edge && rng() < 0.5) continue;
+        R(x + xx + yy * 1.2, y + yy, 1, 1, yy < -6 ? (rng() < 0.5 ? '#1e1814' : '#16110e') : yy < 6 ? (rng() < 0.12 ? '#2a0c0a' : '#100b09') : rng() < 0.5 ? '#4a2618' : '#3a1e14');
       }
     }
   }

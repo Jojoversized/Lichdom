@@ -37,11 +37,24 @@ export function towerMaxHp(t: any) {
   return Math.round(d.hp * m * (1 + t.tier * 0.4) * (1 + metaLv('f_tower_hp') * 0.25 + G.run.m.towerHp) * Math.pow(1.05, G.run.wave));
 }
 export function fortMaxHp(f: any) { return Math.round(f.def.hp * (1 + metaLv('f_wall') * 0.2 + G.run.m.wallHp + (G.run.mods.leg_bulwark && f.type === 'wall' ? 1 : 0)) * Math.pow(1.05, G.run.wave)); }
-/** Recruitment capacity. Summoned and raised undead never count against it. */
-export function unitCap() { return 16 + metaLv('m_cap') * 3 + G.run.m.cap; }
-export function capUsed() { let n = 0; for (const u of G.units) if (!u.temp && !u.summon && !u.free) n += u.def.cap; return n; }
-/** Incremental costs: each copy you already own makes the next one pricier. */
-export function recruitCost(type: string) { let n = 0; for (const u of G.units) if (u.type === type && !u.summon && !u.free) n++; return Math.round(UNITS[type].cost * Math.pow(1.05, n) * (1 - metaLv('m_cost') * 0.08)); }
+/** There is no army cap. Each recruit buys a squad; squad-size upgrades come from
+ *  level-up cards (r.m.squad), the Legions meta node and Soul Well Ossuary Expansions. */
+export function squadSize(type: string) {
+  const r = G.run;
+  return Math.max(5, UNITS[type].squad + (r ? (r.m.squad || 0) + (r.asc.squad || 0) : 0) + metaLv('m_cap'));
+}
+/** Incremental costs: every squad of a type you have bought makes the next one pricier. */
+export function recruitCost(type: string) {
+  const n = (G.run.bought && G.run.bought[type]) || 0;
+  return Math.round(UNITS[type].cost * Math.pow(1.12, n) * (1 - metaLv('m_cost') * 0.08));
+}
+/** Soul value of one body in the host (drives Crusade Fervor). */
+export function unitValue(u: any) {
+  if (u.temp) return 0;
+  if (u.summon) return u.summonValue || 0;
+  const d = UNITS[u.type];
+  return (d.cost / d.squad) * (1 + (u.tier || 0) * 0.75);
+}
 export function towerCost(type: string) { let n = 0; for (const t of G.towers) if (t.type === type) n++; return Math.round(TOWERS[type].cost * Math.pow(1.2, n)); }
 export function fortCost(type: string) { if (type === 'lava' && fb('freeLava')) return 0; let n = 0; for (const f of G.forts) if (f.type === type) n++; return Math.round(FORTS[type].cost * Math.pow(1.015, n)); }
 export function recalcKeep() {
@@ -56,13 +69,14 @@ export function waveHpMult(n: number) { return Math.pow(1.135, n - 1) * (1 + 0.0
 export function waveDmgMult(n: number) { return Math.pow(1.065, n - 1) * (1 + 0.02 * (n - 1)); }
 export function bountyMult(n: number) { return Math.pow(1.08, n - 1); }
 
-/** Crusade Fervor: the mortals answer an ever-larger summoned host by sending
+/** Crusade Fervor: the mortals answer an ever-larger undead host (recruited and summoned) by sending
  *  stronger soldiers. Logarithmic, so big hosts are always worth it. */
 export function computeFervor() {
   let host = 0;
-  for (const u of G.units) if (u.summon) host += u.summonValue || 0;
-  const base = 400 * bountyMult(Math.max(1, G.run.wave));
-  return 1 + 0.6 * Math.log2(1 + host / base);
+  for (const u of G.units) host += unitValue(u);
+  // a starting-sized host is free; beyond it, every doubling adds +0.45 Fervor
+  const b = bountyMult(Math.max(1, G.run.wave));
+  return 1 + 0.45 * Math.log2(1 + Math.max(0, host - 700 * b) / (1200 * b));
 }
 
 export function applyUnitStats(u: any) {

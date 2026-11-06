@@ -3,7 +3,7 @@
 import * as Phaser from 'phaser';
 import { G } from '../core/state';
 import { hooks } from '../core/events';
-import { clamp, fmt, makeCanvas } from '../core/util';
+import { clamp, fmt, makeCanvas, rnd } from '../core/util';
 import { PAL, KEEP } from '../config/constants';
 import { SHEETS } from '../config/manifest';
 import { TOWERS, TOWER_ORDER, FORTS, FORT_ORDER } from '../data/towers';
@@ -13,9 +13,9 @@ import { ENEMIES, BOSSES } from '../data/enemies';
 import { META, META_BRANCHES, META_BY_ID, metaCost, ACHIEVEMENTS, CONTENT_GATES } from '../data/meta';
 import { FORTRESSES } from '../data/world';
 import { RARITY, rollCards, applyCard } from '../systems/cards';
-import { metaLv, contentAvailable, towerStats, recruitCost, towerCost, fortCost, unitCap, capUsed, applyUnitStats, towerMaxHp } from '../systems/stats';
+import { metaLv, contentAvailable, towerStats, recruitCost, towerCost, fortCost, squadSize, applyUnitStats, towerMaxHp } from '../systems/stats';
 import { spawnUnit, removeStructure, addRing, explosion } from '../systems/combat';
-import { startWave, previewWave, castSpell, canCast, spellCd, buyWell, wellCost, wellAvailable, newCampaign, loadRun } from '../systems/campaign';
+import { spawnSquad, startWave, previewWave, castSpell, canCast, spellCd, buyWell, wellCost, wellAvailable, newCampaign, loadRun } from '../systems/campaign';
 import { essenceBreakdown, buyMeta, endCampaign, checkAchievements, codexSee } from '../systems/progression';
 import { saveRun, saveRunSoon, saveMeta, saveMetaSoon, hasRunSave, clearRunSave, loadMeta, store, SAVE_META, SAVE_RUN } from '../systems/save';
 import { startMusic, applyMusicVolume } from '../audio/audio';
@@ -48,8 +48,9 @@ function spriteIcon(key: string, frame = 0, box = 32) {
     c = { url: o.toDataURL(), w, h: hh };
     iconCache.set(id, c);
   }
-  const s = Math.max(1, Math.floor(box / Math.max(c.w, c.h)));
-  return `<img class="pix" src="${c.url}" width="${c.w * s}" height="${c.h * s}">`;
+  // sheets are 2x texel art: fit the box, integer-upscale small art, smooth-downscale big art
+  const m = Math.max(c.w, c.h), s = m <= box ? Math.max(1, Math.floor(box / m)) : box / m;
+  return `<img class="${s >= 1 ? 'pix' : 'pixd'}" src="${c.url}" width="${Math.round(c.w * s)}" height="${Math.round(c.h * s)}">`;
 }
 const unitIcon = (type: string, box = 34) => { const t = G.run ? G.run.unitTier[type] || 0 : 0; return spriteIcon(UNITS[type].tiers[t].spr, 0, box); };
 const towerIcon = (type: string, tier = 0, box = 34) => spriteIcon('tower_' + type, tier * 4, box);
@@ -122,7 +123,7 @@ export const UI: any = {
       case 'essence': return `<b>Life Essence</b><br>Permanent currency for the Phylactery.<br>Projected from this campaign: ${essenceBreakdown().total}`;
       case 'keep': return `<b>The Keep</b><br>${fmt(G.keep.hp)} / ${fmt(G.keep.maxHp)}<br>If it falls, the campaign ends.`;
       case 'enemies': return `<b>Mortals on the field</b>`;
-      case 'units': return `<b>Recruited undead / capacity</b><br>Summoned and raised undead are free and uncapped.<br>Total host: ${G.units.length}`;
+      case 'units': return `<b>Your undead host</b><br>There is no army limit: every recruit raises a whole squad. The crusade's Fervor grows with your host.<br>Total host: ${G.units.length}`;
       case 'fervor': return `<b>Crusade Fervor ×${(r.fervor || 1).toFixed(2)}</b><br>The mortals send stronger soldiers to match your summoned host. Applied at the start of each wave.`;
       default: return '';
     }
@@ -163,7 +164,7 @@ export const UI: any = {
     const kp = $('#s-keep'); kp.style.width = clamp((G.keep.hp / G.keep.maxHp) * 100, 0, 100) + '%'; kp.className = G.keep.hp / G.keep.maxHp < 0.3 ? 'low' : '';
     $('#s-keeptxt').textContent = fmt(Math.max(0, Math.ceil(G.keep.hp)));
     $('#s-enemies').innerHTML = `${icon('skull')} ${G.enemies.length}${G.phase === 'wave' && G.wave ? `<em>/${G.wave.total - G.wave.idx + G.enemies.length}</em>` : ''}`;
-    $('#s-units').innerHTML = `${icon('rally')} ${capUsed()}/${unitCap()} <em>host ${G.units.length}</em>`;
+    $('#s-units').innerHTML = `${icon('rally')} ${fmt(G.units.length)} <em>undead</em>`;
     $('#s-fervor').innerHTML = (r.fervor || 1) > 1.01 ? `<span class="lbl">Fervor</span> ×${r.fervor.toFixed(2)}` : '';
     const wb = $('#b-wave') as HTMLButtonElement;
     if (G.phase === 'prep') {
@@ -254,14 +255,14 @@ export const UI: any = {
         const d = UNITS[u], tier = r.unitTier[u] || 0, next = d.tiers[tier + 1];
         const canEvo = next && (tier < 1 || metaLv('n_evo'));
         const evoBtn = next ? `<div class="evo ${canEvo ? '' : 'locked'}" data-evo="${u}">⇧ ${fmt(next.cost)}</div>` : '';
-        const b = card(unitIcon(u), d.tiers[tier].name, recruitCost(u), unitTip(u), (ev) => { if ((ev.target as HTMLElement).closest('.evo')) return; recruit(u); }, evoBtn);
+        const b = card(unitIcon(u), `${d.tiers[tier].name} <span class="sq">×${squadSize(u)}</span>`, recruitCost(u), unitTip(u), (ev) => { if ((ev.target as HTMLElement).closest('.evo')) return; recruit(u); }, evoBtn);
         const eb = $('.evo', b);
         if (eb) {
           eb.onclick = (ev) => { ev.stopPropagation(); evolveUnit(u); };
           eb.onmouseenter = (ev) => { ev.stopPropagation(); this.showTip(eb, `<b>Evolve: ${next.name}</b><br>All ${d.name}s (present and future) are transformed.<br>${evoText(next)}${canEvo ? '' : '<br><span class="bad">Requires Rite of Ascension (Phylactery)</span>'}<br>${SOUL()} ${fmt(next.cost)}`); };
         }
       }
-      L.appendChild(h('div', 'bnote', 'Your undead pick their own battles: they hold a line before the gate and rush to wherever the crusade presses hardest.'));
+      L.appendChild(h('div', 'bnote', 'Each purchase raises a whole squad and there is no army limit. Your undead pick their own battles: they hold the gate and rush to wherever the crusade presses hardest.'));
     }
     this.refreshAffordability();
   },
@@ -395,7 +396,7 @@ export const UI: any = {
       const m = this.openModal(`<h2>${icon('soul', 2, 'pix')} The Soul Well</h2><div class="dim center">Souls: ${SOUL()} ${fmt(r.souls)} — spend now, or hoard for something greater. Summons are permanent and uncapped (the crusade's Fervor rises to match).</div>
         <div class="well">${cats.map(c => `<div class="wcat"><h3>${c}</h3>${WELL.filter(w => w.cat === c).map(w => {
           const av = wellAvailable(w), cost = wellCost(w);
-          const lv = w.id === 'asc_dmg' ? r.asc.dmg : w.id === 'asc_hp' ? r.asc.hp : w.id === 'asc_souls' ? r.asc.souls : null;
+          const lv = w.id.startsWith('asc_') ? r.asc[w.id.slice(4)] || 0 : null;
           const cnt = w.summon ? ` ×${Math.max(1, Math.round(SUMMONS[w.summon].count * (1 + metaLv('m_reinforce') * 0.5)))}` : '';
           return `<button class="witem ${av ? '' : 'locked'} ${cost > r.souls ? 'poor' : ''}" data-id="${w.id}">${icon(w.icon, 2, 'pix')}<div><b>${w.name}${cnt}${lv != null ? ` <span class="dim">(${lv})</span>` : ''}</b><div class="wdesc">${av ? w.desc : 'Unlock in the Phylactery: ' + META_BY_ID[w.meta].name}</div></div><div class="wcost">${SOUL()} ${fmt(cost)}</div></button>`;
         }).join('')}</div>`).join('')}</div><div class="center"><button class="btn" id="w-close">Close [E]</button></div>`, 'wellm');
@@ -526,8 +527,8 @@ export const UI: any = {
     this.screen(`<h1>How to Rule Eternally</h1><div class="help">
       <p><b>Goal.</b> The crusade marches from the <b>east</b> along the roads toward your keep on the far west. If the keep falls the campaign ends — but Life Essence lets your next stronghold rise stronger.</p>
       <p><b>Build.</b> Pick a tower in the bottom drawer and click the battlefield. Walls reroute enemies (they batter through if you seal a road). Hold the mouse to paint walls. The drawer can be hidden with ▼ Hide or the B key.</p>
-      <p><b>Army.</b> Recruit undead in the <b>Army</b> tab. They fight on their own: they hold a line before the gate, rush to wherever mortals press hardest, ranged troops stay behind the melee, and wounded soldiers fall back to the keep to mend. Every undead slain during a wave rises again when the wave is repelled.</p>
-      <p><b>Souls & the Soul Well (E).</b> Kills give souls and experience. Each level offers three upgrades. In the Soul Well, <b>Ascensions</b> multiply your power and can be bought endlessly; <b>summons</b> raise whole packs of creatures that stay forever with no cap — but the crusade's <b>Fervor</b> rises to match your summoned host.</p>
+      <p><b>Army.</b> Recruit undead in the <b>Army</b> tab — each purchase raises a whole squad (5 or more) and there is no army limit. They fight on their own and can strike anything, flying or not: they hold a line before the gate, rush to wherever mortals press hardest, ranged troops stay behind the melee, and wounded soldiers fall back to the keep to mend. Every undead slain during a wave rises again when the wave is repelled.</p>
+      <p><b>Souls & the Soul Well (E).</b> Kills give souls and experience. Each level offers three upgrades. In the Soul Well, <b>Ascensions</b> multiply your power and can be bought endlessly; <b>Call of the Crypt</b> raises a squad of a random undead type, and <b>summons</b> raise packs of great creatures that stay forever — but the crusade's <b>Fervor</b> rises to match your whole host. Upgrade offers never show two tiers of the same upgrade.</p>
       <p><b>Spells.</b> Keys 1–8. Some need a target area.</p>
       <p><b>Controls.</b> Drag with right/middle mouse or use WASD/arrows to pan. Wheel zooms. Space pauses, F cycles speed, Enter begins the wave, Esc closes windows.</p>
     </div><div class="center"><button class="btn big" id="h-ok">${fromGame ? 'To war' : 'Back'}</button></div>`, 'helpscreen');
@@ -598,17 +599,17 @@ function towerTip(type: string) {
 function unitTip(type: string) {
   const d = UNITS[type], t = G.run.unitTier[type] || 0;
   const u: any = { type, def: d, st: {} }; applyUnitStats(u);
-  return `<b>${d.tiers[t].name}</b>${d.flying ? ' <span class="good">flying</span>' : ''}<br>${d.desc}<br><span class="dim">HP ${fmt(u.maxHp)} · DMG ${fmt(u.dmg)} · ${d.ranged ? 'Range ' + Math.round(u.range) : 'Melee'} · Armor ${Math.round(u.armor * 100)}% · Capacity ${d.cap}</span><br>Click to recruit.`;
+  return `<b>${d.tiers[t].name}</b>${d.flying ? ' <span class="good">flying</span>' : ''}<br>${d.desc}<br><span class="dim">HP ${fmt(u.maxHp)} · DMG ${fmt(u.dmg)} · ${d.ranged ? 'Range ' + Math.round(u.range) : 'Melee'} · Armor ${Math.round(u.armor * 100)}%</span><br>Click to raise a squad of <b>${squadSize(type)}</b>. No army limit.`;
 }
 export function recruit(type: string) {
   const r = G.run, c = recruitCost(type), d = UNITS[type];
   if (r.souls < c) { sfx('error'); msgFn('Not enough souls.', '#ff8080'); return false; }
-  if (capUsed() + d.cap > unitCap()) { sfx('error'); msgFn('Recruit capacity reached — summon from the Soul Well (uncapped) or raise capacity.', '#ff8080'); return false; }
   r.souls -= c;
-  spawnUnit(type, KEEP.x1 + 14, KEEP.y + 30);
+  r.bought[type] = (r.bought[type] || 0) + 1;
+  spawnSquad(type, KEEP.x1 + 30, KEEP.y + rnd(-30, 30));
   codexSee('unit', type);
   sfx('raise', 0.3);
-  UI.refreshAffordability(); saveRunSoon();
+  UI.renderBuild(); saveRunSoon();
   return true;
 }
 function evolveUnit(type: string) {

@@ -47,7 +47,11 @@ const PAL = {
 
 const SPR = {}; // name -> sprite set
 
+// In the hi-res pipeline (default) outlines and shading are applied at 2x by
+// tools/assets/hires.mjs after painting; set LICH_LORES=1 for the legacy 1x look.
+const LORES = typeof process !== 'undefined' && process.env && process.env.LICH_LORES === '1';
 function outlineCanvas(c, color = OUTLINE) {
+  if (!LORES) return c;
   const ctx = c.getContext('2d');
   const w = c.width, h = c.height;
   const img = ctx.getImageData(0, 0, w, h); const d = img.data;
@@ -70,6 +74,7 @@ function outlineCanvas(c, color = OUTLINE) {
 // Adds form shading: rim light on top edges, shade on bottom/right edges and
 // subtle grit noise on larger sprites so flat shapes read as volume.
 function shadeCanvas(c, grit = 0.06, seed = 1) {
+  if (!LORES) return c;
   const ctx = c.getContext('2d');
   const w = c.width, h = c.height;
   const img = ctx.getImageData(0, 0, w, h); const d = img.data; const src = new Uint8ClampedArray(d);

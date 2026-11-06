@@ -165,3 +165,8 @@ body.menu .hud-el { display: none !important; }
 .settings label { display: flex; justify-content: space-between; align-items: center; }
 .settings select { font-family: inherit; background: #1a181d; color: #ddd; border: 1px solid #3a3640; }
 @media (max-width: 1150px) { #objective { display: none; } .tree { grid-template-columns: repeat(3, 1fr); } #buildbar { max-width: calc(100vw - 520px); } }
+.bname .sq { color: #5dff7a; }
+
+/* icons are 32-texel art: at 16 css px they are shown downsampled smoothly */
+img.ico { image-rendering: auto; }
+img.pixd { image-rendering: auto; vertical-align: middle; }

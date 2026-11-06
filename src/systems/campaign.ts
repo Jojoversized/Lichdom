@@ -9,7 +9,7 @@ import { SPELLS, SPELL_ORDER, WELL } from '../data/spells';
 import { FORTRESSES } from '../data/world';
 import { msg, lichSay, sfx, hooks } from '../core/events';
 import { generateMap, computeFlow, canBuildAt } from '../world/mapgen';
-import { metaLv, fb, recalcKeep, unitCap, capUsed, globalDmg, computeFervor, bountyMult, ascSouls, recalcAllStats } from './stats';
+import { metaLv, fb, recalcKeep, squadSize, globalDmg, computeFervor, bountyMult, ascSouls, recalcAllStats } from './stats';
 import {
   spawnUnit, spawnSummon, spawnEnemy, placeTower, placeFort, fireProjectile, aoeDamage, dealDamage, addHazard, raiseCorpse,
   updateProjectiles, updateHazards, bakeCorpse, NEUTRAL_SRC,
@@ -34,7 +34,7 @@ function newRunState(fortKey: string, seed: number) {
     unlockedTowers: ['brimstone', 'tesla', 'necrotic'], unlockedUnits: ['skeleton', 'archer', 'zombie'],
     spells: ['deathwave', 'raise'], spellCd: {} as Record<string, number>, unitTier: {} as Record<string, number>, unitBuff: {} as Record<string, number>,
     towerDmg: {} as Record<string, number>, mods: {} as Record<string, number>, picks: {} as Record<string, number>, banished: [] as string[],
-    m: defaultMods(), asc: { dmg: 0, hp: 0, souls: 0 }, rerolls: metaLv('i_reroll') * 2 + 1, banishes: 1 + metaLv('i_reroll'), insightBuys: 0,
+    m: defaultMods(), asc: { dmg: 0, hp: 0, souls: 0, squad: 0 }, bought: {} as Record<string, number>, rerolls: metaLv('i_reroll') * 2 + 1, banishes: 1 + metaLv('i_reroll'), insightBuys: 0,
     phylUsed: false, adapt: {}, spellsCastWave: 0, fervor: 1, startTime: Date.now(),
   };
 }
@@ -48,9 +48,14 @@ export function newCampaign(fortKey: string) {
   const extra = SPELL_ORDER.filter(s => !G.run.spells.includes(s) && SPELLS[s].meta && metaLv(SPELLS[s].meta) > 0 && s !== 'apocalypse');
   for (let i = 0; i < metaLv('a_start') && extra.length; i++) G.run.spells.push(extra.splice(rndi(0, extra.length - 1), 1)[0]);
   G.keep.maxHp = 0; recalcKeep(); G.keep.hp = G.keep.maxHp;
-  const nStart = 6 + metaLv('m_start') * 2;
-  for (let i = 0; i < nStart; i++) spawnUnit('skeleton', KEEP.x1 + rnd(10, 40), KEEP.y + rnd(-40, 40));
-  for (let i = 0; i < 3; i++) spawnUnit('archer', KEEP.x1 + rnd(0, 20), KEEP.y + rnd(-30, 30));
+  // starting host: two warrior squads, an archer squad, plus random extra squads —
+  // one of a randomly chosen *new* unit type that this campaign unlocks for free.
+  spawnSquad('skeleton', KEEP.x1 + 30, KEEP.y - 24);
+  spawnSquad('skeleton', KEEP.x1 + 30, KEEP.y + 24);
+  spawnSquad('archer', KEEP.x1 + 10, KEEP.y);
+  const fresh = randomUnitType(true, 2);
+  if (fresh) { G.run.unlockedUnits.push(fresh); spawnSquad(fresh, KEEP.x1 + 40, KEEP.y); msg(`The crypts stir: ${UNITS[fresh].tiers[0].name} join you from the start.`, PAL.necro); }
+  for (let i = 0; i < metaLv('m_start'); i++) { const t = randomUnitType(false, 3); if (t) spawnSquad(t, KEEP.x1 + 40, KEEP.y + rnd(-50, 50)); }
   if (metaLv('f_free')) for (const [cx, cy] of [[14, 18], [14, 23], [16, 14], [16, 26]]) if (canBuildAt(cx, cy, 2, 2)) { placeTower('necrotic', cx, cy); break; }
   G.phase = 'prep'; G.speed = 1; G.paused = false;
   G.camera.x = KEEP.x1 + 160; G.camera.y = KEEP.y;
@@ -65,7 +70,8 @@ export function loadRun(): boolean {
   resetWorld();
   G.map = generateMap(s.run.seed, s.run.fortress);
   G.run = Object.assign(newRunState(s.run.fortress, s.run.seed), s.run, { m: Object.assign(defaultMods(), s.run.m), spellCd: {} });
-  G.run.asc = Object.assign({ dmg: 0, hp: 0, souls: 0 }, s.run.asc);
+  G.run.asc = Object.assign({ dmg: 0, hp: 0, souls: 0, squad: 0 }, s.run.asc);
+  G.run.bought = Object.assign({}, s.run.bought);
   G.keep.maxHp = 0; recalcKeep(); G.keep.hp = Math.min(Math.max(1, s.keepHp), G.keep.maxHp);
   for (const t of s.towers) { const tw = placeTower(t.type, t.cx, t.cy, t.tier, { hp: t.hp, invested: t.invested }); tw.mode = t.mode || 'first'; tw.kills = t.kills || 0; }
   for (const f of s.forts) placeFort(f.type, f.cx, f.cy, { hp: f.hp });
@@ -80,6 +86,23 @@ export function loadRun(): boolean {
   G.camera.x = KEEP.x1 + 160; G.camera.y = KEEP.y;
   msg(`Campaign resumed — preparing for wave ${G.run.wave + 1}.`, PAL.necro);
   return true;
+}
+
+/** Raises a whole squad of `type` at (x, y). Squad size is always at least 5. */
+export function spawnSquad(type: string, x: number, y: number, opts: any = {}) {
+  const n = squadSize(type), out: any[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * TAU, rr = 8 + n * 0.9;
+    out.push(spawnUnit(type, x + Math.cos(a) * rr, y + Math.sin(a) * rr * 0.7, opts));
+  }
+  return out;
+}
+/** A random unit type for free grants (starting squad, Call of the Crypt, Forgotten Crypt).
+ *  Random grants may reach past Phylactery gates — a taste of locked undead.
+ *  `onlyNew` = not yet unlocked this campaign; `maxSize` limits body size. */
+export function randomUnitType(onlyNew: boolean, maxSize = 4): string | null {
+  const pool = Object.keys(UNITS).filter(k => UNITS[k].size <= maxSize && (!onlyNew || !G.run.unlockedUnits.includes(k)));
+  return pool.length ? pick(pool) : null;
 }
 
 /** Recreates exactly one summoned creature (used by loading and wave-end revival). */
@@ -107,7 +130,7 @@ const THEMES = [
 function computeAdapt() {
   const unitsN = G.units.filter((u: any) => !u.temp).length, towersN = G.towers.length, wallsN = G.forts.filter((f: any) => f.def.block).length, spells = G.run.spellsCastWave;
   const a = {
-    holy: 1 + Math.min(2, unitsN / 30),
+    holy: 1 + Math.min(2, unitsN / 160), // armies are squads now: tuned for hundreds of undead
     siege: 1 + Math.min(2.5, towersN / 6),
     climb: 1 + Math.min(2.5, wallsN / 20),
     arcane: 1 + Math.min(2, (spells + G.towers.filter((t: any) => t.type === 'arcane' || t.type === 'tesla').length) / 6),
@@ -304,6 +327,16 @@ export function buyWell(id: string): boolean {
   switch (id) {
     case 'asc_dmg': r.asc.dmg++; recalcAllStats(); msg(`Dark Empowerment ${r.asc.dmg}: all damage ×${Math.pow(1.12, r.asc.dmg).toFixed(2)}`, PAL.necro); break;
     case 'asc_hp': r.asc.hp++; recalcAllStats(); msg(`Bone Fortitude ${r.asc.hp}: health ×${Math.pow(1.12, r.asc.hp).toFixed(2)}`, PAL.necro); break;
+    case 'asc_squad': r.asc.squad++; msg(`Ossuary Expansion ${r.asc.squad}: every squad raises +${r.asc.squad} more undead.`, PAL.necro); break;
+    case 'crypt': {
+      const t = randomUnitType(false) || 'skeleton';
+      if (!r.unlockedUnits.includes(t)) r.unlockedUnits.push(t);
+      const made = spawnSquad(t, KEEP.x1 + 40, KEEP.y + rnd(-40, 40));
+      msg(`The crypt opens: ${made.length}× ${UNITS[t].tiers[r.unitTier[t] || 0].name} answer the call!`, PAL.necro);
+      if (G.phase === 'wave') r.fervor = Math.max(r.fervor, computeFervor());
+      hooks.refreshBuild();
+      break;
+    }
     case 'asc_souls': r.asc.souls++; msg(`Soul Tithe ${r.asc.souls}: souls ×${Math.pow(1.08, r.asc.souls).toFixed(2)}`, PAL.necro); break;
     case 'insight': r.insightBuys++; r.pendingLevels++; break;
     case 'mend':
@@ -346,6 +379,7 @@ export function step(dt: number) {
   const M = G.map;
   if (M.dirty) computeFlow(M);
   G.time += dt;
+  G.stepN = (G.stepN || 0) + 1;
   for (let i = G.timers.length - 1; i >= 0; i--) { G.timers[i].t -= dt; if (G.timers[i].t <= 0) { const fn = G.timers[i].fn; G.timers.splice(i, 1); fn(); } }
   updateWave(dt);
   G.hashE.clear(); for (const e of G.enemies) G.hashE.insert(e);

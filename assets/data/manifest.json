@@ -1,11 +1,12 @@
 {
- "version": 1,
+ "version": 2,
+ "res": 2,
  "generated": "tools/assets/gen-sprites.mjs",
  "sheets": {
   "skeleton": {
    "file": "sprites/units/skeleton.png",
-   "fw": 26,
-   "fh": 33,
+   "fw": 56,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -31,8 +32,8 @@
   },
   "skeleton2": {
    "file": "sprites/units/skeleton2.png",
-   "fw": 26,
-   "fh": 33,
+   "fw": 56,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -58,8 +59,8 @@
   },
   "skeleton3": {
    "file": "sprites/units/skeleton3.png",
-   "fw": 26,
-   "fh": 33,
+   "fw": 56,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -85,8 +86,8 @@
   },
   "archer": {
    "file": "sprites/units/archer.png",
-   "fw": 26,
-   "fh": 33,
+   "fw": 56,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -112,8 +113,8 @@
   },
   "archer2": {
    "file": "sprites/units/archer2.png",
-   "fw": 26,
-   "fh": 33,
+   "fw": 56,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -139,8 +140,8 @@
   },
   "archer3": {
    "file": "sprites/units/archer3.png",
-   "fw": 26,
-   "fh": 33,
+   "fw": 56,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -166,8 +167,8 @@
   },
   "zombie": {
    "file": "sprites/units/zombie.png",
-   "fw": 26,
-   "fh": 33,
+   "fw": 56,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -193,8 +194,8 @@
   },
   "zombie2": {
    "file": "sprites/units/zombie2.png",
-   "fw": 30,
-   "fh": 33,
+   "fw": 64,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -220,8 +221,8 @@
   },
   "zombie3": {
    "file": "sprites/units/zombie3.png",
-   "fw": 41,
-   "fh": 39,
+   "fw": 86,
+   "fh": 82,
    "frames": 11,
    "anims": {
     "idle": [
@@ -247,8 +248,8 @@
   },
   "pikeman": {
    "file": "sprites/units/pikeman.png",
-   "fw": 34,
-   "fh": 33,
+   "fw": 72,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -274,8 +275,8 @@
   },
   "pikeman2": {
    "file": "sprites/units/pikeman2.png",
-   "fw": 34,
-   "fh": 33,
+   "fw": 72,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -301,8 +302,8 @@
   },
   "deathknight": {
    "file": "sprites/units/deathknight.png",
-   "fw": 30,
-   "fh": 37,
+   "fw": 64,
+   "fh": 78,
    "frames": 11,
    "anims": {
     "idle": [
@@ -328,8 +329,8 @@
   },
   "deathknight2": {
    "file": "sprites/units/deathknight2.png",
-   "fw": 40,
-   "fh": 49,
+   "fw": 84,
+   "fh": 102,
    "frames": 11,
    "anims": {
     "idle": [
@@ -355,8 +356,8 @@
   },
   "bonemage": {
    "file": "sprites/units/bonemage.png",
-   "fw": 26,
-   "fh": 33,
+   "fw": 56,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -382,8 +383,8 @@
   },
   "acolyte": {
    "file": "sprites/units/acolyte.png",
-   "fw": 26,
-   "fh": 33,
+   "fw": 56,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -409,8 +410,8 @@
   },
   "wraith": {
    "file": "sprites/units/wraith.png",
-   "fw": 26,
-   "fh": 33,
+   "fw": 56,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -436,8 +437,8 @@
   },
   "banshee": {
    "file": "sprites/units/banshee.png",
-   "fw": 26,
-   "fh": 33,
+   "fw": 56,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -463,8 +464,8 @@
   },
   "vampire": {
    "file": "sprites/units/vampire.png",
-   "fw": 26,
-   "fh": 33,
+   "fw": 56,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -490,8 +491,8 @@
   },
   "abomination": {
    "file": "sprites/units/abomination.png",
-   "fw": 64,
-   "fh": 44,
+   "fw": 132,
+   "fh": 92,
    "frames": 11,
    "anims": {
     "idle": [
@@ -517,8 +518,8 @@
   },
   "golem": {
    "file": "sprites/units/golem.png",
-   "fw": 64,
-   "fh": 47,
+   "fw": 132,
+   "fh": 98,
    "frames": 11,
    "anims": {
     "idle": [
@@ -544,8 +545,8 @@
   },
   "colossus": {
    "file": "sprites/summons/colossus.png",
-   "fw": 115,
-   "fh": 78,
+   "fw": 234,
+   "fh": 160,
    "frames": 11,
    "anims": {
     "idle": [
@@ -571,8 +572,8 @@
   },
   "devourer": {
    "file": "sprites/summons/devourer.png",
-   "fw": 78,
-   "fh": 64,
+   "fw": 160,
+   "fh": 132,
    "frames": 11,
    "anims": {
     "idle": [
@@ -598,8 +599,8 @@
   },
   "sumabom": {
    "file": "sprites/summons/sumabom.png",
-   "fw": 104,
-   "fh": 61,
+   "fw": 212,
+   "fh": 126,
    "frames": 11,
    "anims": {
     "idle": [
@@ -625,8 +626,8 @@
   },
   "militia": {
    "file": "sprites/enemies/militia.png",
-   "fw": 34,
-   "fh": 33,
+   "fw": 72,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -652,8 +653,8 @@
   },
   "footman": {
    "file": "sprites/enemies/footman.png",
-   "fw": 26,
-   "fh": 33,
+   "fw": 56,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -679,8 +680,8 @@
   },
   "shield": {
    "file": "sprites/enemies/shield.png",
-   "fw": 26,
-   "fh": 33,
+   "fw": 56,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -706,8 +707,8 @@
   },
   "knight": {
    "file": "sprites/enemies/knight.png",
-   "fw": 27,
-   "fh": 34,
+   "fw": 58,
+   "fh": 72,
    "frames": 11,
    "anims": {
     "idle": [
@@ -733,8 +734,8 @@
   },
   "cavalry": {
    "file": "sprites/enemies/cavalry.png",
-   "fw": 42,
-   "fh": 42,
+   "fw": 88,
+   "fh": 88,
    "frames": 11,
    "anims": {
     "idle": [
@@ -760,8 +761,8 @@
   },
   "crossbow": {
    "file": "sprites/enemies/crossbow.png",
-   "fw": 26,
-   "fh": 33,
+   "fw": 56,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -787,8 +788,8 @@
   },
   "priest": {
    "file": "sprites/enemies/priest.png",
-   "fw": 26,
-   "fh": 33,
+   "fw": 56,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -814,8 +815,8 @@
   },
   "paladin": {
    "file": "sprites/enemies/paladin.png",
-   "fw": 28,
-   "fh": 36,
+   "fw": 60,
+   "fh": 76,
    "frames": 11,
    "anims": {
     "idle": [
@@ -841,8 +842,8 @@
   },
   "inquisitor": {
    "file": "sprites/enemies/inquisitor.png",
-   "fw": 28,
-   "fh": 36,
+   "fw": 60,
+   "fh": 76,
    "frames": 11,
    "anims": {
     "idle": [
@@ -868,8 +869,8 @@
   },
   "battlemage": {
    "file": "sprites/enemies/battlemage.png",
-   "fw": 26,
-   "fh": 33,
+   "fw": 56,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -895,8 +896,8 @@
   },
   "elementalist": {
    "file": "sprites/enemies/elementalist.png",
-   "fw": 26,
-   "fh": 33,
+   "fw": 56,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -922,8 +923,8 @@
   },
   "spellbreaker": {
    "file": "sprites/enemies/spellbreaker.png",
-   "fw": 26,
-   "fh": 33,
+   "fw": 56,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -949,8 +950,8 @@
   },
   "construct": {
    "file": "sprites/enemies/construct.png",
-   "fw": 64,
-   "fh": 47,
+   "fw": 132,
+   "fh": 98,
    "frames": 11,
    "anims": {
     "idle": [
@@ -976,8 +977,8 @@
   },
   "ranger": {
    "file": "sprites/enemies/ranger.png",
-   "fw": 26,
-   "fh": 33,
+   "fw": 56,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -1003,8 +1004,8 @@
   },
   "assassin": {
    "file": "sprites/enemies/assassin.png",
-   "fw": 26,
-   "fh": 33,
+   "fw": 56,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -1030,8 +1031,8 @@
   },
   "hunter": {
    "file": "sprites/enemies/hunter.png",
-   "fw": 27,
-   "fh": 34,
+   "fw": 58,
+   "fh": 72,
    "frames": 11,
    "anims": {
     "idle": [
@@ -1057,8 +1058,8 @@
   },
   "angel": {
    "file": "sprites/enemies/angel.png",
-   "fw": 46,
-   "fh": 33,
+   "fw": 96,
+   "fh": 70,
    "frames": 11,
    "anims": {
     "idle": [
@@ -1084,8 +1085,8 @@
   },
   "griffon": {
    "file": "sprites/enemies/griffon.png",
-   "fw": 54,
-   "fh": 42,
+   "fw": 112,
+   "fh": 88,
    "frames": 11,
    "anims": {
     "idle": [
@@ -1111,8 +1112,8 @@
   },
   "b_inquisitor": {
    "file": "sprites/bosses/b_inquisitor.png",
-   "fw": 47,
-   "fh": 58,
+   "fw": 98,
+   "fh": 120,
    "frames": 11,
    "anims": {
     "idle": [
@@ -1138,8 +1139,8 @@
   },
   "b_archmage": {
    "file": "sprites/bosses/b_archmage.png",
-   "fw": 47,
-   "fh": 58,
+   "fw": 98,
+   "fh": 120,
    "frames": 11,
    "anims": {
     "idle": [
@@ -1165,8 +1166,8 @@
   },
   "b_dragonslayer": {
    "file": "sprites/bosses/b_dragonslayer.png",
-   "fw": 57,
-   "fh": 61,
+   "fw": 118,
+   "fh": 126,
    "frames": 11,
    "anims": {
     "idle": [
@@ -1192,8 +1193,8 @@
   },
   "b_saint": {
    "file": "sprites/bosses/b_saint.png",
-   "fw": 69,
-   "fh": 58,
+   "fw": 142,
+   "fh": 120,
    "frames": 11,
    "anims": {
     "idle": [
@@ -1219,8 +1220,8 @@
   },
   "b_kings": {
    "file": "sprites/bosses/b_kings.png",
-   "fw": 62,
-   "fh": 75,
+   "fw": 128,
+   "fh": 154,
    "frames": 11,
    "anims": {
     "idle": [
@@ -1246,8 +1247,8 @@
   },
   "b_champion": {
    "file": "sprites/bosses/b_champion.png",
-   "fw": 79,
-   "fh": 67,
+   "fw": 162,
+   "fh": 138,
    "frames": 11,
    "anims": {
     "idle": [
@@ -1273,8 +1274,8 @@
   },
   "wyvern": {
    "file": "sprites/units/wyvern.png",
-   "fw": 43,
-   "fh": 34,
+   "fw": 90,
+   "fh": 72,
    "frames": 15,
    "anims": {
     "idle": [
@@ -1300,8 +1301,8 @@
   },
   "infdragon": {
    "file": "sprites/summons/infdragon.png",
-   "fw": 83,
-   "fh": 64,
+   "fw": 170,
+   "fh": 132,
    "frames": 15,
    "anims": {
     "idle": [
@@ -1327,8 +1328,8 @@
   },
   "ram": {
    "file": "sprites/enemies/ram.png",
-   "fw": 40,
-   "fh": 30,
+   "fw": 84,
+   "fh": 64,
    "frames": 11,
    "anims": {
     "idle": [
@@ -1353,8 +1354,8 @@
   },
   "catapult": {
    "file": "sprites/enemies/catapult.png",
-   "fw": 40,
-   "fh": 34,
+   "fw": 84,
+   "fh": 72,
    "frames": 11,
    "anims": {
     "idle": [
@@ -1379,8 +1380,8 @@
   },
   "lich": {
    "file": "sprites/units/lich.png",
-   "fw": 35,
-   "fh": 44,
+   "fw": 74,
+   "fh": 92,
    "frames": 11,
    "anims": {
     "idle": [
@@ -1405,246 +1406,246 @@
   },
   "tower_brimstone": {
    "file": "sprites/towers/brimstone.png",
-   "fw": 32,
-   "fh": 52,
+   "fw": 68,
+   "fh": 108,
    "frames": 12,
    "tiers": 3,
    "perTier": 4
   },
   "tower_tesla": {
    "file": "sprites/towers/tesla.png",
-   "fw": 32,
-   "fh": 52,
+   "fw": 68,
+   "fh": 108,
    "frames": 12,
    "tiers": 3,
    "perTier": 4
   },
   "tower_necrotic": {
    "file": "sprites/towers/necrotic.png",
-   "fw": 32,
-   "fh": 52,
+   "fw": 68,
+   "fh": 108,
    "frames": 12,
    "tiers": 3,
    "perTier": 4
   },
   "tower_frost": {
    "file": "sprites/towers/frost.png",
-   "fw": 32,
-   "fh": 52,
+   "fw": 68,
+   "fh": 108,
    "frames": 12,
    "tiers": 3,
    "perTier": 4
   },
   "tower_artillery": {
    "file": "sprites/towers/artillery.png",
-   "fw": 32,
-   "fh": 52,
+   "fw": 68,
+   "fh": 108,
    "frames": 12,
    "tiers": 3,
    "perTier": 4
   },
   "tower_harvester": {
    "file": "sprites/towers/harvester.png",
-   "fw": 32,
-   "fh": 52,
+   "fw": 68,
+   "fh": 108,
    "frames": 12,
    "tiers": 3,
    "perTier": 4
   },
   "tower_arcane": {
    "file": "sprites/towers/arcane.png",
-   "fw": 32,
-   "fh": 52,
+   "fw": 68,
+   "fh": 108,
    "frames": 12,
    "tiers": 3,
    "perTier": 4
   },
   "tower_abomination": {
    "file": "sprites/towers/abomination.png",
-   "fw": 32,
-   "fh": 52,
+   "fw": 68,
+   "fh": 108,
    "frames": 12,
    "tiers": 3,
    "perTier": 4
   },
   "keep_haunted": {
    "file": "sprites/environment/keep_haunted.png",
-   "fw": 120,
-   "fh": 116,
+   "fw": 244,
+   "fh": 236,
    "frames": 4
   },
   "keep_volcanic": {
    "file": "sprites/environment/keep_volcanic.png",
-   "fw": 120,
-   "fh": 116,
+   "fw": 244,
+   "fh": 236,
    "frames": 4
   },
   "keep_frozen": {
    "file": "sprites/environment/keep_frozen.png",
-   "fw": 120,
-   "fh": 116,
+   "fw": 244,
+   "fh": 236,
    "frames": 4
   },
   "keep_cathedral": {
    "file": "sprites/environment/keep_cathedral.png",
-   "fw": 120,
-   "fh": 116,
+   "fw": 244,
+   "fh": 236,
    "frames": 4
   },
   "keep_abyssal": {
    "file": "sprites/environment/keep_abyssal.png",
-   "fw": 120,
-   "fh": 116,
+   "fw": 244,
+   "fh": 236,
    "frames": 4
   },
   "soulwell": {
    "file": "sprites/environment/soulwell.png",
-   "fw": 40,
-   "fh": 34,
+   "fw": 84,
+   "fh": 72,
    "frames": 6
   },
   "prop_tree0": {
    "file": "sprites/environment/props/tree0.png",
-   "fw": 40,
-   "fh": 48,
+   "fw": 84,
+   "fh": 100,
    "frames": 1
   },
   "prop_tree1": {
    "file": "sprites/environment/props/tree1.png",
-   "fw": 40,
-   "fh": 48,
+   "fw": 84,
+   "fh": 100,
    "frames": 1
   },
   "prop_tree2": {
    "file": "sprites/environment/props/tree2.png",
-   "fw": 40,
-   "fh": 48,
+   "fw": 84,
+   "fh": 100,
    "frames": 1
   },
   "prop_rock": {
    "file": "sprites/environment/props/rock.png",
-   "fw": 18,
-   "fh": 13,
+   "fw": 40,
+   "fh": 30,
    "frames": 1
   },
   "prop_rock2": {
    "file": "sprites/environment/props/rock2.png",
-   "fw": 26,
-   "fh": 16,
+   "fw": 56,
+   "fh": 36,
    "frames": 1
   },
   "prop_pillar": {
    "file": "sprites/environment/props/pillar.png",
-   "fw": 18,
-   "fh": 46,
+   "fw": 40,
+   "fh": 96,
    "frames": 1
   },
   "prop_ruinwall": {
    "file": "sprites/environment/props/ruinwall.png",
-   "fw": 34,
-   "fh": 22,
+   "fw": 72,
+   "fh": 48,
    "frames": 1
   },
   "prop_grave": {
    "file": "sprites/environment/props/grave.png",
-   "fw": 10,
-   "fh": 14,
+   "fw": 24,
+   "fh": 32,
    "frames": 1
   },
   "prop_grave2": {
    "file": "sprites/environment/props/grave2.png",
-   "fw": 12,
-   "fh": 10,
+   "fw": 28,
+   "fh": 24,
    "frames": 1
   },
   "prop_cross": {
    "file": "sprites/environment/props/cross.png",
-   "fw": 10,
-   "fh": 16,
+   "fw": 24,
+   "fh": 36,
    "frames": 1
   },
   "prop_skullpole": {
    "file": "sprites/environment/props/skullpole.png",
-   "fw": 10,
-   "fh": 26,
+   "fw": 24,
+   "fh": 56,
    "frames": 1
   },
   "prop_brazier": {
    "file": "sprites/environment/props/brazier.png",
-   "fw": 14,
-   "fh": 30,
+   "fw": 32,
+   "fh": 64,
    "frames": 4
   },
   "prop_torch": {
    "file": "sprites/environment/props/torch.png",
-   "fw": 6,
-   "fh": 20,
+   "fw": 16,
+   "fh": 44,
    "frames": 4
   },
   "prop_crystal": {
    "file": "sprites/environment/props/crystal.png",
-   "fw": 12,
-   "fh": 18,
+   "fw": 28,
+   "fh": 40,
    "frames": 2
   },
   "prop_cart": {
    "file": "sprites/environment/props/cart.png",
-   "fw": 30,
-   "fh": 18,
+   "fw": 64,
+   "fh": 40,
    "frames": 1
   },
   "prop_fence": {
    "file": "sprites/environment/props/fence.png",
-   "fw": 22,
-   "fh": 12,
+   "fw": 48,
+   "fh": 28,
    "frames": 1
   },
   "prop_banner": {
    "file": "sprites/environment/props/banner.png",
-   "fw": 12,
-   "fh": 28,
+   "fw": 28,
+   "fh": 60,
    "frames": 4
   },
   "fort_wall": {
    "file": "sprites/fortifications/wall.png",
-   "fw": 16,
-   "fh": 24,
+   "fw": 36,
+   "fh": 52,
    "frames": 3
   },
   "fort_wall2": {
    "file": "sprites/fortifications/wall_reinforced.png",
-   "fw": 16,
-   "fh": 24,
+   "fw": 36,
+   "fh": 52,
    "frames": 3
   },
   "fort_spikes": {
    "file": "sprites/fortifications/spikes.png",
-   "fw": 16,
-   "fh": 18,
+   "fw": 36,
+   "fh": 40,
    "frames": 1
   },
   "fort_lava": {
    "file": "sprites/fortifications/lava.png",
-   "fw": 16,
-   "fh": 16,
+   "fw": 36,
+   "fh": 36,
    "frames": 4
   },
   "fort_rune": {
    "file": "sprites/fortifications/rune.png",
-   "fw": 16,
-   "fh": 16,
+   "fw": 36,
+   "fh": 36,
    "frames": 4
   },
   "fort_cauldron": {
    "file": "sprites/fortifications/cauldron.png",
-   "fw": 16,
-   "fh": 18,
+   "fw": 36,
+   "fh": 40,
    "frames": 4
   },
   "fort_ward": {
    "file": "sprites/fortifications/ward.png",
-   "fw": 16,
-   "fh": 24,
+   "fw": 36,
+   "fh": 52,
    "frames": 4
   }
  },

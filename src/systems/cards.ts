@@ -4,6 +4,9 @@ import { lichSay } from '../core/events';
 import { TOWERS, TOWER_ORDER } from '../data/towers';
 import { UNITS, UNIT_ORDER } from '../data/units';
 import { SPELLS, SPELL_ORDER } from '../data/spells';
+import { KEEP } from '../config/constants';
+import { pick, rnd } from '../core/util';
+import { spawnSquad, randomUnitType } from './campaign';
 import { contentAvailable, metaLv, recalcKeep, recalcAllStats, fortMaxHp, towerMaxHp } from './stats';
 
 // ============================================================
@@ -25,25 +28,32 @@ function modN(r: any, id: string) { return r.mods[id] || 0; }
 
 export function buildCardPool(): any[] {
   const C: any[] = [];
-  const add = (c: any) => C.push(c);
+  const add = (c: any) => C.push(Object.assign({ fam: c.id }, c));
   // ---- generic stat cards
-  const stat = (id: string, name: string, rar: number, desc: string, apply: (r: any) => void, max = 99, icon = 'skull') => add({ id, name, rar, cat: 'Power', desc, apply, max, icon, req: () => true });
-  stat('dmg1', 'Malevolence', 0, '+10% damage for everything you command.', (r: any) => r.m.dmg += 0.10);
-  stat('dmg2', 'Profound Malevolence', 1, '+20% damage for everything you command.', (r: any) => r.m.dmg += 0.20);
-  stat('tas1', 'Quickened Rituals', 0, '+10% tower attack speed.', (r: any) => r.m.towerAs += 0.10, 99, 'time');
-  stat('tas2', 'Frenzied Rituals', 1, '+20% tower attack speed.', (r: any) => r.m.towerAs += 0.20, 99, 'time');
+  // `fam` groups tiers of the same upgrade: a single offer never shows two tiers of one
+  // family — the better tier is kept and the weaker one is rerolled (see rollCards).
+  const stat = (id: string, name: string, rar: number, desc: string, apply: (r: any) => void, max = 99, icon = 'skull', fam = '') => add({ id, name, rar, cat: 'Power', desc, apply, max, icon, fam: fam || id, req: () => true });
+  stat('dmg1', 'Malevolence', 0, '+10% damage for everything you command.', (r: any) => r.m.dmg += 0.10, 99, 'skull', 'dmg');
+  stat('dmg2', 'Profound Malevolence', 1, '+20% damage for everything you command.', (r: any) => r.m.dmg += 0.20, 99, 'skull', 'dmg');
+  stat('tas1', 'Quickened Rituals', 0, '+10% tower attack speed.', (r: any) => r.m.towerAs += 0.10, 99, 'time', 'tas');
+  stat('tas2', 'Frenzied Rituals', 1, '+20% tower attack speed.', (r: any) => r.m.towerAs += 0.20, 99, 'time', 'tas');
   stat('rng1', 'Far Sight', 1, '+10% tower range.', (r: any) => r.m.range += 0.10, 5, 'level');
-  stat('uhp1', 'Hardened Bone', 0, '+15% unit health.', (r: any) => r.m.unitHp += 0.15, 99, 'shield');
-  stat('uhp2', 'Ironbone Marrow', 1, '+30% unit health.', (r: any) => r.m.unitHp += 0.30, 99, 'shield');
-  stat('udm1', 'Sharpened Bone', 0, '+12% unit damage.', (r: any) => r.m.unitDmg += 0.12, 99, 'frenzy');
-  stat('udm2', 'Grave Fury', 1, '+25% unit damage.', (r: any) => r.m.unitDmg += 0.25, 99, 'frenzy');
+  stat('uhp1', 'Hardened Bone', 0, '+15% unit health.', (r: any) => r.m.unitHp += 0.15, 99, 'shield', 'uhp');
+  stat('uhp2', 'Ironbone Marrow', 1, '+30% unit health.', (r: any) => r.m.unitHp += 0.30, 99, 'shield', 'uhp');
+  stat('udm1', 'Sharpened Bone', 0, '+12% unit damage.', (r: any) => r.m.unitDmg += 0.12, 99, 'frenzy', 'udm');
+  stat('udm2', 'Grave Fury', 1, '+25% unit damage.', (r: any) => r.m.unitDmg += 0.25, 99, 'frenzy', 'udm');
   stat('uas1', 'Rattling Haste', 1, '+15% unit attack and move speed.', (r: any) => { r.m.unitAs += 0.15; r.m.unitSpd += 0.1; }, 99, 'frenzy');
-  stat('crit1', 'Cruel Precision', 1, '+6% critical strike chance (x2 damage).', (r: any) => r.m.crit += 0.06, 6, 'bomb');
-  stat('crit2', 'Executioner', 3, 'Critical strikes deal x3 damage instead of x2. +5% crit chance.', (r: any) => { r.m.critMult = 3; r.m.crit += 0.05; }, 1, 'bomb');
-  stat('soul1', 'Soul Greed', 0, '+15% souls from kills.', (r: any) => r.m.souls += 0.15, 99, 'soul');
-  stat('soul2', 'Soul Gluttony', 2, '+35% souls from kills.', (r: any) => r.m.souls += 0.35, 99, 'soul');
-  stat('cap1', 'Mass Graves', 0, '+2 unit capacity.', (r: any) => r.m.cap += 2, 99, 'rally');
-  stat('cap2', 'Necropolis', 2, '+5 unit capacity.', (r: any) => r.m.cap += 5, 99, 'rally');
+  stat('crit1', 'Cruel Precision', 1, '+6% critical strike chance (x2 damage).', (r: any) => r.m.crit += 0.06, 6, 'bomb', 'crit');
+  stat('crit2', 'Executioner', 3, 'Critical strikes deal x3 damage instead of x2. +5% crit chance.', (r: any) => { r.m.critMult = 3; r.m.crit += 0.05; }, 1, 'bomb', 'crit');
+  stat('soul1', 'Soul Greed', 0, '+15% souls from kills.', (r: any) => r.m.souls += 0.15, 99, 'soul', 'soul');
+  stat('soul2', 'Soul Gluttony', 2, '+35% souls from kills.', (r: any) => r.m.souls += 0.35, 99, 'soul', 'soul');
+  stat('cap1', 'Mass Graves', 0, 'Every squad you recruit raises +1 more undead.', (r: any) => r.m.squad += 1, 99, 'rally', 'squad');
+  stat('cap2', 'Necropolis', 2, 'Every squad you recruit raises +3 more undead.', (r: any) => r.m.squad += 3, 99, 'rally', 'squad');
+  // random reinforcements
+  add({ id: 'army_free', name: 'Unbidden Dead', rar: 0, cat: 'Army', icon: 'raise', fam: 'army_free', desc: 'A free squad of a random undead type you command claws out of the earth.', max: 99, req: () => true,
+    apply: (r: any) => { const pool = r.unlockedUnits.filter((u: string) => UNITS[u]); spawnSquad(pick(pool), KEEP.x1 + 40, KEEP.y + rnd(-40, 40)); } });
+  add({ id: 'army_new', name: 'Forgotten Crypt', rar: 1, cat: 'Army', icon: 'raise', fam: 'army_new', desc: 'Unlock a random new undead type and receive a free squad of it.', max: 99,
+    req: (r: any) => !!randomUnitType(true), apply: (r: any) => { const t = randomUnitType(true); r.unlockedUnits.push(t); spawnSquad(t, KEEP.x1 + 40, KEEP.y + rnd(-40, 40)); } });
   stat('keep1', 'Fortified Phylactery', 0, '+20% keep max health and heal 25%.', (r: any) => { r.m.keep += 0.2; recalcKeep(); G.keep.hp = Math.min(G.keep.maxHp, G.keep.hp + G.keep.maxHp * 0.25); }, 99, 'keep');
   stat('wall1', 'Bone Mortar', 0, '+30% wall and barricade health.', (r: any) => { r.m.wallHp += 0.3; G.forts.forEach((f: any) => { if (f.def.hp) { const nm = fortMaxHp(f); f.hp += nm - f.maxHp; f.maxHp = nm; } }); }, 99, 'wall');
   stat('cd1', 'Swift Incantations', 1, '-10% spell cooldowns.', (r: any) => r.m.spellCd *= 0.9, 5, 'time');
@@ -63,8 +73,8 @@ export function buildCardPool(): any[] {
   }
   // ---- unit unlocks
   for (const u of UNIT_ORDER) {
-    add({ id: 'unlock_u_' + u, name: UNITS[u].name, rar: UNITS[u].cap >= 3 ? 3 : 2, cat: 'New Unit', unit: u, desc: 'Unlock: ' + UNITS[u].desc, max: 1,
-      req: (r: any) => !hasUnit(r, u) && contentAvailable('unit', u), apply: (r: any) => r.unlockedUnits.push(u) });
+    add({ id: 'unlock_u_' + u, name: UNITS[u].name, rar: UNITS[u].size >= 3 ? 3 : 2, cat: 'New Unit', unit: u, desc: 'Unlock and raise a free squad: ' + UNITS[u].desc, max: 1,
+      req: (r: any) => !hasUnit(r, u) && contentAvailable('unit', u), apply: (r: any) => { r.unlockedUnits.push(u); spawnSquad(u, KEEP.x1 + 40, KEEP.y + rnd(-40, 40)); } });
     add({ id: 'udmg_' + u, name: `${UNITS[u].name} Drill`, rar: 0, cat: 'Unit', unit: u, desc: `+30% ${UNITS[u].name} damage and health.`, max: 99,
       req: (r: any) => hasUnit(r, u) && ownsUnit(u), apply: (r: any) => { r.unitBuff[u] = (r.unitBuff[u] || 0) + 0.3; } });
   }
@@ -124,24 +134,42 @@ export function rollCards(n = 3): any[] {
   if (!CARD_POOL) CARD_POOL = buildCardPool();
   const eligible = CARD_POOL.filter((c: any) => (r.picks[c.id] || 0) < c.max && !r.banished.includes(c.id) && c.req(r));
   const out: any[] = [];
+  const banned = new Set<string>(); // families whose weaker tier was rerolled away
   const lvBonus = Math.min(1, r.level / 30);
-  for (let i = 0; i < n && eligible.length; i++) {
+  const drawOne = (): any => {
     // pick rarity first, then card within rarity (fallback lower)
     const weights = RARITY.map((ra: any, idx: number) => ra.w * (idx >= 2 ? 1 + lvBonus * 1.5 : 1));
     let tot = weights.reduce((a, b) => a + b, 0), roll = Math.random() * tot, rar = 0;
     for (let k = 0; k < weights.length; k++) { roll -= weights[k]; if (roll <= 0) { rar = k; break; } }
+    const open = eligible.filter((c: any) => !out.includes(c) && !banned.has(c.id));
     let cands: any[] = [];
-    for (let rr = rar; rr >= 0 && !cands.length; rr--) cands = eligible.filter((c: any) => c.rar === rr && !out.includes(c));
-    if (!cands.length) cands = eligible.filter((c: any) => !out.includes(c));
-    if (!cands.length) break;
+    for (let rr = rar; rr >= 0 && !cands.length; rr--) cands = open.filter((c: any) => c.rar === rr);
+    if (!cands.length) cands = open;
+    if (!cands.length) return null;
     // prefer relevant: modifiers/tower-specific for things owned get weight boost
     const w = cands.map((c: any) => (c.tower && ownsTower(c.tower)) || (c.unit && ownsUnit(c.unit)) ? 2.5 : 1);
     let tw = w.reduce((a, b) => a + b, 0), rl = Math.random() * tw, ch = cands[0];
     for (let k = 0; k < cands.length; k++) { rl -= w[k]; if (rl <= 0) { ch = cands[k]; break; } }
-    out.push(ch);
+    return ch;
+  };
+  // Never offer two tiers of the same upgrade family: keep the better tier
+  // (higher rarity, then the stronger card listed later in the pool) and reroll the other.
+  let guard = 0;
+  while (out.length < n && guard++ < 60) {
+    const ch = drawOne();
+    if (!ch) break;
+    const clash = out.find((c: any) => c.fam === ch.fam);
+    if (!clash) { out.push(ch); continue; }
+    const better = ch.rar > clash.rar || (ch.rar === clash.rar && CARD_POOL.indexOf(ch) > CARD_POOL.indexOf(clash)) ? ch : clash;
+    const worse = better === ch ? clash : ch;
+    for (const c of eligible) if (c.fam === worse.fam && c !== better) banned.add(c.id);
+    if (better === ch) out[out.indexOf(clash)] = ch;
   }
   return out;
 }
+
+/** True when no two cards in the offer share an upgrade family (used by tests). */
+export function offerIsClean(cards: any[]) { const f = cards.map((c: any) => c.fam); return new Set(f).size === f.length; }
 
 export function applyCard(c: any) {
   const r = G.run;

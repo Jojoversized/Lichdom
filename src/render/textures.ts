@@ -8,7 +8,7 @@ const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 
 /** Dithered, 5-band quantized radial light falloff — keeps lighting "pixel". */
 export function makeLightTextures(scene: Phaser.Scene) {
-  for (let r = 8; r <= 128; r += 8) {
+  for (let r = 8; r <= 256; r += 8) {
     const key = 'light_' + r;
     if (scene.textures.exists(key)) continue;
     const s = r * 2;
@@ -29,18 +29,20 @@ export function makeLightTextures(scene: Phaser.Scene) {
   }
 }
 
-/** Enemy shadows carry a dark-red ground ring so mortals read instantly. */
-export function makeShadowTextures(scene: Phaser.Scene) {
+/** Enemy shadows carry a dark-red ground ring so mortals read instantly.
+ *  Built at texel resolution from the generated shadow images (drawn at 1/T). */
+export function makeShadowTextures(scene: Phaser.Scene, T = 2) {
   for (const w of [8, 12, 16, 24, 32, 48]) {
     const key = 'eshadow_' + w;
     if (scene.textures.exists(key)) continue;
-    const h = Math.max(4, Math.round(w * 0.45)) + 2;
-    const [c, ctx] = makeCanvas(w + 4, h + 2);
     const src = scene.textures.get('shadow_' + w).getSourceImage() as HTMLImageElement;
-    ctx.drawImage(src, 2, Math.round((h + 2 - src.height) / 2));
-    ctx.fillStyle = 'rgba(176,42,32,0.6)';
-    const rx = w / 2 + 1, ry = h / 2, cx = (w + 4) / 2, cy = (h + 2) / 2;
-    for (let i = 0; i < 48; i++) { const a = (i / 48) * Math.PI * 2; ctx.fillRect(Math.round(cx + Math.cos(a) * rx - 0.5), Math.round(cy + Math.sin(a) * ry - 0.5), 1, 1); }
+    const W = src.width + 4 * T, H = src.height + 3 * T;
+    const [c, ctx] = makeCanvas(W, H);
+    ctx.drawImage(src, 2 * T, Math.round((H - src.height) / 2));
+    ctx.fillStyle = 'rgba(176,42,32,0.7)';
+    const rx = src.width / 2 + T, ry = src.height / 2 + T * 0.5, cx = W / 2, cy = H / 2;
+    const n = Math.round((rx + ry) * 3.2);
+    for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; ctx.fillRect(Math.round(cx + Math.cos(a) * rx - 0.5), Math.round(cy + Math.sin(a) * ry - 0.5), 1, 1); }
     scene.textures.addCanvas(key, c);
   }
 }

@@ -17,7 +17,7 @@ export function addParticle(x: number, y: number, vx: number, vy: number, color:
 export function spawnBurst(x: number, y: number, color: string, n: number) { for (let i = 0; i < n; i++) addParticle(x + rnd(-4, 4), y + rnd(-4, 4), rnd(-30, 30), rnd(-40, 0), color, rnd(0.3, 0.7), 'p', 1); }
 export function addRing(x: number, y: number, r0: number, r1: number, color: string, life: number, ground = true) { if (G.rings.length < 200) G.rings.push({ x, y, r0, r1, color, life, t: 0, ground }); }
 export function addFlash(x: number, y: number, r: number, color: string, life: number) { if (G.flashes.length < 120) G.flashes.push({ x, y, r, color, life, t: 0 }); }
-export function addText(x: number, y: number, s: string | number, color: string, big = false) { if (G.texts.length > 110) G.texts.shift(); G.texts.push({ x, y, s: '' + s, color, t: 0, life: big ? 1.0 : 0.75, big }); }
+export function addText(x: number, y: number, s: string | number, color: string, big = false) { if (G.texts.length > 70) G.texts.shift(); G.texts.push({ x, y, s: '' + s, color, t: 0, life: big ? 1.0 : 0.75, big }); }
 export function addSoulParticle(x: number, y: number, souls: number) {
   const n = Math.min(3, 1 + Math.floor(Math.log10(Math.max(1, souls))));
   for (let i = 0; i < n; i++) if (G.particles.length < particleLimit() + 200) {

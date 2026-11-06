@@ -13,7 +13,7 @@ import { loadMeta, saveRun, saveMeta, saveRunSoon } from '../systems/save';
 import { UI } from '../ui/ui';
 import { initAudio, startMusic } from '../audio/audio';
 import { hooks } from '../core/events';
-import { applyZoom } from '../config/zoom';
+import { applyZoom, VIEW } from '../config/zoom';
 
 export class GameScene extends Phaser.Scene {
   renderer2!: WorldRenderer;
@@ -27,6 +27,7 @@ export class GameScene extends Phaser.Scene {
     this.renderer2 = new WorldRenderer(this);
     applyZoom(this.game);
     this.renderer2.resize(this.scale.width, this.scale.height);
+    this.cameras.main.setOrigin(0, 0).setZoom(VIEW.cz);
     this.scale.on('resize', (s: any) => this.renderer2.resize(s.width, s.height));
     UI.init(this.game);
     this.menuMap = generateMap(1337, 'haunted');
@@ -39,7 +40,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   worldToScreen = (x: number, y: number): [number, number] => {
-    const cam = this.cameras.main, z = this.game.scale.zoom, rect = this.game.canvas.getBoundingClientRect();
+    const cam = this.cameras.main, z = VIEW.cz * VIEW.pz, rect = this.game.canvas.getBoundingClientRect();
     return [(x - cam.scrollX) * z + rect.left, (y - cam.scrollY) * z + rect.top];
   };
 

@@ -77,7 +77,7 @@ export function spawnEnemy(type: string | null, lane: string, opts: any = {}): E
   const dmgM = waveDmgMult(n) * Math.sqrt(fervor) * (opts.champion ? 1.6 : 1);
   if (isBoss) {
     const extra = Math.max(0, n - d.wave);
-    e.maxHp = e.hp = Math.round(d.hp * waveHpMult(n) / waveHpMult(d.wave) * (1 + extra * 0.05) * fervor * 1.6);
+    e.maxHp = e.hp = Math.round(d.hp * waveHpMult(n) / waveHpMult(d.wave) * (1 + extra * 0.05) * Math.sqrt(fervor) * 1.6);
     e.dmg = d.dmg * waveDmgMult(n) / waveDmgMult(d.wave) * 1.3;
   } else {
     e.maxHp = e.hp = Math.round(d.hp * hpM);
@@ -156,7 +156,7 @@ export function dealDamage(t: any, amount: number, dtype: string, src: any, opt:
     if (t.st.prisonT > 0) dmg *= 1.25;
   } else if (t.team === 'u') {
     if (src && src.def && src.def.holy && t.kind === 'unit') dmg *= 2;
-    if (src && src.def && src.def.bigSlayer && t.kind === 'unit' && (t.def.cap >= 3 || t.summon)) dmg *= src.def.bigSlayer;
+    if (src && src.def && src.def.bigSlayer && t.kind === 'unit' && (t.def.size >= 3 || t.summon)) dmg *= src.def.bigSlayer;
     if (opt.proj && t.type === 'skeleton' && G.run.mods.skel_shield) dmg *= 0.7;
     if (t.kind !== 'unit' && opt.spell && G.forts.some((f: any) => f.type === 'ward' && dist2(f.x, f.y, t.x, t.y) < 2500)) dmg *= 0.5;
   }
@@ -171,7 +171,14 @@ export function dealDamage(t: any, amount: number, dtype: string, src: any, opt:
   dmg = Math.max(1, dmg);
   t.hp -= dmg;
   t.hitT = 0.12;
-  if (G.settings.dmgNumbers && (t.team === 'm' || dmg > t.maxHp * 0.08)) addText(t.x + rnd(-4, 4), t.y - sheetH(t.spr) - t.alt - 2, fmtDmg(dmg) + (crit ? '!' : ''), crit ? '#ffd257' : t.team === 'm' ? DCOL[dtype] || '#e8e8e0' : '#ff6060', crit);
+  // damage numbers: one merged number per target every 0.35s (crits always pop) so big fights stay readable
+  if (G.settings.dmgNumbers && (t.team === 'm' || dmg > t.maxHp * 0.08)) {
+    t.dmgAcc = (t.dmgAcc || 0) + dmg;
+    if (crit || !(t.dmgTxtT > G.time)) {
+      addText(t.x + rnd(-4, 4), t.y - sheetH(t.spr) - t.alt - 2, fmtDmg(t.dmgAcc) + (crit ? '!' : ''), crit ? '#ffd257' : t.team === 'm' ? DCOL[dtype] || '#e8e8e0' : '#ff6060', crit);
+      t.dmgAcc = 0; t.dmgTxtT = G.time + 0.35;
+    }
+  }
   if (src && src.kind === 'unit' && src.def && src.def.lifesteal) healUnit(src, dmg * src.def.lifesteal, G.run.mods.vamp_feast);
   if (t.hp <= 0) killEntity(t, src, dtype);
   return dmg;
@@ -263,7 +270,7 @@ function onUnitDeath(u: any) {
 
 export function aoeDamage(x: number, y: number, r: number, dmg: number, dtype: string, src: any, opt: any = {}) {
   const hit: any[] = [];
-  G.hashE.query(x, y, r + 6, (e: any) => { if (e.flying && opt.groundOnly) return; hit.push(e); });
+  G.hashE.query(x, y, r + 6, (e: any) => { hit.push(e); });
   for (const e of hit) {
     const d = dist(x, y, e.x, e.y);
     const f = d < r * 0.4 ? 1 : 1 - 0.4 * (d - r * 0.4) / (r * 0.6);
@@ -397,7 +404,6 @@ export function updateHazards(dt: number) {
     if (h.tick <= 0) {
       h.tick = 0.25;
       G.hashE.query(h.x, h.y, h.r, (e: any) => {
-        if (e.flying && h.kind !== 'rift' && h.kind !== 'blood') return;
         dealDamage(e, h.dps * 0.25, h.dtype, h.src || NEUTRAL_SRC, { aoe: true, noCrit: true });
         if (h.slow) applySlow(e, h.slow, 0.5);
         if (h.kind === 'blood') e.st.bloodT = 0.6;

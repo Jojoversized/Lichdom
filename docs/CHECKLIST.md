@@ -4,7 +4,9 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 
 ## Foundation
 - [x] Phaser 3.80 + TypeScript + Vite project, GitHub Pages workflow
-- [x] Fixed integer-zoom pixel rendering (480×270 target view), pixelArt/roundPixels
+- [x] Pixel-perfect rendering at 2× texel density (even screen zoom, camera zoom × canvas zoom), pixelArt/roundPixels
+- [x] Hi-res finishing pass for all art (`tools/assets/hires.mjs`): silhouette Scale2x, form shading, selective outline, unblocking of huge sprites
+- [x] Terrain and decals painted at texel resolution (rounded cobbles, 1-texel grass, dithered soil)
 - [x] Asset pipeline: procedural painters → PNG sheets + manifest; synthesized SFX → WAV
 - [x] Folder structure: `assets/sprites/{units,enemies,bosses,summons,towers,fortifications,environment,effects}`, `assets/ui/icons`, `assets/audio/{sfx,music}`, `assets/data`
 - [x] CLAUDE.md, checklist, test harness (smoke, ui_flow, bot)
@@ -22,22 +24,27 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 ## Combat & entities
 - [x] 8 towers × 3 tiers with distinct behaviours and evolved abilities
 - [x] 13 recruitable undead (3 forms each), 6 summon packs (Legion ×12, Wraiths ×8, Colossus ×2, Abomination ×2, Devourer ×2, Dragon ×1)
-- [x] Autonomous army AI: guard line weighted to hot roads, urgency/travel/crowding target assignment, ranged kiting, wounded retreat-and-mend at the keep, flyers hunt flyers, taunters dive
+- [x] Autonomous army AI: guard line weighted to hot roads (with formation depth for big hosts), urgency/travel/crowding target assignment, ranged kiting, wounded retreat-and-mend at the keep, flyers hunt flyers, taunters dive, no piecemeal charges into distant boss kill-zones
 - [x] 20 mortal types across 4 factions; 6 bosses with abilities; champions every 5 waves; adaptive crusade
 - [x] Walls/barricades/lava/runes/cauldrons/wards; climbers, rams, catapults, flyers
 - [x] All slain undead (recruits and summons) revive free at wave end
-- [x] Summons are permanent and uncapped; Crusade Fervor scales enemies to the summoned host
+- [x] **No army cap**: recruits come in squads of ≥ 5 (squad-size upgrades: cards, Legions, Ossuary Expansion); summons permanent
+- [x] Crusade Fervor scales enemies to the whole host (recruits + summons) beyond a free allowance; bosses use √Fervor
+- [x] Universal targeting — every unit, tower and enemy can hit flyers and ground alike
+- [x] Random undead: random starting squad type, Call of the Crypt, Unbidden Dead, Forgotten Crypt, unlock cards grant a squad
 - [ ] Per-unit "stance" hints (optional, no micromanagement) — e.g. favour a road
 
 ## Progression
 - [x] Three-choice level-ups, 5 rarities, ~80 cards incl. modifiers and legendaries
-- [x] Soul Well: Ascensions (repeatable ×1.12 dmg/hp, ×1.08 souls), insight, mend, revive, frenzy, summons, emergencies
-- [x] Incremental curves: enemy HP ×1.135/wave, bounty ×1.08/wave, per-copy cost scaling (towers ×1.2, recruits ×1.05)
+- [x] Offers never contain two tiers of the same upgrade family (better tier kept, worse rerolled; checked by the bot)
+- [x] Soul Well: Ascensions (repeatable ×1.12 dmg/hp, ×1.08 souls, +1 squad size), insight, mend, revive, frenzy, Call of the Crypt, summons, emergencies
+- [x] Incremental curves: enemy HP ×1.135/wave, bounty ×1.08/wave, per-copy cost scaling (towers ×1.2, squads ×1.12 per squad bought)
 - [x] 8 spells, Life Essence, 49-node Phylactery tree, 5 fortresses, 20 achievements, codex
 - [x] Save/continue (localStorage), resume mid-wave at that wave's prep
 - [ ] Prestige layer beyond Life Essence (e.g. "Dread" multiplier per boss tier cleared)
 - [ ] Offline/idle progress between sessions (classic incremental feature)
-- [ ] Balance pass with human playtests (bot baseline: no meta dies ~wave 14–28; maxed meta reaches 70+)
+- [ ] Balance pass with human playtests (v0.3 bot baseline: no meta dies at wave 10 boss ~¼ of runs, otherwise ~18–24; maxed meta reaches ~wave 53 with ~6,700 undead)
+- [ ] Squad formations / banner per squad (squads currently dissolve into the host)
 
 ## UI
 - [x] Collapsible build drawer (▼ Hide / B key / click active tab)
@@ -58,5 +65,5 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 
 ## Known issues
 - Fonts load from Google Fonts; offline they fall back to Georgia/Courier.
-- Large summons and bosses use a scaled humanoid painter and look chunkier than small units.
-- Very late waves (60+) with 200+ undead are heavy on low-end CPUs; consider effect-quality presets.
+- Painters still author shapes on the 1× grid; the 2× pass adds rounding and shading but not new hand-placed detail. Next art step: native 2× painters for the most-seen units (skeleton, footman, knight).
+- Uncapped hosts reach 2,000+ undead by wave 30 with max meta (~3 ms/step simulation); rendering that many sprites + shadows on weak GPUs needs an effects-quality preset (e.g. drop shadows/lights for small units).

@@ -31,7 +31,7 @@ export const G: any = {
   decalQueue: [] as any[],
   keep: { hp: 1000, maxHp: 1000, ward: 0, flash: 0 },
   lich: { anim: 'idle', at: 0, castT: 0, cdT: 1, face: 1 },
-  hashE: new SpatialHash<Ent>(48), hashU: new SpatialHash<Ent>(48),
+  hashE: new SpatialHash<Ent>(24), hashU: new SpatialHash<Ent>(16), stepN: 0,
   time: 0, speed: 1, paused: false, modal: null as string | null, phase: 'menu' as 'menu' | 'prep' | 'wave' | 'over',
   wave: null, shake: 0, flash: 0, selected: null, build: null,
   tdT: 0, frenzyT: 0, stormT: 0, extraRaised: 0, citadelRaised: 0, fleshZombies: 0,

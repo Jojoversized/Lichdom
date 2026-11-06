@@ -26,11 +26,23 @@ git init -b main
 git remote add origin https://github.com/Jojoversized/Lichdom.git
 git fetch origin
 git reset origin/main      # keeps the files, adopts the repo history
+git restore .github        # restores the deploy workflow
 npm install && npm run dev
 ```
 
+### Updating an existing local copy
+When Claude has written a new version into the folder and pushed it to GitHub:
+
+```bash
+git fetch origin
+git reset origin/main      # local files already match; this just syncs git's view
+```
+(Or, if Claude only pushed: `git pull`.)
+
 ## Highlights
-- 8 evolving towers, 13 undead troop types, 6 permanent summon packs (uncapped)
+- 2× texel-density pixel art: rounded silhouettes, volume shading, thin selective outlines
+- No army cap: every recruit raises a squad of 5+; random undead from the crypts; 6 permanent summon packs
+- 8 evolving towers, 13 undead troop types; everything can target everything (no air/ground rules)
 - Undead fight on their own — no flags, no micromanagement
 - 20 mortal unit types in 4 factions, 6 bosses, an adaptive crusade
 - Three-choice roguelite level-ups, repeatable Soul Well Ascensions, a 49-node permanent Phylactery tree

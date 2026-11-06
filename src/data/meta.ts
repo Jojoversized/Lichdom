@@ -48,9 +48,9 @@ export const META: any[] = [
   { id: 'a_start', b: 'A', name: 'Ancient Memory', max: 2, cost: 60, mult: 2, req: ['a_meteor'], desc: (lv: number) => `Begin campaigns knowing ${lv} extra random spell${lv > 1 ? 's' : ''}.` },
   { id: 'a_apoc', b: 'A', name: 'The Final Page', max: 1, cost: 260, req: ['a_res'], desc: () => 'Apocalypse can be learned.' },
   // Military
-  { id: 'm_cap', b: 'M', name: 'Legions', max: 5, cost: 12, mult: 1.6, desc: (lv: number) => `+${lv * 2} unit capacity.` },
+  { id: 'm_cap', b: 'M', name: 'Legions', max: 5, cost: 12, mult: 1.6, desc: (lv: number) => `Every squad you recruit raises +${lv} more undead.` },
   { id: 'm_as', b: 'M', name: 'Drums of the Dead', max: 5, cost: 15, mult: 1.7, desc: (lv: number) => `+${lv * 6}% unit attack speed.` },
-  { id: 'm_start', b: 'M', name: 'Vanguard', max: 3, cost: 20, mult: 1.8, desc: (lv: number) => `Begin campaigns with ${lv * 2} extra Skeleton Warriors.` },
+  { id: 'm_start', b: 'M', name: 'Vanguard', max: 3, cost: 20, mult: 1.8, desc: (lv: number) => `Begin campaigns with ${lv} extra squad${lv > 1 ? 's' : ''} of random undead.` },
   { id: 'm_cost', b: 'M', name: 'Conscription', max: 3, cost: 25, mult: 1.8, req: ['m_cap'], desc: (lv: number) => `-${lv * 8}% recruitment cost.` },
   { id: 'm_acolyte', b: 'M', name: 'Dark Seminary', max: 1, cost: 40, req: ['m_start'], desc: () => 'Necromantic Acolytes can be unlocked.' },
   { id: 'm_reinforce', b: 'M', name: 'Grave Pact', max: 3, cost: 50, mult: 1.9, req: ['m_cost'], desc: (lv: number) => `Every Soul Well summon raises +${lv * 50}% more creatures.` },

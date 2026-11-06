@@ -16,7 +16,7 @@ import { stepVisual } from './systems/fx';
 import { canBuildAt } from './world/mapgen';
 import { UI, recruit } from './ui/ui';
 
-const z0 = computeZoom();
+const z0 = computeZoom().pz;
 const game = new Phaser.Game({
   type: Phaser.WEBGL,
   parent: 'game-root',
