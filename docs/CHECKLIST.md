@@ -13,6 +13,13 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 - [ ] Enable `strict` TypeScript and type the entity model fully
 - [ ] Unit tests for pure systems (stats curves, card pool, flow field)
 
+## AI-assisted art (Dreamina)
+- [x] Test asset: Skeleton Warriors (tier 1) imported from Dreamina via `manifest_ai.json` override
+- [x] Importer `tools/assets/import_ai_sprite.py` (resample → quantize → emissive glow → outline → strip)
+- [ ] Decide character scale for AI art (H 24 loses face/mail detail; H 32–36 keeps it)
+- [ ] Real animation poses (currently derived from one pose: bob, squash, lean)
+- [ ] Remaining undead tiers, crusaders, towers, keep, tiles, spell FX
+
 ## Battlefield
 - [x] Keep on far left; crusade enters from the right (3 roads → 5 at waves 12 and 20)
 - [x] Seeded map: roads, obstacles (trees, rocks, ruins), braziers/crystals, graves, debris

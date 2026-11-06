@@ -1,0 +1,38 @@
+{
+ "version": 1,
+ "res": 2,
+ "enabled": true,
+ "sheets": {
+  "ai_skeleton_warrior": {
+   "file": "sprites/units/ai/ai_skeleton_warrior.png",
+   "fw": 47,
+   "fh": 54,
+   "frames": 11,
+   "anims": {
+    "idle": [
+     0,
+     2
+    ],
+    "walk": [
+     2,
+     4
+    ],
+    "atk": [
+     6,
+     3
+    ],
+    "cast": [
+     9,
+     2
+    ]
+   },
+   "H": 24.0,
+   "flying": false,
+   "category": "units",
+   "source": "art_source/dreamina/skeleton_warrior_v1/cutout.png"
+  }
+ },
+ "overrides": {
+  "skeleton": "ai_skeleton_warrior"
+ }
+}

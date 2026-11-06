@@ -77,7 +77,21 @@ assets/
   data/manifest.json, palette.json, sfx.json
 ```
 
-## Architecture
+## AI-assisted art (Dreamina) — pipeline under test
+
+Imported AI art never overwrites generated assets. It is layered at boot:
+- **Generate** in Dreamina (Seedream 5.0 Lite, 6 credits/image, the original style reference attached).
+  Generate *on the reference's dark battlefield* (a flat chroma background pushes the palette bright and
+  cartoony), one character, facing right, ¾ top-down. Then **Remove BG** (2 credits) and download the cutout.
+- **Keep the original** in `art_source/dreamina/<asset>_vN/` (`cutout.png` + `meta.json` with prompt, model,
+  credits). `art_source/` is outside `assets/`, so it is not shipped.
+- **Import**: `python3 tools/assets/import_ai_sprite.py <cutout> <key> --H 24 [--override <sprite key>]`
+  → resample to H×2 texels, palette-quantize, keep emissive glows, 1-texel selective outline, derive the
+  idle/walk/atk/cast strip, write `assets/sprites/<category>/ai/<key>.png` and `assets/data/manifest_ai.json`.
+- **Runtime**: BootScene merges `manifest_ai.json`; `overrides` maps an existing sprite key to the imported
+  sheet (`enabled: false` or removing the entry restores the procedural art).
+
+
 
 ```
 src/

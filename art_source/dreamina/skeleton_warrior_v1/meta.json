@@ -1,0 +1,13 @@
+{
+  "asset": "skeleton_warrior",
+  "used_as": "units/skeleton (tier 1, Skeleton Warriors) via assets/data/manifest_ai.json overrides",
+  "tool": "Dreamina (dreamina.capcut.com) — AI Image",
+  "model": "Seedream 5.0 Lite",
+  "settings": { "ratio": "1:1", "resolution": "2K", "images_per_run": 2 },
+  "reference": "original Lichdom style reference image (attached in the Dreamina 'Undead lich army pixel art' session)",
+  "postprocess": "Dreamina Remove BG (2 credits) -> tools/assets/import_ai_sprite.py --H 24",
+  "credits_spent": { "generation_2_images": 12, "remove_bg": 2, "failed_magenta_bg_attempt": 12 },
+  "date": "2026-11-06",
+  "prompt": "Make a character sprite for my game in this image's exact art style: high resolution shaded pixel art, gritty, dark and desaturated, muted earthy colors, same lighting and same top-down three-quarter camera angle and same character scale as the reference. The character is a skeleton warrior of the undead lich's army: yellowed cracked bones, a dented rusty iron half-helm, a torn dark leather and chainmail tunic, a notched rusty longsword held in its right hand and a battered round wooden shield with an iron rim on its left arm, faint necrotic green glow in its eye sockets. Full body, standing in a ready combat stance, facing right. It is the ONLY character, standing alone in an open, empty patch of the dark battlefield ground with nothing touching or overlapping it, fully visible with clear space around it. Not a cartoon, not bright, no saturated colors.",
+  "notes": "A flat magenta background was tried first; it pushed the palette bright and cartoony. Generating on the reference's dark battlefield and removing the background keeps the style."
+}
