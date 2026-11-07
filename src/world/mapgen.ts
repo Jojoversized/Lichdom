@@ -4,6 +4,7 @@ import { G } from '../core/state';
 import { makeRng, makeCanvas, clamp, lerp, dist, shade, hexToRgb, MinHeap, Rng } from '../core/util';
 import { CELL, MW, MH, WW, WH, KEEP, WELL_POS, LANES, PAL } from '../config/constants';
 import { FORTRESSES } from '../data/world';
+import { FORT, cellInFort, fortRadius, rampartX } from '../data/fortress';
 
 export const cellIdx = (x: number, y: number) => y * MW + x;
 export function worldToCell(px: number, py: number): [number, number] { return [clamp(Math.floor(px / CELL), 0, MW - 1), clamp(Math.floor(py / CELL), 0, MH - 1)]; }
@@ -20,10 +21,14 @@ export function generateMap(seed: number, fortKey: string) {
     flow: new Float32Array(n), flowC: new Float32Array(n), dirty: true,
   };
   const inb = (x: number, y: number) => x >= 0 && y >= 0 && x < MW && y < MH;
-  for (let y = KEEP.cy0 - 1; y <= KEEP.cy1 + 1; y++) for (let x = 0; x <= KEEP.cx1 + 1; x++) if (inb(x, y)) M.reserved[cellIdx(x, y)] = 2;
-  for (let y = WELL_POS.cy0; y <= WELL_POS.cy1; y++) for (let x = WELL_POS.cx0; x <= WELL_POS.cx1 + 1; x++) M.reserved[cellIdx(x, y)] = 3;
+  // the fortress: every cell inside the curtain wall is solid, except the gatehouse (the flow goal)
+  for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) if (cellInFort(x, y)) {
+    const i = cellIdx(x, y); M.reserved[i] = 2;
+    if (!(x >= KEEP.cx0 && x <= KEEP.cx1 && y >= KEEP.cy0 && y <= KEEP.cy1)) M.obstacle[i] = 1;
+  }
+  for (let y = WELL_POS.cy0; y <= WELL_POS.cy1; y++) for (let x = WELL_POS.cx0; x <= WELL_POS.cx1; x++) if (!M.reserved[cellIdx(x, y)]) M.reserved[cellIdx(x, y)] = 3;
   // roads: from each lane on the right edge to the keep gate
-  const gateX = KEEP.cx1 + 1, gateY = 21;
+  const gateX = KEEP.cx1 + 1, gateY = Math.floor(KEEP.y / CELL);
   for (const l of LANES) {
     let x = MW - 1, y = l.cy, steps = 0;
     const phase = rng() * Math.PI * 2;
@@ -40,7 +45,7 @@ export function generateMap(seed: number, fortKey: string) {
   M.sites = makeWallSites(M);
   M.plots = makePlots(M);
   const nearRoad = (x: number, y: number, r: number) => { for (let oy = -r; oy <= r; oy++) for (let ox = -r; ox <= r; ox++) if (inb(x + ox, y + oy) && M.road[cellIdx(x + ox, y + oy)]) return true; return false; };
-  const nearKeep = (x: number, y: number, r: number) => x <= KEEP.cx1 + r && y >= KEEP.cy0 - r && y <= KEEP.cy1 + r;
+  const nearKeep = (x: number, y: number, r: number) => fortRadius((x + 0.5) * CELL, (y + 0.5) * CELL) < FORT.rRamp + r * CELL;
   // obstacles
   const types: [string, number, number][] = [['tree0', 2, 1], ['tree1', 2, 1], ['tree2', 2, 1], ['rock', 1, 1], ['rock2', 2, 1], ['pillar', 1, 1], ['ruinwall', 2, 1]];
   let placed = 0, tries = 0;
@@ -66,7 +71,8 @@ export function generateMap(seed: number, fortKey: string) {
     M.props.push({ name: type, x: x * CELL + 8, y: y * CELL + 15, solid: true, anim: true, light: { r: type === 'brazier' ? 64 : 44, color: type === 'brazier' ? '#ff8a1e' : M.theme.accent, flicker: type === 'brazier' } });
     braz++;
   }
-  [[KEEP.x1 + 8, KEEP.y - 34], [KEEP.x1 + 8, KEEP.y1 + 6], [KEEP.x0 + 30, KEEP.y1 + 8], [KEEP.x0 + 90, KEEP.y1 + 8]].forEach(([x, y]) =>
+  // torches flanking the gate approach
+  [[KEEP.x1 + 10, KEEP.y0 - 6], [KEEP.x1 + 10, KEEP.y1 + 10]].forEach(([x, y]) =>
     M.props.push({ name: 'torch', x, y, anim: true, light: { r: 40, color: '#ff9a2e', flicker: true } }));
   // small decorative props
   tries = 0; let sp = 0;
@@ -91,7 +97,7 @@ export interface WallSite { id: string; name: string; cells: [number, number][];
 /** Preset rampart sites (no rng: identical for every seed). The keep ring closes on the map's
  *  left edge; the two lines span the whole field, so closing every segment of a line forces
  *  the crusade to breach it, while gaps funnel the host through them. */
-export const WALL_LINES = [{ cx: 24, name: 'Inner Line' }, { cx: 36, name: 'Outer Line' }];
+export const WALL_LINES = [{ cx: 28, name: 'Inner Line' }, { cx: 40, name: 'Outer Line' }];
 const SEG_NAMES = ['North', 'Upper', 'Centre', 'Lower', 'South'];
 function makeWallSites(M: any): WallSite[] {
   const sites: WallSite[] = [];
@@ -101,12 +107,23 @@ function makeWallSites(M: any): WallSite[] {
     const x = cells.reduce((a, c) => a + c[0], 0) / cells.length, y = cells.reduce((a, c) => a + c[1], 0) / cells.length;
     sites.push({ id, name, cells, x: (x + 0.5) * CELL, y: (y + 0.5) * CELL });
   };
-  const fx = 14, ny = 14, sy = 28; // ring around keep + Soul Well
-  const row = (y: number, x0: number, x1: number) => { const c: [number, number][] = []; for (let x = x0; x <= x1; x++) c.push([x, y]); return c; };
   const col = (x: number, y0: number, y1: number) => { const c: [number, number][] = []; for (let y = y0; y <= y1; y++) c.push([x, y]); return c; };
-  add('keep_n', 'Keep Rampart: North', row(ny, 0, fx));
-  add('keep_g', 'Keep Rampart: Gate', col(fx, ny + 1, sy - 1));
-  add('keep_s', 'Keep Rampart: South', row(sy, 0, fx));
+  // curtain rampart: rasterised along the outer arc of the bailey, top edge to bottom edge. Each row
+  // takes the cells the arc crosses between its top and bottom border (shared borders keep it 4-connected).
+  const curtain = (y0: number, y1: number) => {
+    const c: [number, number][] = [];
+    for (let y = y0; y <= y1; y++) {
+      const a = Math.floor(rampartX(y * CELL) / CELL), b = Math.floor(rampartX((y + 1) * CELL) / CELL);
+      for (let x = Math.min(a, b); x <= Math.max(a, b); x++) c.push([x, y]);
+    }
+    return c;
+  };
+  // segments around the gatehouse (rows 23–26): the gate segment spans the three converging roads
+  add('keep_nn', 'Curtain Rampart: North', curtain(0, 8));
+  add('keep_n', 'Curtain Rampart: Upper', curtain(9, 17));
+  add('keep_g', 'Curtain Rampart: Gate', curtain(18, 29));
+  add('keep_s', 'Curtain Rampart: Lower', curtain(30, 34));
+  add('keep_ss', 'Curtain Rampart: South', curtain(35, 39));
   for (const l of WALL_LINES) for (let s = 0; s < 5; s++) add(`l${l.cx}_${s}`, `${l.name}: ${SEG_NAMES[s]}`, col(l.cx, s * 8, s * 8 + 7));
   return sites;
 }
@@ -114,20 +131,38 @@ export interface Plot { id: string; cx: number; cy: number; x: number; y: number
 /** Construction plots (2×2 cells) for towers and keep buildings: a front cluster between the keep
  *  ring and the Inner Line (covers the approach) and rear clusters behind the ring. Candidates on a
  *  road are dropped, so the count varies a little per map. Reserved = 5. */
-const PLOT_CANDIDATES: [number, number, boolean][] = [
-  // front: just outside the keep ring, flanking the gate approach (nearest first)
-  [16, 12, true], [16, 26, true], [19, 12, true], [19, 26, true], [16, 9, true], [16, 29, true], [19, 9, true], [19, 29, true],
-  [16, 5, true], [16, 33, true], [19, 5, true], [19, 33, true],
-  // rear: hugging the ring's north and south walls
-  [1, 11, false], [4, 11, false], [7, 11, false], [10, 11, false], [1, 30, false], [4, 30, false], [7, 30, false], [10, 30, false],
-  [2, 7, false], [6, 7, false], [2, 34, false], [6, 34, false],
-];
+/** Front plots: two columns just outside the curtain rampart, in rows flanking the gate roads
+ *  (nearest first); x follows the arc. */
+const FRONT_ROWS = [20, 29, 17, 32, 13, 35, 9, 5];
+function frontCandidates(): [number, number, boolean][] {
+  const out: [number, number, boolean][] = [];
+  for (const cy of FRONT_ROWS) {
+    const rc = Math.floor(Math.max(rampartX(cy * CELL), rampartX((cy + 2) * CELL)) / CELL);
+    out.push([rc + 2, cy, true], [rc + 5, cy, true]);
+  }
+  return out;
+}
+/** Rear plots: in the bailey between the fortress wall and the curtain rampart, spaced along the arc
+ *  outward from the gate (nearest first). */
+function baileyCandidates(): [number, number, boolean][] {
+  const out: [number, number, boolean][] = [];
+  for (let k = 1; k <= 12; k++) for (const s of [-1, 1]) {
+    const wy = FORT.oy + s * (8 + k * 34), dy = wy - FORT.oy;
+    if (wy < 12 || wy > MH * CELL - 12) continue;
+    const wx = FORT.ox + Math.sqrt(FORT.rBand * FORT.rBand - dy * dy);
+    out.push([Math.round(wx / CELL - 1), Math.round(wy / CELL - 1), false]);
+  }
+  return out;
+}
 function makePlots(M: any): Plot[] {
   const out: Plot[] = [];
-  for (const [cx, cy, front] of PLOT_CANDIDATES) {
+  let rear = 0, fronts = 0;
+  for (const [cx, cy, front] of [...frontCandidates(), ...baileyCandidates()]) {
+    if (front ? fronts >= 12 : rear >= 12) continue;
     let ok = true;
-    for (let y = cy; y < cy + 2; y++) for (let x = cx; x < cx + 2; x++) { const i = cellIdx(x, y); if (M.road[i] || M.reserved[i]) ok = false; }
+    for (let y = cy; y < cy + 2; y++) for (let x = cx; x < cx + 2; x++) { if (x < 0 || y < 0 || x >= MW || y >= MH) { ok = false; continue; } const i = cellIdx(x, y); if (M.road[i] || M.reserved[i]) ok = false; }
     if (!ok) continue;
+    if (front) fronts++; else rear++;
     for (let y = cy; y < cy + 2; y++) for (let x = cx; x < cx + 2; x++) M.reserved[cellIdx(x, y)] = 5;
     out.push({ id: 'p' + out.length, cx, cy, x: (cx + 1) * CELL, y: (cy + 1) * CELL, front });
   }

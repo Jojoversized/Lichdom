@@ -408,6 +408,35 @@
    "flying": false,
    "category": "units",
    "source": "art_source/dreamina/bone_golem_v1/cutout.png"
+  },
+  "lich_ai": {
+   "file": "sprites/units/ai/lich_ai.png",
+   "fw": 123,
+   "fh": 138,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 32.0,
+   "res": 4,
+   "flying": false,
+   "category": "units",
+   "source": "art_source/dreamina/lich_v1/cutout.png"
   }
  },
  "overrides": {
@@ -423,6 +452,15 @@
   "vampire": "ai_vampire_lord",
   "wyvern": "ai_bone_wyvern",
   "abomination": "ai_flesh_abomination",
-  "golem": "ai_bone_golem"
+  "golem": "ai_bone_golem",
+  "lich": "lich_ai"
+ },
+ "images": {
+  "fortress": {
+   "file": "sprites/buildings/ai/fortress.png",
+   "res": 4,
+   "w": 1016,
+   "h": 2560
+  }
  }
 }

@@ -11,10 +11,13 @@ export const WW = MW * CELL, WH = MH * CELL;
  *  integer zoom that keeps at least this much of the world on screen. */
 export const VIEW_TARGET_W = 480, VIEW_TARGET_H = 270;
 
-export const KEEP = { x: 96, y: 328, x0: 36, x1: 156, y0: 272, y1: 380, cx0: 2, cx1: 9, cy0: 17, cy1: 23 };
-export const WELL_POS = { x: 186, y: 430, cx0: 10, cx1: 12, cy0: 25, cy1: 27 };
+/** The keep's gatehouse in the fortress's curtain wall (src/data/fortress.ts): the crusade's target,
+ *  the flow-field goal and the anchor for spawns and spells. */
+export const KEEP = { x: 186, y: 400, x0: 152, x1: 228, y0: 368, y1: 432, cx0: 10, cx1: 13, cy0: 23, cy1: 26 };
+/** The Soul Well stands in the bailey above the gate, between the fortress wall and the curtain rampart. */
+export const WELL_POS = { x: 264, y: 318, cx0: 15, cx1: 17, cy0: 18, cy1: 20 };
 /** Where idle undead form up: a line in front of the keep gate. */
-export const GUARD_LINE_X = 236;
+export const GUARD_LINE_X = 330;
 
 export interface Lane { id: string; name: string; cy: number; minWave: number; }
 export const LANES: Lane[] = [

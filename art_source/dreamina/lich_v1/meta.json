@@ -1,0 +1,20 @@
+{
+ "asset": "lich",
+ "used_as": "override of 'lich' (the player's Lich atop the keep)",
+ "tool": "Dreamina (dreamina.capcut.com) \u2014 AI Image",
+ "model": "Seedream 4.6 (5.0 Lite no longer offered)",
+ "settings": {
+  "ratio": "1:1",
+  "resolution": "2K",
+  "images": 4,
+  "picked": 2
+ },
+ "reference": "original Lichdom style reference image",
+ "postprocess": "Dreamina Remove BG (2 credits) -> tools/assets/import_ai_sprite.py --H 32 --res 4 --override lich",
+ "credits_spent": {
+  "generate": 8,
+  "remove_bg": 2
+ },
+ "date": "2026-11-07",
+ "prompt": "Make a character sprite for my game in this image's exact art style: high resolution shaded pixel art, gritty, dark and desaturated, muted earthy colors, same lighting and same top-down three-quarter camera angle and same character scale as the reference. It belongs to the same undead lich's army as the hunched skeletal wendigo, the rotting zombie and the skeleton warrior already made in this style: gaunt, ragged and bony, with exposed yellowed bones, tattered dark cloth, rusted iron and faint necrotic green glows. The character is the Lich himself, master of this undead army: a tall gaunt skeletal sorcerer-king in tattered ornate black and deep purple robes with a high collar, a jagged iron crown on his skull, glowing necrotic green eyes, a long staff topped with a green soul crystal held in one bony hand, the other hand raised casting green flame, a faint green aura. Full body, standing and casting, facing right. It is the ONLY character, standing alone in an open, empty patch of the dark battlefield ground with nothing touching or overlapping it, fully visible with clear space around it. Not a cartoon, not bright, no saturated colors."
+}

@@ -1,0 +1,26 @@
+{
+ "asset": "fortress",
+ "used_as": "the Lich's necropolis fortress spanning the map's left edge (replaces the keep sprite)",
+ "tool": "Dreamina (dreamina.capcut.com) \u2014 AI Image",
+ "model": "Seedream 4.6",
+ "settings": {
+  "ratio": "9:16",
+  "resolution": "2K (1440x2560)",
+  "images": 4,
+  "picked": 4
+ },
+ "reference": "original Lichdom style reference image",
+ "files": {
+  "original.png": "the generated image",
+  "cutout.png": "Dreamina Remove BG of it (used only to measure the wall face / keep towers, banners and chains)"
+ },
+ "postprocess": "tools/assets/import_fortress.py original.png cutout.png (bends the wall strip onto the arc, citadel rigid; writes sprites/buildings/ai/fortress.png + src/data/fortress_fit.ts)",
+ "credits_spent": {
+  "first_attempt_rejected": 8,
+  "generate": 8,
+  "remove_bg": 2
+ },
+ "date": "2026-11-07",
+ "rejected_prompt_note": "First attempt asked for a 'top-down three-quarter angle' fortress: all 4 images came out as isometric perspective shots with the wall curving away to a horizon. The ')' bracket / flat map view wording fixed the composition.",
+ "prompt": "Top-down 2D game map art in this image's exact art style: high resolution shaded pixel art, gritty, dark and desaturated, muted earthy colors, same lighting, seen from high above with only a slight tilt exactly like the reference battlefield, flat map view, no perspective vanishing, no horizon, no sky. The image shows the eastern front of the undead lich's colossal necropolis fortress as a tall map strip: one continuous thick curtain wall of black weathered stone shaped like a ')' bracket runs vertically from the very top edge of the image all the way down to the very bottom edge. Its outer face bulges to the right, reaching about two thirds of the way across the image at the middle and curving back toward the left at the top and bottom edges. Five round towers crowned with skulls sit evenly spaced along the curve; the middle one is a massive gatehouse with a portcullis glowing faint necrotic green, facing right. Crenellated battlements, wall walks, torches, iron chains, tattered dark banners, yellowed bones set into the stone. Left of the wall, filling the space to the left edge: densely packed dark citadel rooftops, spires, crypts and courtyards with faint green windows, cut off by the left edge so the fortress continues beyond the frame. Right of the wall: flat, plain, empty dark battlefield ground. The whole wall is visible from top to bottom. Not a cartoon, not bright, no saturated colors."
+}

@@ -83,7 +83,8 @@ assets/
 ## AI-assisted art (Dreamina) — the adopted art pipeline
 
 Imported AI art never overwrites generated assets. It is layered at boot:
-- **Generate** in Dreamina (Seedream 5.0 Lite, 6 credits/image, the original style reference attached).
+- **Generate** in Dreamina (Seedream 4.6, 2 credits/image, 4 images per run; Seedream 5.0 Lite was retired in Nov 2026;
+  the original style reference attached).
   Generate *on the reference's dark battlefield* (a flat chroma background pushes the palette bright and
   cartoony), one character, facing right, ¾ top-down. Then **Remove BG** (2 credits) and download the cutout.
 - **Keep the original** in `art_source/dreamina/<asset>_vN/` (`cutout.png` + `meta.json` with prompt, model,
@@ -98,9 +99,16 @@ Imported AI art never overwrites generated assets. It is layered at boot:
   `WorldRenderer.updateDetailFilters`).
 - **Imported so far (all 14 allied units):** skeleton, zombie, acolyte (skeleton cleric), deathknight (haunted
   armor), wendigo (new unit); v0.6.1: archer, pikeman, bonemage, wraith, banshee, vampire, wyvern, abomination,
-  golem (prompts in each `meta.json`, styled after the wendigo). Credits remaining: ~136.
+  golem (prompts in each `meta.json`, styled after the wendigo); v0.7: the Lich (`lich_v1`) and the necropolis
+  fortress (`fortress_v1`, original + cutout). Credits remaining: 224.
+- **Fortress**: `python3 tools/assets/import_fortress.py <original> <cutout>` bends the painted wall onto the arc
+  (citadel stays rigid), writes `sprites/buildings/ai/fortress.png` and the generated `src/data/fortress_fit.ts`
+  (per-row wall profile = solid cells, lights). Gameplay geometry (rampart arc, plots, KEEP gate cells, Soul Well)
+  is in `src/data/fortress.ts`, `config/constants.ts` and `makeWallSites`/`makePlots` in mapgen.
+  Composition prompts that worked: "flat map view, no horizon", wall "shaped like a ')' bracket from the very top
+  edge to the very bottom edge" (a plain "three-quarter angle" prompt gives isometric perspective shots).
 - Batch workflow that works: in the 'Undead lich army pixel art' session, *Edit prompt* on an earlier entry (keeps
-  the reference + Seedream 5.0 Lite 1:1 2K), set 1 image/run, queue several prompts; then per image: detail view →
+  the reference; pick Seedream 4.6 and the ratio), set the image count, queue several prompts; then per image: detail view →
   *Edit on canvas* → select node → *Remove BG* → Generate → select cutout → download → stage from Downloads.
   `import_ai_sprite.py` drops stray specks (the generator's corner 'AI' badge) before cropping.
 
@@ -151,6 +159,11 @@ Key rules:
 - After any change: typecheck, run smoke + ui_flow, run the bot for balance changes, update `docs/CHECKLIST.md`.
 
 ## Current status
+
+v0.7 — **the Lich and the necropolis**: Dreamina Lich atop the gatehouse; a colossal fortress spans the map's
+left edge (curtain wall top-to-bottom, citadel cut off by the frame) and the gameplay follows the painted wall
+(`data/fortress.ts`, generated `fortress_fit.ts`): curtain rampart arc, bailey plots, Soul Well in the bailey, save v5.
+Bone Golem retuned (it was strictly worse than the Abomination on paper).
 
 v0.6.1 — AI art for the whole allied cast (9 new Dreamina units, 72 credits).
 

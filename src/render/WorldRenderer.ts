@@ -4,7 +4,8 @@
 import * as Phaser from 'phaser';
 import { G } from '../core/state';
 import { CELL, MW, MH, WW, WH, KEEP, WELL_POS, PAL } from '../config/constants';
-import { SHEETS } from '../config/manifest';
+import { SHEETS, IMAGES } from '../config/manifest';
+import { FORT_ART, FORT_LIGHTS, LICH_POS } from '../data/fortress';
 import { hexNum, clamp, rnd, rndi, pick, dist, lerp, makeCanvas, TAU } from '../core/util';
 import { TOWERS, FORTS, WALL_TIERS, WALL_MAX_TIER } from '../data/towers';
 import { siteTier, siteUpgradeCost } from '../systems/ramparts';
@@ -33,7 +34,7 @@ export class WorldRenderer {
   gGround: Phaser.GameObjects.Graphics; gFx: Phaser.GameObjects.Graphics; gOver: Phaser.GameObjects.Graphics;
   dark: Phaser.GameObjects.RenderTexture; glow: Phaser.GameObjects.RenderTexture;
   stamps: Phaser.GameObjects.Image[] = [];
-  keep?: Phaser.GameObjects.Sprite; lich?: Phaser.GameObjects.Sprite; well?: Phaser.GameObjects.Sprite;
+  keep?: Phaser.GameObjects.Sprite; lich?: Phaser.GameObjects.Sprite; well?: Phaser.GameObjects.Sprite; fortress?: Phaser.GameObjects.Image;
   props: Phaser.GameObjects.Sprite[] = [];
   worldVersion = -1;
   viewW = 480; viewH = 270;
@@ -64,7 +65,7 @@ export class WorldRenderer {
    *  least one screen pixel (zoom >= 4). Below that they are downsampled smoothly
    *  (linear filtering) instead of dropping texels, so the extra detail still reads. */
   updateDetailFilters() {
-    for (const [key, m] of Object.entries(SHEETS)) {
+    for (const [key, m] of [...Object.entries(SHEETS), ...Object.entries(IMAGES)]) {
       const res = (m as any).res || T;
       if (res <= T || !this.scene.textures.exists(key)) continue;
       const crisp = VIEW.Z / res >= 1;
@@ -79,7 +80,7 @@ export class WorldRenderer {
     // destroy any view still attached to old entities
     for (const k of ['units', 'enemies', 'towers', 'forts', 'buildings', 'corpses', 'dying']) for (const o of G[k]) this.destroyView(o);
     this.props.forEach(p => p.destroy()); this.props = [];
-    this.terrain?.destroy(); this.keep?.destroy(); this.lich?.destroy(); this.well?.destroy();
+    this.terrain?.destroy(); this.keep?.destroy(); this.lich?.destroy(); this.well?.destroy(); this.fortress?.destroy(); this.fortress = undefined;
     if (s.textures.exists('terrain')) s.textures.remove('terrain');
     s.textures.addCanvas('terrain', M.terrain);
     this.terrain = s.add.image(0, 0, 'terrain').setOrigin(0).setDepth(DEPTH.terrain).setScale(WW / M.terrain.width);
@@ -101,7 +102,13 @@ export class WorldRenderer {
     }
     const keepKey = 'keep_' + M.fort;
     this.keep = s.add.sprite(KEEP.x, KEEP.y1 + 2, keepKey, 0).setOrigin(0.5, 1).setDepth(KEEP.y1).setScale(SC);
-    this.lich = s.add.sprite(KEEP.x + 18, KEEP.y0 + 6, 'lich', 0).setOrigin(0.5, 1).setDepth(KEEP.y1 + 1).setScale(SC);
+    // v0.7: the necropolis fortress (AI art) spans the map's left edge; the old keep sprite is the fallback
+    if (s.textures.exists(FORT_ART.key)) {
+      const res = (IMAGES[FORT_ART.key] as any)?.res || FORT_ART.res;
+      this.fortress = s.add.image(0, 0, FORT_ART.key).setOrigin(0).setDepth(DEPTH.decals + 5).setScale(1 / res);
+      this.keep.setVisible(false);
+    }
+    this.lich = s.add.sprite(LICH_POS.x, LICH_POS.y, 'lich', 0).setOrigin(0.5, 1).setDepth(WH + 10).setScale(sheetScale('lich'));
     this.well = s.add.sprite(WELL_POS.x, WELL_POS.y + 8, 'soulwell', 0).setOrigin(0.5, 1).setDepth(WELL_POS.y + 6).setScale(SC);
   }
 
@@ -128,6 +135,7 @@ export class WorldRenderer {
     // static set pieces
     this.keep.setFrame(animF % 4);
     if (G.keep.flash > 0) this.keep.setTint(0xff7070); else this.keep.clearTint();
+    if (this.fortress) { if (G.keep.flash > 0) this.fortress.setTint(0xffb0b0); else this.fortress.clearTint(); }
     this.well.setFrame(animF % 6);
     const L = G.lich, ls = SHEETS.lich;
     const la = L.anim === 'cast' ? 'cast' : 'idle';
@@ -434,7 +442,8 @@ export class WorldRenderer {
     const flick = Math.sin(now / 90) * 0.06 + Math.random() * 0.05;
     for (const p of M.props) if (p.light) add(p.x, p.y - 14, p.light.r * (p.light.flicker ? 1 + flick : 1), p.light.color, 1);
     add(KEEP.x, KEEP.y0 + 30, 64, M.theme.windowGlow, 0.9);
-    add(KEEP.x + 18, KEEP.y0 - 14, 46, PAL.necro, 1);
+    add(LICH_POS.x, LICH_POS.y - 20, 46, PAL.necro, 1);
+    for (const l of FORT_LIGHTS) add(l.x, l.y, l.r * (l.flicker ? 1 + flick : 1), l.color, 0.9);
     add(WELL_POS.x, WELL_POS.y - 4, 48, PAL.necro, 1);
     const tc: Record<string, string> = { brimstone: PAL.fire, tesla: '#9fe6ff', necrotic: PAL.necro, frost: PAL.frost, artillery: '#c8c0a8', harvester: '#7dffb0', arcane: PAL.arcane, abomination: '#ff5a3a' };
     for (const t of G.towers) add(t.x, t.y - 32, 38 + t.tier * 10 + (t.fireT > 0 ? 14 : 0), tc[t.type], t.silT > 0 ? 0.3 : 0.9);
@@ -472,7 +481,7 @@ export class WorldRenderer {
     if (G.tdT > 0) { g.fillStyle(0x508cc8, 0.1); g.fillRect(ox, oy, vw, vh); }
     if (G.frenzyT > 0) { g.fillStyle(0xa01414, 0.06); g.fillRect(ox, oy, vw, vh); }
     if (G.flash > 0) { g.fillStyle(0xfffae6, Math.min(0.5, G.flash)); g.fillRect(ox, oy, vw, vh); }
-    if (G.keep.hp < G.keep.maxHp) this.bar(g, KEEP.x, KEEP.y0 - 30, 60, G.keep.hp / G.keep.maxHp, 0x3fae5a);
+    if (G.keep.hp < G.keep.maxHp) this.bar(g, LICH_POS.x, LICH_POS.y - 44, 60, G.keep.hp / G.keep.maxHp, 0x3fae5a);
     const bars = (e: any) => {
       if (e.dead || (e.hp >= e.maxHp && !e.champion) || e.boss) return;
       const h = e.kind === 'tower' ? 44 + e.tier * 4 : e.kind === 'fort' ? 14 : ((SHEETS[e.spr] && SHEETS[e.spr].H) || 20) + e.alt + 4;

@@ -42,7 +42,7 @@ export const UNITS: Record<string, any> = {
   abomination: { name: 'Abomination', cost: 640, squad: 5, size: 3, hp: 560, dmg: 22, cd: 1.8, range: 16, spd: 18, armor: 0.25, dtype: 'phys', melee: true, cleave: 24, taunt: true,
     tiers: [{ name: 'Abominations', spr: 'abomination' }, { name: 'Flesh Giants', spr: 'abomination', cost: 340, hp: 1.7, dmg: 1.6 }, { name: 'Plague Titans', spr: 'abomination', cost: 640, hp: 2.6, dmg: 2.4 }],
     desc: 'Huge stitched horror. Taunts enemies and cleaves crowds.' },
-  golem: { name: 'Bone Golem', cost: 880, squad: 5, size: 4, hp: 500, dmg: 28, cd: 2.4, range: 18, spd: 16, armor: 0.35, dtype: 'phys', melee: true, cleave: 22,
+  golem: { name: 'Bone Golem', cost: 800, squad: 5, size: 4, hp: 620, dmg: 28, cd: 2.4, range: 18, spd: 16, armor: 0.35, dtype: 'phys', melee: true, cleave: 26,
     tiers: [{ name: 'Bone Golems', spr: 'golem' }, { name: 'Colossal Bone Golems', spr: 'golem', cost: 420, hp: 1.8, dmg: 1.7 }, { name: 'Titans of the Grave', spr: 'golem', cost: 800, hp: 2.8, dmg: 2.6 }],
     desc: 'A walking ossuary. Slams the ground, crushing formations.' },
   wyvern: { name: 'Skeletal Wyvern', cost: 600, squad: 5, size: 3, hp: 200, dmg: 16, cd: 1.4, range: 80, spd: 44, armor: 0.15, dtype: 'necro', ranged: 'bonespit', splash: 18, flying: true,

@@ -22,7 +22,7 @@ export class BootScene extends Phaser.Scene {
     const ai = this.cache.json.get('manifest_ai');
     if (ai) {
       // new content (e.g. the Wendigo) always loads; only the reskin overrides are switchable
-      Object.assign(SHEETS, ai.sheets || {});
+      Object.assign(SHEETS, ai.sheets || {}); Object.assign(IMAGES, ai.images || {});
       if (ai.enabled !== false && (G.settings?.aiArt ?? true))
         for (const [key, aiKey] of Object.entries<string>(ai.overrides || {})) if (ai.sheets?.[aiKey]) SHEETS[key] = ai.sheets[aiKey];
     }

@@ -2,6 +2,7 @@
 import { G } from '../core/state';
 import { dist, dist2, rnd, rndi, pick, clamp, TAU } from '../core/util';
 import { CELL, KEEP, GUARD_LINE_X, LANES, PAL, WW } from '../config/constants';
+import { fortWallX, LICH_POS } from '../data/fortress';
 import { sfx } from '../core/events';
 import { flowStep, worldToCell, cellIdx, flowDist } from '../world/mapgen';
 import {
@@ -21,6 +22,7 @@ function moveToward(e: any, tx: number, ty: number, spd: number, dt: number) {
   if (d < 0.5) return true;
   const s = Math.min(d, spd * dt);
   e.x += (dx / d) * s; e.y += (dy / d) * s;
+  if (!e.flying) { const fx = fortWallX(e.y) + 3; if (e.x < fx) e.x = fx; } // nobody walks through the fortress wall
   e.vx = (dx / d) * spd;
   if (Math.abs(dx) > 0.3) e.face = dx > 0 ? 1 : -1;
   return d <= spd * dt;
@@ -183,7 +185,7 @@ function isRanged(u: any) { return !!u.def.ranged; }
  *  evenly spread, never stack, and don't reshuffle when others die. The formation grows
  *  with the host — a tight block at the gate for a small army, out toward midfield for a
  *  large one — melee in front, ranged mixed into the rear ranks, flyers above the front. */
-const FIELD_X0 = KEEP.x1 + 34, FIELD_X1 = 720, FIELD_Y0 = 46, FIELD_Y1 = 600;
+const FIELD_X0 = GUARD_LINE_X, FIELD_X1 = 720, FIELD_Y0 = 46, FIELD_Y1 = 600;
 function guardPosition(u: any, _idx: number, count: number) {
   // with a boss on the field the host falls back into a tight block at the gate, inside
   // tower cover, instead of standing spread out in the boss's kill-zone
@@ -606,7 +608,7 @@ export function updateLich(dt: number) {
   if (L.castT > 0) { L.castT -= dt; if (L.castT <= 0) L.anim = 'idle'; }
   L.cdT -= dt;
   if (L.cdT <= 0 && G.phase === 'wave') {
-    const lx = KEEP.x, ly = KEEP.y0 - 6;
+    const lx = LICH_POS.x, ly = LICH_POS.y;
     const e = G.hashE.nearest(KEEP.x1, KEEP.y, 210);
     if (e) {
       L.cdT = 1.2 / (1 + r.m.lichAs);

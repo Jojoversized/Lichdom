@@ -14,12 +14,12 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 - [ ] Unit tests for pure systems (stats curves, card pool, flow field)
 
 ## AI-assisted art (Dreamina)
-- [x] Pipeline adopted: Dreamina (Seedream 5.0 Lite + reference) → Remove BG → `import_ai_sprite.py` → `manifest_ai.json`
+- [x] Pipeline adopted: Dreamina (Seedream 5.0 Lite + reference; 5.0 Lite was retired in Nov 2026 → Seedream 4.6, 2 credits/image, 4 per run) → Remove BG → `import_ai_sprite.py` → `manifest_ai.json`
 - [x] AI detail tier: res 4 texels/world px (same world size, 2× detail); crisp at zoom ≥ 4, smooth below
 - [x] Imported: Skeleton Warriors, Zombie Horde, Necromantic Acolyte (cleric), Death Knight (haunted armor), Undead Wendigo (new)
 - [ ] Tier 2/3 forms for imported units (currently tiers 2–3 keep procedural art; Wendigo reuses one sheet)
 - [ ] Real animation poses (currently derived from one pose: bob, squash, lean)
-- [ ] Remaining undead tiers, crusaders, towers, keep, tiles, spell FX
+- [ ] Remaining undead tiers, crusaders, towers, tiles, spell FX (the Lich and the fortress are done: v0.7)
 
 ## Roster
 - [x] Random starting roster per campaign: 1 front-line + 1 ranged + 1 wild card (`startingRoster` in campaign.ts)
@@ -68,6 +68,22 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 - [ ] Offline/idle progress between sessions (classic incremental feature)
 - [ ] Balance pass with human playtests (see the Balance section for the v0.5 bot baselines)
 - [ ] Squad formations / banner per squad (squads currently dissolve into the host)
+
+## Necropolis fortress & the Lich (v0.7)
+- [x] **The Lich** (Dreamina, Seedream 4.6, 1 of 4): overrides `lich`, H 32, stands on the gatehouse battlements (`LICH_POS`)
+- [x] **Fortress art** (Dreamina, 9:16 = exactly map height at res 4): curtain wall from the top edge to the bottom edge, gatehouse with green portcullis, citadel cut off by the map's left edge (`assets/sprites/buildings/ai/fortress.png`, `images` in manifest_ai.json)
+- [x] `tools/assets/import_fortress.py`: measures the wall face from the Remove-BG cutout, bends only the wall strip onto the arc (the citadel stays rigid, no sheared spires), fills Remove-BG holes in the city, extracts torch + portcullis lights, writes `src/data/fortress_fit.ts` (per-row wall profile, lights, arc constants)
+- [x] Gameplay follows the art (`src/data/fortress.ts`): every cell left of the painted face is solid; the gatehouse cells (KEEP, rows 23–26) are the flow goal; ground units are pushed out of the wall (`moveToward`)
+- [x] Curtain rampart: five preset sites rasterised along the outer arc (`keep_nn/n/g/s/ss`), top edge to bottom edge; Inner/Outer Lines moved to cx 28/40; guard line / army field start at x 330
+- [x] Plots: rear foundations in the bailey (between wall and curtain rampart), front ones just outside the rampart (both follow the arc); Soul Well moved into the upper bailey; save v5
+- [x] Regression: smoke + ui_flow pass; bot (no meta) 1 run lost to the wave-10 Inquisitor (known), 1 run cleared wave 30 with the keep untouched
+- [ ] Per-theme fortress variants (all keep themes currently share the one fortress; the old keep sprites remain as fallback)
+- [ ] Keep damage states on the fortress art (cracks/fires as keep HP drops)
+- [ ] Enemy art (Dreamina) — next
+
+## Golem vs Abomination (v0.7)
+- [x] Bone Golem was strictly worse on paper (cost 880 vs 640, HP 500 vs 560, armor .35); its old sim lead came from the Tremor stun-lock (fixed in v0.5) → cost 800, HP 620, dmg 28, armor 0.35, cleave 26: slower and pricier than the Abomination but sturdier and harder-hitting (Abomination keeps taunt)
+- [x] Sims (cap 70): Abomination solo 60/51; Golem solo 62/70 (final stats; 2 runs — at HP 640–760 / armor 0.4 it capped at 70 every run). The Golem now edges the Abomination for 25% more souls per squad; trim dmg first if it proves too strong in real play
 
 ## Keep construction (v0.6)
 - [x] **Materials**: slow currency, earned after each wave (1, +1 per 10 waves, +3 for a boss, +1 per Bone Quarry level); start with 6. HUD counter + tooltip

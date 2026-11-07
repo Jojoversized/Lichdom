@@ -49,7 +49,8 @@ with sync_playwright() as p:
     # ramparts: Fortify tab -> Ramparts mode -> click the keep gate site twice (palisade, stone)
     pg.click('.tabs button[data-tab=fort]'); pg.wait_for_timeout(120)
     pg.click('#buildlist .bitem >> nth=0'); pg.wait_for_timeout(120)
-    world_click(14 * 16 + 8, 20 * 16 + 8); world_click(14 * 16 + 8, 20 * 16 + 8)
+    gx, gy = pg.evaluate("() => { const s = window.__LICH.G.map.sites.find(s => s.id === 'keep_g'); const c = s.cells[s.cells.length >> 1]; return [c[0] * 16 + 8, c[1] * 16 + 8]; }")
+    world_click(gx, gy); world_click(gx, gy)
     wl = pg.evaluate("() => window.__LICH.G.run.walls"); print('ramparts:', wl); assert wl.get('keep_g') == 2
     shot(pg, 'c3_ramparts')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
