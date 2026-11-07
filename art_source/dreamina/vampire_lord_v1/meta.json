@@ -1,0 +1,19 @@
+{
+ "asset": "ai_vampire_lord",
+ "used_as": "units/vampire (base tier) override",
+ "tool": "Dreamina (dreamina.capcut.com) - AI Image",
+ "model": "Seedream 5.0 Lite",
+ "settings": {
+  "ratio": "1:1",
+  "resolution": "2K",
+  "images_per_run": 1
+ },
+ "reference": "original Lichdom style reference image (Undead lich army pixel art session)",
+ "postprocess": "Dreamina canvas Remove BG (2 credits) -> tools/assets/import_ai_sprite.py --H 23 --res 4",
+ "credits_spent": {
+  "generation_1_image": 6,
+  "remove_bg": 2
+ },
+ "date": "2026-11-06",
+ "prompt": "Make a character sprite for my game in this image's exact art style: high resolution shaded pixel art, gritty, dark and desaturated, muted earthy colors, same lighting and same top-down three-quarter camera angle and same character scale as the reference. It belongs to the same undead lich's army as the hunched skeletal wendigo, the rotting zombie and the skeleton warrior already made in this style: gaunt, ragged and bony, with exposed yellowed bones, tattered dark cloth, rusted iron and faint necrotic green glows. The character is a vampire lord: a gaunt corpse-pale undead noble in tarnished black plate armor and a tattered high-collared cloak lined with dark blood red, long clawed fingers, sunken red eyes and fangs, a thin cruel sword. Full body, in a crouched predatory stance, facing right. It is the ONLY character, standing alone in an open, empty patch of the dark battlefield ground with nothing touching or overlapping it, fully visible with clear space around it. Not a cartoon, not bright, no saturated colors."
+}

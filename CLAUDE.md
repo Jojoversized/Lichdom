@@ -96,8 +96,13 @@ Imported AI art never overwrites generated assets. It is layered at boot:
   always load. Each sheet's `res` sets its draw scale (1/res). Res-4 textures use NEAREST filtering when a
   texel covers ≥ 1 screen px (zoom ≥ 4, default at 1080p) and LINEAR below that (smooth downsampling,
   `WorldRenderer.updateDetailFilters`).
-- **Imported so far:** skeleton (Skeleton Warriors), zombie, acolyte (skeleton cleric), deathknight (haunted
-  armor), wendigo (new unit). Credits remaining after this session: ~204.
+- **Imported so far (all 14 allied units):** skeleton, zombie, acolyte (skeleton cleric), deathknight (haunted
+  armor), wendigo (new unit); v0.6.1: archer, pikeman, bonemage, wraith, banshee, vampire, wyvern, abomination,
+  golem (prompts in each `meta.json`, styled after the wendigo). Credits remaining: ~136.
+- Batch workflow that works: in the 'Undead lich army pixel art' session, *Edit prompt* on an earlier entry (keeps
+  the reference + Seedream 5.0 Lite 1:1 2K), set 1 image/run, queue several prompts; then per image: detail view →
+  *Edit on canvas* → select node → *Remove BG* → Generate → select cutout → download → stage from Downloads.
+  `import_ai_sprite.py` drops stray specks (the generator's corner 'AI' badge) before cropping.
 
 
 
@@ -146,6 +151,8 @@ Key rules:
 - After any change: typecheck, run smoke + ui_flow, run the bot for balance changes, update `docs/CHECKLIST.md`.
 
 ## Current status
+
+v0.6.1 — AI art for the whole allied cast (9 new Dreamina units, 72 credits).
 
 v0.6 — **keep construction**: towers are no longer bought with souls or placed freely; a slow second
 currency, **materials** (after each wave), builds towers and 8 permanent **keep buildings** (army-wide bonuses)

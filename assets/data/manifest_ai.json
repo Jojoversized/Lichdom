@@ -147,12 +147,282 @@
    "flying": false,
    "category": "units",
    "source": "art_source/dreamina/wendigo_v1/cutout.png"
+  },
+  "ai_skeleton_archer": {
+   "file": "sprites/units/ai/ai_skeleton_archer.png",
+   "fw": 101,
+   "fh": 106,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 24.0,
+   "res": 4,
+   "flying": false,
+   "category": "units",
+   "source": "art_source/dreamina/skeleton_archer_v1/cutout.png"
+  },
+  "ai_skeleton_pikeman": {
+   "file": "sprites/units/ai/ai_skeleton_pikeman.png",
+   "fw": 171,
+   "fh": 106,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 24.0,
+   "res": 4,
+   "flying": false,
+   "category": "units",
+   "source": "art_source/dreamina/skeleton_pikeman_v1/cutout.png"
+  },
+  "ai_bone_mage": {
+   "file": "sprites/units/ai/ai_bone_mage.png",
+   "fw": 114,
+   "fh": 114,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 26.0,
+   "res": 4,
+   "flying": false,
+   "category": "units",
+   "source": "art_source/dreamina/bone_mage_v1/cutout.png"
+  },
+  "ai_wraith": {
+   "file": "sprites/units/ai/ai_wraith.png",
+   "fw": 124,
+   "fh": 110,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 25.0,
+   "res": 4,
+   "flying": true,
+   "category": "units",
+   "source": "art_source/dreamina/wraith_v1/cutout.png"
+  },
+  "ai_banshee": {
+   "file": "sprites/units/ai/ai_banshee.png",
+   "fw": 103,
+   "fh": 106,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 24.0,
+   "res": 4,
+   "flying": true,
+   "category": "units",
+   "source": "art_source/dreamina/banshee_v1/cutout.png"
+  },
+  "ai_vampire_lord": {
+   "file": "sprites/units/ai/ai_vampire_lord.png",
+   "fw": 151,
+   "fh": 102,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 23.0,
+   "res": 4,
+   "flying": false,
+   "category": "units",
+   "source": "art_source/dreamina/vampire_lord_v1/cutout.png"
+  },
+  "ai_bone_wyvern": {
+   "file": "sprites/units/ai/ai_bone_wyvern.png",
+   "fw": 162,
+   "fh": 130,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 30.0,
+   "res": 4,
+   "flying": true,
+   "category": "units",
+   "source": "art_source/dreamina/bone_wyvern_v1/cutout.png"
+  },
+  "ai_flesh_abomination": {
+   "file": "sprites/units/ai/ai_flesh_abomination.png",
+   "fw": 168,
+   "fh": 138,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 32.0,
+   "res": 4,
+   "flying": false,
+   "category": "units",
+   "source": "art_source/dreamina/flesh_abomination_v1/cutout.png"
+  },
+  "ai_bone_golem": {
+   "file": "sprites/units/ai/ai_bone_golem.png",
+   "fw": 122,
+   "fh": 146,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 34.0,
+   "res": 4,
+   "flying": false,
+   "category": "units",
+   "source": "art_source/dreamina/bone_golem_v1/cutout.png"
   }
  },
  "overrides": {
   "skeleton": "ai_skeleton_warrior",
   "zombie": "ai_zombie_rotting",
   "acolyte": "ai_skeleton_cleric",
-  "deathknight": "ai_haunted_armor"
+  "deathknight": "ai_haunted_armor",
+  "archer": "ai_skeleton_archer",
+  "pikeman": "ai_skeleton_pikeman",
+  "bonemage": "ai_bone_mage",
+  "wraith": "ai_wraith",
+  "banshee": "ai_banshee",
+  "vampire": "ai_vampire_lord",
+  "wyvern": "ai_bone_wyvern",
+  "abomination": "ai_flesh_abomination",
+  "golem": "ai_bone_golem"
  }
 }

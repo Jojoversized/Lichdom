@@ -80,6 +80,12 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 - [ ] Building/tower lights (forge glow, sanctum window) in the light buffer
 - [ ] Re-run `balance.py` solo sweep with buildings in the policy (unit balance itself is unchanged)
 
+## AI art (v0.6.1)
+- [x] Dreamina sprites for every allied unit: archer, pikeman, bone mage, wraith, banshee, vampire, wyvern, abomination, golem (base-tier overrides; procedural art kept, `manifest_ai.json` `overrides`)
+- [x] Importer ignores detached specks far from the subject (corner badge) when cropping
+- [ ] Evolved tiers (tier 2/3 names) still reuse the base AI sprite; consider tinted/upgraded variants
+- [ ] Enemies/bosses still procedural — next candidates for the Dreamina pass
+
 ## UI fonts
 - [x] **Lich Numerals** (`assets/fonts/LichNumerals.ttf`, built by `tools/assets/gen-font.py`): pixel digits and number signs only, loaded with a `unicode-range` ahead of every font stack (Pixelify Sans / Jacquard 24), so every number in the DOM UI uses it (flat-topped 5, open 4/9)
 

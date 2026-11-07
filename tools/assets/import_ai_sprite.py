@@ -26,9 +26,29 @@ TEXEL_RES = 2  # procedural art; AI art defaults to --res 4 (twice the detail at
 OUTLINE = np.array([8, 9, 11])
 
 
+def keep_subject(alpha):
+    """Drop stray specks (e.g. the generator's 'AI' badge in a corner): keep the largest blob
+    and any other blob whose box lies within 15% of the image size of the subject's box
+    (detached flames, arrows, a floating head stay)."""
+    from scipy import ndimage
+    lab, n = ndimage.label(alpha > 0)
+    if n <= 1: return alpha
+    sizes = ndimage.sum(np.ones_like(lab), lab, range(1, n + 1))
+    main = int(np.argmax(sizes)) + 1
+    objs = ndimage.find_objects(lab)
+    my0, my1, mx0, mx1 = objs[main - 1][0].start, objs[main - 1][0].stop, objs[main - 1][1].start, objs[main - 1][1].stop
+    pad = 0.15 * max(alpha.shape)
+    keep = np.zeros(n + 1, bool); keep[main] = True
+    for i, sl in enumerate(objs, 1):
+        if i == main or sizes[i - 1] < 40: continue
+        y0, y1, x0, x1 = sl[0].start, sl[0].stop, sl[1].start, sl[1].stop
+        if x1 >= mx0 - pad and x0 <= mx1 + pad and y1 >= my0 - pad and y0 <= my1 + pad: keep[i] = True
+    return np.where(keep[lab], alpha, 0)
+
+
 def load_cutout(path):
     a = np.array(Image.open(path).convert('RGBA')).astype(np.float32)
-    a[..., 3] = np.where(a[..., 3] > 128, 255, 0)
+    a[..., 3] = keep_subject(np.where(a[..., 3] > 128, 255, 0))
     ys, xs = np.where(a[..., 3] > 0)
     return a[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
 
