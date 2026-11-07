@@ -118,7 +118,7 @@ export class GameScene extends Phaser.Scene {
     if (b.kind === 'tower' || b.kind === 'building') {
       if (painting) return;
       const p = plotAtCell(...worldToCell(wx, wy));
-      if (!p) { hooks.sfx('error'); hooks.msg('Towers and buildings rise only on the foundations around the keep.', '#c8b890'); return; }
+      if (!p) { hooks.sfx('error'); hooks.msg(b.kind === 'tower' ? 'Towers stand on top of the ramparts: pick the mount of a built wall segment.' : 'Buildings rise on the foundations behind the walls.', '#c8b890'); return; }
       const made = b.kind === 'tower' ? constructTower(b.type, p) : constructBuilding(b.type, p);
       if (made) { G.build = null; G.selected = made; UI.infoKey = ''; UI.renderBuild(); saveRunSoon(); }
       return;

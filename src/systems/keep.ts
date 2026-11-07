@@ -8,6 +8,7 @@ import { TOWERS } from '../data/towers';
 import { UNITS } from '../data/units';
 import { BUILDINGS, TOWER_MAT, baseMaterialsIncome } from '../data/buildings';
 import { Plot } from '../world/mapgen';
+import { siteById, siteTier } from './ramparts';
 import { placeTower, removeStructure, spawnUnit } from './combat';
 import { towerMaxHp, recalcAllStats, recalcKeep, bld } from './stats';
 export { bld };
@@ -34,12 +35,15 @@ export function towerMatCost(type: string, tier = 0) { return TOWER_MAT[type][ti
 export function constructTower(type: string, p: Plot): any {
   const r = G.run, cost = towerMatCost(type, 0);
   if (!plotFree(p)) { sfx('error'); return null; }
+  if (!mountReady(p)) { msg(p.mount ? 'Raise this rampart first: towers stand on top of built walls.' : 'Towers stand on the ramparts; foundations behind the walls are for buildings.', '#c8b890'); sfx('error'); return null; }
   if (r.materials < cost) { msg('Not enough materials.', '#ff8080'); sfx('error'); return null; }
   r.materials -= cost;
   const t = placeTower(type, p.cx, p.cy, 0, { plot: p.id, matInvested: cost });
   sfx('build');
   return t;
 }
+/** A tower mount is usable once its rampart segment is built. */
+export function mountReady(p: Plot): boolean { if (!p.mount) return false; const s = siteById(p.mount); return !!s && siteTier(s) > 0; }
 export function towerUpgradeCost(t: any) { const c = TOWER_MAT[t.type][t.tier + 1]; return c == null ? 0 : c; }
 export function upgradeTowerMat(t: any): boolean {
   const r = G.run, next = TOWERS[t.type].tiers[t.tier + 1];
@@ -75,7 +79,7 @@ export function spawnBuilding(type: string, p: Plot, tier: number) {
 }
 export function constructBuilding(type: string, p: Plot): any {
   const r = G.run, cost = buildingCost(type, 0);
-  if (!plotFree(p) || hasBuilding(type)) { sfx('error'); return null; }
+  if (!plotFree(p) || hasBuilding(type) || p.mount) { if (p.mount) msg('Rampart mounts carry towers; buildings stand on the foundations behind the walls.', '#c8b890'); sfx('error'); return null; }
   if (r.materials < cost) { msg('Not enough materials.', '#ff8080'); sfx('error'); return null; }
   r.materials -= cost;
   r.buildings[p.id] = { type, tier: 0 };

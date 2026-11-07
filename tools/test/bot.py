@@ -12,24 +12,24 @@ BOT = r"""
   if (metamax) for (const m of Object.values(L.META_BY_ID || {})) G.meta.lv[m.id] = m.max;
   L.newCampaign('haunted');
   const log = []; const t0 = performance.now(); let guard = 0, dupes = 0;
-  const KEEPX = 156;
   function build() {
     const r = G.run;
     let tries = 0;
-    // ramparts: ring the keep (palisade, then stone), repair what was breached
-    for (const s of G.map.sites || []) {
-      if (!s.id.startsWith('keep')) continue;
-      const rep = L.siteRepairCost(s); if (rep && r.souls > rep * 2) L.repairSite(s);
-      if (r.wave >= 3 && L.siteTier(s) < 2 && r.souls > L.siteUpgradeCost(s) * 2.5) L.upgradeSite(s);
-    }
-    // materials: towers on front foundations and keep buildings (souls never buy towers now)
+    // ramparts (materials): the Curtain around the gate first, then the Bulwark; repair breaches (souls)
+    const WALL_ORDER = ['keep_g', 'keep_n', 'keep_s', 'wall_2', 'wall_1', 'wall_3', 'wall_0', 'wall_4'];
+    for (const s of G.map.sites || []) { const rep = L.siteRepairCost(s); if (rep && r.souls > rep * 2) L.repairSite(s); }
+    // materials: walls, towers on built wall segments, keep buildings behind the walls
     for (let guardM = 0; guardM < 20; guardM++) {
       const free = G.map.plots.filter(p => L.plotFree(p));
       const opts = [];
+      const nextWall = WALL_ORDER.map(id => L.siteById(id)).find(s => s && L.siteTier(s) === 0);
+      if (nextWall && r.materials >= L.siteUpgradeCost(nextWall) && G.towers.length >= WALL_ORDER.indexOf(nextWall.id) / 2) opts.push(() => L.upgradeSite(nextWall));
+      const weak = r.wave >= 6 ? (G.map.sites || []).find(s => L.siteTier(s) === 1) : null;
+      if (weak && r.materials >= L.siteUpgradeCost(weak) + 2) opts.push(() => L.upgradeSite(weak));
       const tt = r.unlockedTowers[Math.floor(Math.random() * r.unlockedTowers.length)];
-      const fp = free.find(p => p.front);
-      if (fp && G.towers.length < 5 && r.materials >= L.towerMatCost(tt)) opts.push(() => L.constructTower(tt, fp));
-      const bp = free.find(p => !p.front) || free[0];
+      const fp = free.find(p => p.mount && L.mountReady(p));
+      if (fp && r.materials >= L.towerMatCost(tt)) opts.push(() => L.constructTower(tt, fp));
+      const bp = free.find(p => !p.mount);
       for (const k of ['forge', 'vault', 'quarry', 'barracks', 'bell', 'embalm', 'cistern', 'sanctum']) {
         const lv = L.bld(k), ent = G.buildings.find(b => b.type === k);
         if (lv === 0 && bp && r.materials >= 8) { opts.push(() => L.constructBuilding(k, bp)); break; }

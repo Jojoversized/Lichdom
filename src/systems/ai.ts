@@ -1,8 +1,8 @@
 // AI for mortals, the autonomous undead army, towers, fortifications and the Lich.
 import { G } from '../core/state';
 import { dist, dist2, rnd, rndi, pick, clamp, TAU } from '../core/util';
-import { CELL, KEEP, GUARD_LINE_X, LANES, PAL, WW } from '../config/constants';
-import { fortWallX, LICH_POS } from '../data/fortress';
+import { CELL, KEEP, GUARD_LINE_X, LANES, PAL, WW, WH } from '../config/constants';
+import { fortWallX, LICH_POS, GATE, R_CURTAIN, R_BULWARK, DEFENSE_R, gateDist } from '../data/fortress';
 import { sfx } from '../core/events';
 import { flowStep, worldToCell, cellIdx, flowDist } from '../world/mapgen';
 import {
@@ -175,7 +175,6 @@ function enemyAttack(e: any, t: any) {
 // and unit role (ranged stay behind the line, flyers hunt flyers, taunters
 // go where the press is thickest). Idle undead form a guard line in front of
 // the gate, distributed toward the roads that carried the most recent threat.
-const ENGAGE_MAX_X = 980;   // ground undead do not wander deep into enemy territory
 let planT = 0;
 const laneHeat: Record<string, number> = {};
 
@@ -185,27 +184,34 @@ function isRanged(u: any) { return !!u.def.ranged; }
  *  evenly spread, never stack, and don't reshuffle when others die. The formation grows
  *  with the host — a tight block at the gate for a small army, out toward midfield for a
  *  large one — melee in front, ranged mixed into the rear ranks, flyers above the front. */
-const FIELD_X0 = GUARD_LINE_X, FIELD_X1 = 720, FIELD_Y0 = 46, FIELD_Y1 = 600;
 function guardPosition(u: any, _idx: number, count: number) {
-  // with a boss on the field the host falls back into a tight block at the gate, inside
-  // tower cover, instead of standing spread out in the boss's kill-zone
+  // with a boss on the field the host tightens behind the Curtain, under the towers
   const fallback = G.enemies.some((e: any) => e.boss);
-  const cell = fallback ? 13 : u.flying ? 34 : 30;                       // personal space per body (px): an open, field-filling host
-  const area = Math.max(1, count) * cell * cell;
-  const hgt = clamp(Math.sqrt(area * 1.3), 110, FIELD_Y1 - FIELD_Y0);
-  const wid = clamp(area / hgt, 40, FIELD_X1 - FIELD_X0);
-  // lean the block toward the roads that carried recent pressure
+  const ranged = isRanged(u);
+  let r0: number, r1: number;
+  if (fallback) { r0 = ranged ? 40 : 70; r1 = R_CURTAIN + 30; }
+  else if (ranged) { r0 = R_CURTAIN - 40; r1 = R_CURTAIN + 50; }        // just behind / on the Curtain
+  else if (u.flying) { r0 = R_BULWARK - 50; r1 = R_BULWARK + 30; }      // over the Bulwark
+  else { r0 = R_CURTAIN + 28; r1 = R_BULWARK + 24; }                     // between the walls, holding the Bulwark
+  // a small host stands compact around the gate road; a large one fills the whole arc
+  const cell = fallback ? 13 : u.flying ? 34 : 30;
+  const rm = (r0 + r1) / 2;
+  const spread = clamp((Math.max(1, count) * cell * cell) / ((r1 - r0) * rm), 0.9, 2.9);
+  // lean toward the roads that carried recent pressure
   const lanes = LANES.filter(l => l.minWave <= Math.max(1, G.run.wave + 1));
   let wy = 0, ws = 0; for (const l of lanes) { const w = 1 + (laneHeat[l.id] || 0); wy += (l.cy * CELL + 8) * w; ws += w; }
-  const cy = clamp(KEEP.y + ((ws ? wy / ws : KEEP.y) - KEEP.y) * 0.4, FIELD_Y0 + hgt / 2, FIELD_Y1 - hgt / 2);
+  const a0 = clamp(((ws ? wy / ws : GATE.y) - GATE.y) / 400, -0.5, 0.5) * (1 - spread / 3.2);
   const n = u.id + 1;
-  const fx = (0.5 + n * 0.7548776662) % 1, fy = (0.5 + n * 0.5698402910) % 1;
-  let x: number;
-  if (isRanged(u)) x = FIELD_X0 + fx * Math.max(30, wid * 0.55);          // rear ranks
-  else if (u.flying) x = FIELD_X0 + 20 + wid * 0.35 + fx * wid * 0.65;      // over the front
-  else x = FIELD_X0 + 12 + wid * 0.15 + fx * wid * 0.85;                   // front ranks
-  const y = cy - hgt / 2 + fy * hgt;
-  return { x: clamp(x, FIELD_X0, fallback ? GUARD_LINE_X + 70 : FIELD_X1), y: clamp(y, FIELD_Y0, FIELD_Y1) };
+  const fr = (0.5 + n * 0.7548776662) % 1, fa = (0.5 + n * 0.5698402910) % 1;
+  const r = r0 + fr * (r1 - r0), a = clamp(a0 + (fa - 0.5) * spread, -1.5, 1.5);
+  let x = GATE.x + Math.cos(a) * r, y = clamp(GATE.y + Math.sin(a) * r, 18, WH - 12);
+  x = Math.max(x, fortWallX(y) + 8);
+  return { x, y };
+}
+/** Ground undead defend the gate: they plan only against foes inside the defence zone. */
+function inZone(u: any, e: any) {
+  if (u.summon) return true;
+  return gateDist(e.x, e.y) <= DEFENSE_R + (u.flying ? 120 : 0) || dist2(u.x, u.y, e.x, e.y) < 50 * 50;
 }
 
 export function planArmy(dt: number) {
@@ -221,30 +227,19 @@ export function planArmy(dt: number) {
   // only the most urgent threats are worth planning around (keeps huge hosts cheap)
   threats.sort((a: any, b: any) => a.fd - b.fd);
   if (threats.length > 90) threats.length = 90;
-  // bosses carry kill-zones (purges, slams). Far from the keep, ordinary undead do not
-  // trickle into them squad by squad; they hold the line and fight the boss together
-  // once it reaches the guard line and the towers.
-  const bosses = G.enemies.filter((e: any) => e.boss);
-  const dangerous = (e: any) => e.x > GUARD_LINE_X + 170 && bosses.some((b: any) => dist2(b.x, b.y, e.x, e.y) < 150 * 150);
-  // ...but a boss that can already reach the guard formation (long-range casters park just
-  // outside the line and shell it) is engaged by the whole host at once, never waited out
-  const committed = bosses.some((b: any) => b.x - (b.range || 20) < GUARD_LINE_X + 110);
-  for (const t of threats) t.danger = bosses.length && !committed ? dangerous(t.e) : false;
   let gi = 0, ri = 0;
   const nRanged = G.units.filter((u: any) => isRanged(u)).length;
   for (const u of G.units) {
     u.guard = isRanged(u) ? guardPosition(u, ri++, nRanged) : guardPosition(u, gi++, Math.max(1, ground));
     if (u.retreat) { u.plan = null; continue; }
     let best: any = null, bc = Infinity;
-    const reach = u.summon ? 9999 : u.flying ? 900 : ENGAGE_MAX_X;
     for (const t of threats) {
       const e = t.e;
-      if (e.x > reach && dist2(u.x, u.y, e.x, e.y) > 180 * 180) continue;
-      if (t.danger && !u.summon) continue;
+      if (!inZone(u, e)) continue;
       const travel = dist(u.x, u.y, e.x, e.y);
       const c = crowd.get(e) || 0;
       let cost = travel * 0.8 + t.fd * CELL * 0.6 + c * (u.def.taunt ? 5 : 22);
-      if ((e.boss && !t.danger) || e.champion) cost -= 60;
+      if (e.boss || e.champion) cost -= 60;
       if (u.flying && e.flying) cost -= 120;
       if (u.def.antiCav && e.def.cav) cost -= 80;
       if (u.def.hunter && (e.def.ranged || e.def.caster || e.def.healer)) cost -= 90; // wendigos hunt the backline
@@ -302,6 +297,8 @@ export function updateUnit(u: any, dt: number) {
     if (near) u.engage = near; else u.engage = null;
   }
   if (u.engage && !u.engage.dead) t = u.engage;
+  // never chase a foe out of the defence zone: hit it if it is in reach, otherwise go back to the post
+  if (t && !u.summon && !u.flying && gateDist(t.x, t.y) > DEFENSE_R + 30 && dist(u.x, u.y, t.x, t.y) - (t.rad || 4) > u.range) t = null;
   if (t) {
     u.atPost = false;
     const td = dist(u.x, u.y, t.x, t.y) - (t.rad || 4);
@@ -320,7 +317,7 @@ export function updateUnit(u: any, dt: number) {
     // hold the post with hysteresis: arrive within 3px, only march again when pushed >12px
     // away; small nudges (crowding, a post shifting as the host grows) are absorbed by a
     // slow drift without switching to the walk cycle — no more walk/idle flicker
-    const g = u.guard || { x: GUARD_LINE_X, y: KEEP.y };
+    const g = u.guard || { x: GATE.x + R_CURTAIN, y: GATE.y };
     const gd = dist2(u.x, u.y, g.x, g.y);
     if (u.atPost && gd > 144) u.atPost = false;
     if (!u.atPost && gd <= 9) u.atPost = true;

@@ -1,6 +1,7 @@
-// Ramparts: walls live on preset sites (see mapgen `makeWallSites`). A site is built and
-// upgraded as a whole (Bone Palisade → Stone Wall → Bone Rampart); destroyed sections stay
-// rubble until the site is repaired. Pure simulation: no Phaser, no DOM.
+// Ramparts: walls live on preset sites (see mapgen `makeWallSites`: the Curtain and the Bulwark
+// around the gate). A site is built and upgraded as a whole with MATERIALS (Bone Palisade → Stone
+// Wall → Bone Rampart); a built segment can carry a tower (its mount plot). Destroyed sections stay
+// rubble until the site is repaired (souls). Pure simulation: no Phaser, no DOM.
 import { G } from '../core/state';
 import { WALL_TIERS, WALL_MAX_TIER } from '../data/towers';
 import { cellIdx, WallSite } from '../world/mapgen';
@@ -12,7 +13,10 @@ export function siteById(id: string): WallSite | null { return (G.map && G.map.s
 export function siteTier(site: WallSite): number { return (G.run && G.run.walls && G.run.walls[site.id]) || 0; }
 export function siteWalls(site: WallSite): any[] { return G.forts.filter((f: any) => f.site === site.id && !f.dead); }
 const inflation = () => Math.pow(1.045, Math.max(0, (G.run ? G.run.wave : 0)));
-export function siteTierCost(site: WallSite, tier: number): number { return Math.round(site.cells.length * WALL_TIERS[tier].cell * inflation()); }
+/** Materials to raise a site to `tier` (flat per segment). */
+export function siteTierCost(_site: WallSite, tier: number): number { return WALL_TIERS[tier].mat; }
+/** Soul value of a built tier, the basis of repair costs. */
+function siteSoulValue(site: WallSite, tier: number): number { return Math.round(site.cells.length * WALL_TIERS[tier].cell * inflation()); }
 export function siteUpgradeCost(site: WallSite): number { const t = siteTier(site); return t >= WALL_MAX_TIER ? 0 : siteTierCost(site, t + 1); }
 /** Missing durability (destroyed sections count as fully missing), 0..1. */
 export function siteDamage(site: WallSite): number {
@@ -21,7 +25,7 @@ export function siteDamage(site: WallSite): number {
   for (const [x, y] of site.cells) { const f = G.map.struct[cellIdx(x, y)]; miss += f && f.site === site.id && !f.dead ? 1 - f.hp / f.maxHp : 1; }
   return miss / site.cells.length;
 }
-export function siteRepairCost(site: WallSite): number { const t = siteTier(site); return t ? Math.ceil(siteDamage(site) * siteTierCost(site, t) * 0.5) : 0; }
+export function siteRepairCost(site: WallSite): number { const t = siteTier(site); return t ? Math.ceil(siteDamage(site) * siteSoulValue(site, t) * 0.5) : 0; }
 export function siteHp(site: WallSite): [number, number] {
   let hp = 0, max = 0;
   for (const f of siteWalls(site)) { hp += f.hp; max += f.maxHp; }
@@ -44,8 +48,8 @@ export function upgradeSite(site: WallSite): boolean {
   const t = siteTier(site);
   if (t >= WALL_MAX_TIER) { msg('This rampart cannot be raised any higher.', '#c8b890'); sfx('error'); return false; }
   const cost = siteUpgradeCost(site);
-  if (G.run.souls < cost) { msg('Not enough souls.', '#ff8080'); sfx('error'); return false; }
-  G.run.souls -= cost;
+  if (G.run.materials < cost) { msg('Not enough materials.', '#ff8080'); sfx('error'); return false; }
+  G.run.materials -= cost;
   G.run.walls[site.id] = t + 1;
   restore(site);
   sfx('build');

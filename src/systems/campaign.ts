@@ -12,6 +12,8 @@ import { generateMap, computeFlow, canBuildAt } from '../world/mapgen';
 import { metaLv, fb, recalcKeep, squadSize, globalDmg, computeFervor, bountyMult, ascSouls, recalcAllStats, bld } from './stats';
 import { materialsIncome, rebuildRuins, spawnBuilding, plotById } from './keep';
 import { START_MATERIALS } from '../data/buildings';
+import { WALL_TIERS } from '../data/towers';
+import { upgradeSite } from './ramparts';
 import {
   spawnUnit, spawnSummon, spawnEnemy, placeTower, placeFort, fireProjectile, aoeDamage, dealDamage, addHazard, raiseCorpse,
   updateProjectiles, updateHazards, bakeCorpse, NEUTRAL_SRC,
@@ -63,7 +65,10 @@ export function newCampaign(fortKey: string) {
   spawnSquad(roster[2], KEEP.x1 + 40, KEEP.y);
   msg(`Your host rises: ${roster.map(t => UNITS[t].tiers[0].name).join(', ')}.`, PAL.necro);
   for (let i = 0; i < metaLv('m_start'); i++) { const t = randomUnitType(false, 3); if (t) spawnSquad(t, KEEP.x1 + 40, KEEP.y + rnd(-50, 50)); }
-  if (metaLv('f_free')) for (const p of G.map.plots) if (p.front) { placeTower('necrotic', p.cx, p.cy, 0, { plot: p.id, matInvested: 5 }); break; }
+  if (metaLv('f_free')) { // a Bone Palisade on the Curtain's gate segment with a Necrotic Spire on top
+    const site = G.map.sites.find((s: any) => s.id === 'keep_g'), mount = G.map.plots.find((p: any) => p.mount === 'keep_g');
+    if (site && mount) { G.run.materials += WALL_TIERS[1].mat; upgradeSite(site); placeTower('necrotic', mount.cx, mount.cy, 0, { plot: mount.id, matInvested: 5 }); }
+  }
   G.phase = 'prep'; G.speed = 1; G.paused = false;
   G.camera.x = KEEP.x1 + 160; G.camera.y = KEEP.y;
   lichSay('start');

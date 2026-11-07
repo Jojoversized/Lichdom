@@ -72,14 +72,23 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 ## Necropolis fortress & the Lich (v0.7)
 - [x] **The Lich** (Dreamina, Seedream 4.6, 1 of 4): overrides `lich`, H 32, stands on the gatehouse battlements (`LICH_POS`)
 - [x] **Fortress art** (Dreamina, 9:16 = exactly map height at res 4): curtain wall from the top edge to the bottom edge, gatehouse with green portcullis, citadel cut off by the map's left edge (`assets/sprites/buildings/ai/fortress.png`, `images` in manifest_ai.json)
-- [x] `tools/assets/import_fortress.py`: measures the wall face from the Remove-BG cutout, bends only the wall strip onto the arc (the citadel stays rigid, no sheared spires), fills Remove-BG holes in the city, extracts torch + portcullis lights, writes `src/data/fortress_fit.ts` (per-row wall profile, lights, arc constants)
-- [x] Gameplay follows the art (`src/data/fortress.ts`): every cell left of the painted face is solid; the gatehouse cells (KEEP, rows 23–26) are the flow goal; ground units are pushed out of the wall (`moveToward`)
-- [x] Curtain rampart: five preset sites rasterised along the outer arc (`keep_nn/n/g/s/ss`), top edge to bottom edge; Inner/Outer Lines moved to cx 28/40; guard line / army field start at x 330
-- [x] Plots: rear foundations in the bailey (between wall and curtain rampart), front ones just outside the rampart (both follow the arc); Soul Well moved into the upper bailey; save v5
-- [x] Regression: smoke + ui_flow pass; bot (no meta) 1 run lost to the wave-10 Inquisitor (known), 1 run cleared wave 30 with the keep untouched
+- [x] v0.7.1: **no warping** — the art is placed at x = 0 with its original proportions (v0.7 bent the wall onto an arc and it looked stretched); `tools/assets/import_fortress.py` only measures it: wall face per row (cutout opened so banners/chains don't count) → `src/data/fortress_fit.ts`, solid cells follow the painted wall exactly
+- [x] v0.7.1 lights: torches detected by flame colour (g/r < 0.65, no blue) — v0.7 also lit the yellowed bones; every lit window of the citadel now gets a small necro-green glow, the portcullis a big one
+- [x] **Gate-centred defence** (`src/data/fortress.ts`): two preset rampart lines are arcs around the gatehouse face — the **Curtain** (R 112, 3 segments `keep_n/g/s`) and the **Bulwark** (R 232, 5 segments `wall_0..4`); their ends run into the fortress wall / off the map edge, so each fully closes off the gate. The old straight field lines are gone
+- [x] Pathing fix: diagonal moves may not squeeze between two diagonal wall cells (arcs are staircases; enemies used to slip through)
+- [x] **Army holds the gate**: guard posts are arcs around the gate (ranged behind/on the Curtain, melee between the walls, flyers over the Bulwark; tighter with a boss on the field); ground undead plan only against foes within `DEFENSE_R` (Bulwark + 48 px) and never chase out of it — no more marching up one road
+- [x] Building plots (14) behind the Bulwark, around the gate; Soul Well between the walls north of the gate; save v6
 - [ ] Per-theme fortress variants (all keep themes currently share the one fortress; the old keep sprites remain as fallback)
 - [ ] Keep damage states on the fortress art (cracks/fires as keep HP drops)
 - [ ] Enemy art (Dreamina) — next
+
+## Towers on the ramparts (v0.7.1)
+- [x] Every rampart segment has a **mount** (a plot with `mount` = site id, centred on the segment's middle cell): once the segment is built, a tower can be placed on it (materials, same `TOWER_MAT` costs and upgrades). Mounted towers claim no pathing cells (the wall blocks), draw on the battlements above the wall blocks, and fall to a ruin that is rebuilt after the wave as before
+- [x] Buildings only on the foundations behind the walls; towers only on mounts (Towers tab shows mounts, Buildings tab shows foundations)
+- [x] **Ramparts cost materials** (flat per segment: Palisade 2, Stone 3, Bone Rampart 5); repairs still cost souls. Start materials 6 → 10 (a wall segment and a tower before wave 1)
+- [x] Regression: smoke + ui_flow pass; bot (no meta, 3 runs) all reach wave 30 with the keep intact (towers on walls + the host holding the gate)
+- [x] Phylactery "free tower" perk: a Palisade on the Curtain's gate segment with a Necrotic Spire on top
+- [ ] Mounted towers are not hit by wall-battering mobs (only by things that target towers); consider sharing the segment's damage
 
 ## Golem vs Abomination (v0.7)
 - [x] Bone Golem was strictly worse on paper (cost 880 vs 640, HP 500 vs 560, armor .35); its old sim lead came from the Tremor stun-lock (fixed in v0.5) → cost 800, HP 620, dmg 28, armor 0.35, cleave 26: slower and pricier than the Abomination but sturdier and harder-hitting (Abomination keeps taunt)

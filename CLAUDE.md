@@ -101,10 +101,12 @@ Imported AI art never overwrites generated assets. It is layered at boot:
   armor), wendigo (new unit); v0.6.1: archer, pikeman, bonemage, wraith, banshee, vampire, wyvern, abomination,
   golem (prompts in each `meta.json`, styled after the wendigo); v0.7: the Lich (`lich_v1`) and the necropolis
   fortress (`fortress_v1`, original + cutout). Credits remaining: 224.
-- **Fortress**: `python3 tools/assets/import_fortress.py <original> <cutout>` bends the painted wall onto the arc
-  (citadel stays rigid), writes `sprites/buildings/ai/fortress.png` and the generated `src/data/fortress_fit.ts`
-  (per-row wall profile = solid cells, lights). Gameplay geometry (rampart arc, plots, KEEP gate cells, Soul Well)
-  is in `src/data/fortress.ts`, `config/constants.ts` and `makeWallSites`/`makePlots` in mapgen.
+- **Fortress**: `python3 tools/assets/import_fortress.py <original> <cutout>` places the art unscaled and unwarped at
+  x = 0 (keep the AI art's proportions — warping it looked stretched), writes `sprites/buildings/ai/fortress.png` and
+  the generated `src/data/fortress_fit.ts` (per-row wall face = solid cells; torch/window/portcullis lights detected by
+  colour — flames have g/r < 0.65, the yellowed bones must not glow). Gameplay geometry (gate, Curtain/Bulwark arcs,
+  defence radius, KEEP gate cells, Soul Well) is in `src/data/fortress.ts`, `config/constants.ts` and
+  `makeWallSites`/`makeMounts`/`makePlots` in mapgen.
   Composition prompts that worked: "flat map view, no horizon", wall "shaped like a ')' bracket from the very top
   edge to the very bottom edge" (a plain "three-quarter angle" prompt gives isometric perspective shots).
 - Batch workflow that works: in the 'Undead lich army pixel art' session, *Edit prompt* on an earlier entry (keeps
@@ -159,6 +161,10 @@ Key rules:
 - After any change: typecheck, run smoke + ui_flow, run the bot for balance changes, update `docs/CHECKLIST.md`.
 
 ## Current status
+
+v0.7.1 — fortress art at its original proportions (no warping), correct torch/window lights; **gate-centred defence**:
+Curtain + Bulwark rampart arcs around the gatehouse (materials), **towers stand on top of built wall segments**,
+buildings on foundations behind the walls, the host holds and fights inside the Bulwark (`DEFENSE_R`); save v6.
 
 v0.7 — **the Lich and the necropolis**: Dreamina Lich atop the gatehouse; a colossal fortress spans the map's
 left edge (curtain wall top-to-bottom, citadel cut off by the frame) and the gameplay follows the painted wall

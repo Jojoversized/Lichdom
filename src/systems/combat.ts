@@ -107,7 +107,10 @@ function championName() {
 export function placeTower(type: string, cx: number, cy: number, tier = 0, opts: any = {}): Ent {
   const t = Object.assign(baseEnt('tower', (cx + 1) * CELL, (cy + 1) * CELL + 6), { type, def: TOWERS[type], tier, cx, cy, team: 'u' as const, blocks: true, mode: 'first', kills: 0, silT: 0, hasteT: 0, haste: 0, abT: 3, abT2: 5, rad: 12, invested: opts.invested || TOWERS[type].cost, plot: opts.plot || null, matInvested: opts.matInvested || 0 });
   t.maxHp = towerMaxHp(t); t.hp = opts.hp ?? t.maxHp;
-  for (let y = cy; y < cy + 2; y++) for (let x = cx; x < cx + 2; x++) G.map.struct[cellIdx(x, y)] = t;
+  // towers on rampart mounts stand on top of the wall (which already blocks): they claim no cells,
+  // and they sit on the segment's middle cell
+  if (t.plot && String(t.plot).startsWith('m_')) { t.mount = true; t.x = (cx + 1) * CELL + 8; t.y = (cy + 1) * CELL + 8; }
+  else for (let y = cy; y < cy + 2; y++) for (let x = cx; x < cx + 2; x++) G.map.struct[cellIdx(x, y)] = t;
   G.map.dirty = true;
   G.towers.push(t);
   G.stats.maxTowers = Math.max(G.stats.maxTowers, G.towers.length);

@@ -2,7 +2,7 @@
 // A campaign saved mid-wave resumes at that wave's preparation phase.
 import { G } from '../core/state';
 
-export const SAVE_META = 'lichdom_meta_v2', SAVE_RUN = 'lichdom_run_v5';
+export const SAVE_META = 'lichdom_meta_v2', SAVE_RUN = 'lichdom_run_v6';
 export const store = {
   get(k: string): string | null { try { return localStorage.getItem(k); } catch { return null; } },
   set(k: string, v: string) { try { localStorage.setItem(k, v); return true; } catch { return false; } },

@@ -13,11 +13,11 @@ export const VIEW_TARGET_W = 480, VIEW_TARGET_H = 270;
 
 /** The keep's gatehouse in the fortress's curtain wall (src/data/fortress.ts): the crusade's target,
  *  the flow-field goal and the anchor for spawns and spells. */
-export const KEEP = { x: 186, y: 400, x0: 152, x1: 228, y0: 368, y1: 432, cx0: 10, cx1: 13, cy0: 23, cy1: 26 };
-/** The Soul Well stands in the bailey above the gate, between the fortress wall and the curtain rampart. */
-export const WELL_POS = { x: 264, y: 318, cx0: 15, cx1: 17, cy0: 18, cy1: 20 };
+export const KEEP = { x: 208, y: 408, x0: 160, x1: 256, y0: 384, y1: 432, cx0: 10, cx1: 15, cy0: 24, cy1: 26 };
+/** The Soul Well stands behind the walls, between the Curtain and the Bulwark, north of the gate. */
+export const WELL_POS = { x: 352, y: 290, cx0: 21, cx1: 23, cy0: 16, cy1: 18 };
 /** Where idle undead form up: a line in front of the keep gate. */
-export const GUARD_LINE_X = 330;
+export const GUARD_LINE_X = 400;
 
 export interface Lane { id: string; name: string; cy: number; minWave: number; }
 export const LANES: Lane[] = [

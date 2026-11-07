@@ -11,7 +11,7 @@ import { TOWERS, FORTS, WALL_TIERS, WALL_MAX_TIER } from '../data/towers';
 import { siteTier, siteUpgradeCost } from '../systems/ramparts';
 import { towerStats, metaLv } from '../systems/stats';
 import { cellIdx, canBuildAt, siteAtCell, plotAtCell, worldToCell } from '../world/mapgen';
-import { plotContent } from '../systems/keep';
+import { plotContent, mountReady } from '../systems/keep';
 import { SPELLS } from '../data/spells';
 import { animFrameIndex, makeLightTextures, makeShadowTextures, PX_FONT, PX_DIGITS } from './textures';
 import { TEXEL_RES, VIEW } from '../config/zoom';
@@ -213,10 +213,12 @@ export class WorldRenderer {
 
   syncTower(t: any, animF: number) {
     const spr = this.ensureSprite(t, 'tower_' + t.type);
-    spr.setPosition(t.x, t.cy * CELL + 2 * CELL + 2).setDepth(t.y + 10);
+    // mounted towers stand on the battlements of their rampart segment, above the wall blocks
+    if (t.mount) spr.setPosition(t.x, t.y + 2).setDepth(t.y + 40);
+    else spr.setPosition(t.x, t.cy * CELL + 2 * CELL + 2).setDepth(t.y + 10);
     spr.setFrame(t.tier * 4 + ((animF + t.id) % 4));
     if (t.hitT > 0) spr.setTintFill(0xffffff); else if (t.silT > 0) spr.setTint(0xb090ff); else spr.clearTint();
-    if (!t.shadow) t.shadow = this.scene.add.image(t.x, t.cy * CELL + 2 * CELL - 4, 'shadow_32').setDepth(DEPTH.shadows).setScale(SC);
+    if (!t.shadow && !t.mount) t.shadow = this.scene.add.image(t.x, t.cy * CELL + 2 * CELL - 4, 'shadow_32').setDepth(DEPTH.shadows).setScale(SC);
   }
 
   syncBuilding(b: any, animF: number) {
@@ -230,8 +232,10 @@ export class WorldRenderer {
     const b = G.build, placing = b && (b.kind === 'tower' || b.kind === 'building');
     if (!placing && !G.showPlots) return;
     const hov = G.mouse.onCanvas ? plotAtCell(...worldToCell(G.mouse.world[0], G.mouse.world[1])) : null;
+    const wantMounts = placing ? b.kind === 'tower' : G.showPlots === 'mounts';
     for (const p of G.map.plots || []) {
-      const c = plotContent(p), free = !c.tower && !c.building && !c.ruin;
+      if (!!p.mount !== wantMounts) continue;
+      const c = plotContent(p), free = !c.tower && !c.building && !c.ruin && (!p.mount || mountReady(p));
       if (!placing && !free) continue;
       const ok = free && placing && G.run.materials >= b.cost;
       const col = !placing ? 0xc8b890 : !free ? 0x6a645c : ok ? 0x5dff7a : 0xff5050;
@@ -325,7 +329,7 @@ export class WorldRenderer {
     for (const site of G.map.sites || []) {
       const t = siteTier(site), on = hov === site || sel === site.id;
       if (!mode && !on) continue;
-      const cost = siteUpgradeCost(site), ok = t < WALL_MAX_TIER && G.run.souls >= cost;
+      const cost = siteUpgradeCost(site), ok = t < WALL_MAX_TIER && G.run.materials >= cost;
       const c = on ? (t >= WALL_MAX_TIER ? 0xe8e0c0 : ok ? 0x5dff7a : 0xff5050) : t ? 0xc8b890 : 0x8a8478;
       g.fillStyle(c, on ? 0.32 : t ? 0.12 : 0.26);
       for (const [x, y] of site.cells) g.fillRect(x * CELL + 1, y * CELL + 1, CELL - 2, CELL - 2);

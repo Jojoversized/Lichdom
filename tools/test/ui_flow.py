@@ -17,16 +17,25 @@ with sync_playwright() as p:
     def world_click(wx, wy, button='left'):
         sx, sy = pg.evaluate(f"() => {{ const s = window.__LICH.game.scene.getScene('game'); return s.worldToScreen({wx},{wy}); }}")
         pg.mouse.move(sx, sy); pg.wait_for_timeout(60); pg.mouse.down(button=button); pg.mouse.up(button=button); pg.wait_for_timeout(80)
-    # build a tower with real clicks
+    # raise the Curtain's gate segment with real clicks (Fortify tab -> Ramparts, materials)
+    pg.click('.tabs button[data-tab=fort]'); pg.wait_for_timeout(120)
+    pg.click('#buildlist .bitem >> nth=0'); pg.wait_for_timeout(120)
+    gx, gy = pg.evaluate("() => { const s = window.__LICH.G.map.sites.find(s => s.id === 'keep_g'); const c = s.cells[0]; return [c[0] * 16 + 8, c[1] * 16 + 8]; }")
+    m0 = pg.evaluate("() => window.__LICH.G.run.materials")
+    world_click(gx, gy)
+    wl = pg.evaluate("() => ({ walls: window.__LICH.G.run.walls, mat: window.__LICH.G.run.materials })"); print('curtain gate raised:', wl, 'materials before', m0); assert wl['walls'].get('keep_g') == 1 and wl['mat'] < m0
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
+    # a tower on top of it, with real clicks
+    pg.click('.tabs button[data-tab=towers]'); pg.wait_for_timeout(120)
     pg.click('#buildlist .bitem >> nth=0'); pg.wait_for_timeout(100)
-    px, py = pg.evaluate("() => { const G = window.__LICH.G, d = p => (p.x - G.camera.x) ** 2 + (p.y - G.camera.y) ** 2; const p = G.map.plots.filter(p => p.front).sort((a, b) => d(a) - d(b))[0]; return [p.x, p.y]; }")
+    px, py = pg.evaluate("() => { const p = window.__LICH.G.map.plots.find(p => p.mount === 'keep_g'); return [p.x, p.y]; }")
     sx, sy = pg.evaluate(f"() => window.__LICH.game.scene.getScene('game').worldToScreen({px}, {py})")
     pg.mouse.move(sx, sy); pg.wait_for_timeout(200); shot(pg, 'a_ghost')
     world_click(px, py)
     st = pg.evaluate("() => ({towers: window.__LICH.G.towers.length, sel: !!window.__LICH.G.selected, mat: window.__LICH.G.run.materials})"); print('after tower click', st); assert st['towers'] == 1
     # a keep building on a rear foundation (materials topped up for the test)
     pg.evaluate("() => { window.__LICH.G.run.materials += 20; window.__LICH.UI.renderBuild(); }")
-    bx, by = pg.evaluate("() => { const G = window.__LICH.G, d = p => (p.x - G.camera.x) ** 2 + (p.y - G.camera.y) ** 2; const p = G.map.plots.filter(p => !p.front).sort((a, b) => d(a) - d(b))[0]; return [p.x, p.y]; }")
+    bx, by = pg.evaluate("() => { const G = window.__LICH.G, d = p => (p.x - G.camera.x) ** 2 + (p.y - G.camera.y) ** 2; const p = G.map.plots.filter(p => !p.mount).sort((a, b) => d(a) - d(b))[0]; return [p.x, p.y]; }")
     pg.click('.tabs button[data-tab=buildings]'); pg.wait_for_timeout(120)
     pg.click('#buildlist .bitem >> nth=0'); pg.wait_for_timeout(100)   # first building card (Bone Forge)
     world_click(bx, by)
@@ -46,12 +55,13 @@ with sync_playwright() as p:
     n1 = pg.evaluate("() => window.__LICH.G.units.length")
     print('squad recruited:', n1 - n0, 'undead (must be >= 5)'); assert n1 - n0 >= 5
     shot(pg, 'c2_army_tab')
-    # ramparts: Fortify tab -> Ramparts mode -> click the keep gate site twice (palisade, stone)
+    # ramparts: Fortify tab -> Ramparts mode -> raise the Bulwark's gate segment twice (palisade, stone)
+    pg.evaluate("() => { window.__LICH.G.run.materials += 10; }")
     pg.click('.tabs button[data-tab=fort]'); pg.wait_for_timeout(120)
     pg.click('#buildlist .bitem >> nth=0'); pg.wait_for_timeout(120)
-    gx, gy = pg.evaluate("() => { const s = window.__LICH.G.map.sites.find(s => s.id === 'keep_g'); const c = s.cells[s.cells.length >> 1]; return [c[0] * 16 + 8, c[1] * 16 + 8]; }")
+    gx, gy = pg.evaluate("() => { const s = window.__LICH.G.map.sites.find(s => s.id === 'wall_2'); const c = s.cells[1]; return [c[0] * 16 + 8, c[1] * 16 + 8]; }")
     world_click(gx, gy); world_click(gx, gy)
-    wl = pg.evaluate("() => window.__LICH.G.run.walls"); print('ramparts:', wl); assert wl.get('keep_g') == 2
+    wl = pg.evaluate("() => window.__LICH.G.run.walls"); print('ramparts:', wl); assert wl.get('wall_2') == 2
     shot(pg, 'c3_ramparts')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
     pg.click('#b-wave'); pg.wait_for_timeout(6000); shot(pg, 'd_wave')

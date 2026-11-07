@@ -41,10 +41,10 @@ export const FORT_ORDER = ['spikes', 'lava', 'rune', 'cauldron', 'ward'];
 /** Ramparts: walls are built on preset sites (keep ring + two defensive lines) and
  *  upgraded in place. `cell` = souls per wall cell for that tier (× wave inflation). */
 export const WALL_TIERS = [
-  { name: 'Unbuilt', hp: 0, cell: 0, spr: '', tint: 0xffffff },
-  { name: 'Bone Palisade', hp: 0.55, cell: 9, spr: 'fort_wall', tint: 0xb98552, desc: 'Lashed bone and timber. Cheap, but it buckles quickly.' },
-  { name: 'Stone Wall', hp: 1, cell: 20, spr: 'fort_wall', tint: 0xffffff, desc: 'Solid masonry that holds a lane for a long while.' },
-  { name: 'Bone Rampart', hp: 1.9, cell: 44, spr: 'fort_wall2', tint: 0xffffff, desc: 'Black stone fused with bone. Attackers are wounded by its spurs.', thorns: 14 },
+  { name: 'Unbuilt', hp: 0, cell: 0, mat: 0, spr: '', tint: 0xffffff },
+  { name: 'Bone Palisade', hp: 0.55, cell: 9, mat: 2, spr: 'fort_wall', tint: 0xb98552, desc: 'Lashed bone and timber. Cheap, but it buckles quickly.' },
+  { name: 'Stone Wall', hp: 1, cell: 20, mat: 3, spr: 'fort_wall', tint: 0xffffff, desc: 'Solid masonry that holds a lane for a long while.' },
+  { name: 'Bone Rampart', hp: 1.9, cell: 44, mat: 5, spr: 'fort_wall2', tint: 0xffffff, desc: 'Black stone fused with bone. Attackers are wounded by its spurs.', thorns: 14 },
 ];
 export const WALL_MAX_TIER = 3;
 

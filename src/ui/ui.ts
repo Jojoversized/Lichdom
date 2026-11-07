@@ -91,7 +91,7 @@ export const UI: any = {
       <div id="toasts" class="hud-el"></div>
       <div id="spellbar" class="panel hud-el"></div>
       <div id="buildbar" class="panel hud-el">
-        <div class="tabs"><button data-tab="towers" title="Towers on the keep's foundations (materials)">Towers</button><button data-tab="buildings" title="Keep buildings: permanent bonuses (materials)">Buildings</button><button data-tab="fort">Fortify</button><button data-tab="army">Army</button><span class="spacer"></span><button class="close" id="b-collapse" title="Show/hide (B)">▼ Hide</button></div>
+        <div class="tabs"><button data-tab="towers" title="Towers on top of the ramparts (materials)">Towers</button><button data-tab="buildings" title="Keep buildings: permanent bonuses (materials)">Buildings</button><button data-tab="fort">Fortify</button><button data-tab="army">Army</button><span class="spacer"></span><button class="close" id="b-collapse" title="Show/hide (B)">▼ Hide</button></div>
         <div id="buildlist"></div>
       </div>
       <div id="speech" class="hidden"></div>
@@ -242,7 +242,7 @@ export const UI: any = {
       b.onmouseenter = () => this.showTip(b, tip); b.onmouseleave = () => this.hideTip();
       L.appendChild(b); return b;
     };
-    G.showPlots = (this.tab === 'towers' || this.tab === 'buildings') && !this.collapsed;
+    G.showPlots = this.collapsed ? false : this.tab === 'towers' ? 'mounts' : this.tab === 'buildings' ? 'plots' : false;
     if (this.tab === 'towers') {
       for (const t of TOWER_ORDER) {
         if (!r.unlockedTowers.includes(t)) continue;
@@ -251,6 +251,7 @@ export const UI: any = {
       }
       const locked = TOWER_ORDER.filter(t => !r.unlockedTowers.includes(t)).length;
       if (locked) L.appendChild(h('div', 'bnote', `${locked} more tower${locked > 1 ? 's' : ''} can be unlocked through level-ups${TOWER_ORDER.some(t => !contentAvailable('tower', t)) ? ' and the Phylactery' : ''}. Towers cost ${MAT()} materials, earned after each wave.`));
+      L.appendChild(h('div', 'bnote', `Towers stand on top of the ramparts: build a wall segment first (Fortify tab), then place a tower on its mount.`));
     } else if (this.tab === 'buildings') {
       for (const k of BUILDING_ORDER) {
         const d = BUILDINGS[k], lv = bld(k), ent = G.buildings.find((o: any) => o.type === k);
@@ -263,7 +264,7 @@ export const UI: any = {
       }
     } else if (this.tab === 'fort') {
       const sites = G.map.sites || [], built = sites.filter((s: any) => siteTier(s) > 0).length;
-      card(icon('wall', 2, 'pix'), 'Ramparts', null, `<b>Ramparts</b><br>Walls stand on fixed sites: a ring around the keep and two defensive lines across the field.<br>Click a site to raise a <b>Bone Palisade</b>, click again for a <b>Stone Wall</b>, then a <b>Bone Rampart</b>. Close every segment of a line and the crusade must breach it; leave a gap and they funnel through it.<br><span class="dim">${built}/${sites.length} sites built. Right-click to stop.</span>`,
+      card(icon('wall', 2, 'pix'), 'Ramparts', null, `<b>Ramparts</b><br>Walls stand on fixed sites around the gatehouse: the inner <b>Curtain</b> and the outer <b>Bulwark</b>, each closing the gate off from wall to map edge. They cost ${MAT()} materials.<br>Click a site to raise a <b>Bone Palisade</b>, click again for a <b>Stone Wall</b>, then a <b>Bone Rampart</b>. A built segment carries a tower. Close every segment of a wall and the crusade must breach it; leave a gap and they funnel through it.<br><span class="dim">${built}/${sites.length} sites built. Right-click to stop.</span>`,
         () => { G.build = G.build && G.build.kind === 'site' ? null : { kind: 'site', type: 'site', cost: 0 }; G.selected = null; sfx('click'); this.renderBuild(); }, '', !!(G.build && G.build.kind === 'site'));
       for (const f of FORT_ORDER) {
         const d = FORTS[f], avail = !d.meta || metaLv(d.meta) > 0;
@@ -299,14 +300,14 @@ export const UI: any = {
   renderSiteInfo(s: any, P: HTMLElement) {
     const site = siteById(s.siteId); if (!site) { G.selected = null; P.classList.add('hidden'); return; }
     const t = siteTier(site), up = siteUpgradeCost(site), rep = siteRepairCost(site), [hp, max] = siteHp(site);
-    const key = s.id + ':' + t + ':' + Math.round(hp) + ':' + Math.floor(G.run.souls / 10);
+    const key = s.id + ':' + t + ':' + Math.round(hp) + ':' + Math.floor(G.run.souls / 10) + ':' + G.run.materials;
     if (this.infoKey === key && !P.classList.contains('hidden')) return;
     this.infoKey = key; P.classList.remove('hidden');
     const cur = WALL_TIERS[t], nx = WALL_TIERS[t + 1];
     P.innerHTML = `<span class="x" id="i-x">✕</span><div class="ihead">${icon('wall', 3, 'pix')}<div><b>${site.name}</b><div class="dim">${t ? cur.name : 'Empty site'} · ${site.cells.length} sections</div></div></div>
-      ${t ? `<div class="istats"><span>Durability</span><b>${fmt(hp)}/${fmt(max)}</b>${cur.thorns ? '<span>Spurs</span><b>wound attackers</b>' : ''}</div><div class="idesc">${cur.desc}</div>` : '<div class="idesc">A surveyed wall site. Build it to block this stretch.</div>'}
+      ${t ? `<div class="istats"><span>Durability</span><b>${fmt(hp)}/${fmt(max)}</b>${cur.thorns ? '<span>Spurs</span><b>wound attackers</b>' : ''}</div><div class="idesc">${cur.desc}</div>` : '<div class="idesc">A surveyed wall site. Build it to block this stretch; a built segment can carry a tower.</div>'}
       ${nx ? `<div class="idesc"><span class="good">Next: ${nx.name}</span> (${t ? `+${Math.round((nx.hp / cur.hp - 1) * 100)}% health` : 'blocks the crusade'}${nx.thorns ? ', spurs wound attackers' : ''})</div>` : ''}
-      <div class="ibtns">${t < WALL_MAX_TIER ? `<button class="btn sm" id="i-up">${t ? 'Upgrade' : 'Build'} ${SOUL()}${fmt(up)}</button>` : ''}${rep ? `<button class="btn sm" id="i-rep">Repair ${SOUL()}${fmt(rep)}</button>` : ''}</div>`;
+      <div class="ibtns">${t < WALL_MAX_TIER ? `<button class="btn sm" id="i-up">${t ? 'Upgrade' : 'Build'} ${MAT()}${fmt(up)}</button>` : ''}${rep ? `<button class="btn sm" id="i-rep">Repair ${SOUL()}${fmt(rep)}</button>` : ''}</div>`;
     const ub = $('#i-up'); if (ub) ub.onclick = () => { if (upgradeSite(site)) saveRunSoon(); this.infoKey = ''; };
     const rb = $('#i-rep'); if (rb) rb.onclick = () => { if (repairSite(site)) saveRunSoon(); this.infoKey = ''; };
     $('#i-x').onclick = () => { G.selected = null; P.classList.add('hidden'); };
@@ -598,8 +599,8 @@ export const UI: any = {
   showHelp(fromGame?: boolean) {
     this.screen(`<h1>How to Rule Eternally</h1><div class="help">
       <p><b>Goal.</b> The crusade marches from the <b>east</b> along the roads toward your keep on the far west. If the keep falls the campaign ends — but Life Essence lets your next stronghold rise stronger.</p>
-      <p><b>The keep (materials).</b> After every repelled wave you earn a few <b>materials</b> (more for bosses). Spend them in the <b>Towers</b> and <b>Buildings</b> tabs: pick one, then click a free foundation around the keep. Towers grow stronger every wave and are rebuilt after a wave if they fall. Buildings give permanent bonuses to every undead you have and will have (damage, health, souls, squad size, spells, regeneration, attack speed, more materials). Click a building or tower to upgrade it.</p>
-      <p><b>Fortify (souls).</b> <b>Ramparts</b> stand on fixed sites: a ring around the keep and two lines across the field. Click a site to build, click again to upgrade. A closed line must be breached; gaps funnel the crusade. Barricades, traps and wards are painted freely. The drawer can be hidden with ▼ Hide or the B key.</p>
+      <p><b>The keep (materials).</b> After every repelled wave you earn a few <b>materials</b> (more for bosses). Spend them on <b>ramparts</b> (Fortify), <b>towers</b> (placed on top of a built wall segment) and <b>buildings</b> (on the foundations behind the walls). Towers grow stronger every wave and are rebuilt after a wave if they fall. Buildings give permanent bonuses to every undead you have and will have (damage, health, souls, squad size, spells, regeneration, attack speed, more materials). Click a building or tower to upgrade it.</p>
+      <p><b>Fortify.</b> <b>Ramparts</b> (materials) stand on fixed sites around the gatehouse: the inner Curtain and the outer Bulwark. Click a site to build, click again to upgrade; repairs cost souls. Towers stand on top of built segments. A closed wall must be breached; gaps funnel the crusade. Your host defends inside the Bulwark. Barricades, traps and wards are painted freely. The drawer can be hidden with ▼ Hide or the B key.</p>
       <p><b>Army.</b> Recruit undead in the <b>Army</b> tab — each purchase raises a whole squad (5 or more) and there is no army limit. They fight on their own and can strike anything, flying or not: they hold a line before the gate, rush to wherever mortals press hardest, ranged troops stay behind the melee, and wounded soldiers fall back to the keep to mend. Every undead slain during a wave rises again when the wave is repelled.</p>
       <p><b>Souls & the Soul Well (E).</b> Kills give souls and experience. Each level offers three upgrades. In the Soul Well, <b>Ascensions</b> multiply your power and can be bought endlessly; <b>Unearth a Crypt</b> lets you choose a new undead type, and <b>summons</b> raise packs of great creatures that stay forever. The crusade's <b>Fervor</b> rises a fixed amount every wave, whatever the size of your host. Upgrade offers never show two tiers of the same upgrade.</p>
       <p><b>Spells.</b> Keys 1–8. Some need a target area.</p>
