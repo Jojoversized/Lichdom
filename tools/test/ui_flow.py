@@ -28,14 +28,14 @@ with sync_playwright() as p:
     # a tower on top of it, with real clicks
     pg.click('.tabs button[data-tab=towers]'); pg.wait_for_timeout(120)
     pg.click('#buildlist .bitem >> nth=0'); pg.wait_for_timeout(100)
-    px, py = pg.evaluate("() => { const p = window.__LICH.G.map.plots.find(p => p.mount === 'keep_g'); return [p.x, p.y]; }")
+    px, py = pg.evaluate("() => { const p = window.__LICH.mountCells().find(p => p.mount === 'keep_g'); return [p.x, p.y]; }")
     sx, sy = pg.evaluate(f"() => window.__LICH.game.scene.getScene('game').worldToScreen({px}, {py})")
     pg.mouse.move(sx, sy); pg.wait_for_timeout(200); shot(pg, 'a_ghost')
     world_click(px, py)
     st = pg.evaluate("() => ({towers: window.__LICH.G.towers.length, sel: !!window.__LICH.G.selected, mat: window.__LICH.G.run.materials})"); print('after tower click', st); assert st['towers'] == 1
     # a keep building on a rear foundation (materials topped up for the test)
     pg.evaluate("() => { window.__LICH.G.run.materials += 20; window.__LICH.UI.renderBuild(); }")
-    bx, by = pg.evaluate("() => { const G = window.__LICH.G, d = p => (p.x - G.camera.x) ** 2 + (p.y - G.camera.y) ** 2; const p = G.map.plots.filter(p => !p.mount).sort((a, b) => d(a) - d(b))[0]; return [p.x, p.y]; }")
+    bx, by = pg.evaluate("() => { const G = window.__LICH.G, d = p => (p.x - G.camera.x) ** 2 + (p.y - G.camera.y) ** 2; const p = G.map.plots.slice().sort((a, b) => d(a) - d(b))[0]; return [p.x, p.y]; }")
     pg.click('.tabs button[data-tab=buildings]'); pg.wait_for_timeout(120)
     pg.click('#buildlist .bitem >> nth=0'); pg.wait_for_timeout(100)   # first building card (Bone Forge)
     world_click(bx, by)

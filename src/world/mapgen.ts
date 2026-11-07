@@ -43,7 +43,7 @@ export function generateMap(seed: number, fortKey: string) {
     }
   }
   M.sites = makeWallSites(M);
-  M.plots = [...makeMounts(M), ...makePlots(M)];
+  M.plots = makePlots(M);
   const nearRoad = (x: number, y: number, r: number) => { for (let oy = -r; oy <= r; oy++) for (let ox = -r; ox <= r; ox++) if (inb(x + ox, y + oy) && M.road[cellIdx(x + ox, y + oy)]) return true; return false; };
   const nearKeep = (x: number, y: number, r: number) => cellInFort(x, y) || gateDist((x + 0.5) * CELL, (y + 0.5) * CELL) < R_BULWARK + r * CELL;
   // obstacles
@@ -144,25 +144,15 @@ function makeWallSites(M: any): WallSite[] {
   }
   return sites;
 }
-/** Construction plots (2×2 cells). Buildings stand on ordinary plots behind the walls (reserved = 5);
- *  towers stand on top of rampart segments, on a mount plot centred on the segment (`mount` = site id,
- *  reserved = 6 on the cells that are not wall). */
+/** Construction plots (2×2 cells): buildings stand on ordinary plots behind the walls (reserved = 5).
+ *  Towers stand on top of built rampart sections: their mounts are made on demand (`mountAt` in
+ *  systems/keep.ts, `mount` = site id, id `m_<cx>_<cy>` of the wall cell). */
 export interface Plot { id: string; cx: number; cy: number; x: number; y: number; front: boolean; mount?: string; }
-function makeMounts(M: any): Plot[] {
-  const out: Plot[] = [];
-  for (const s of M.sites as WallSite[]) {
-    const [mx, my] = s.cells[s.cells.length >> 1];
-    const cx = mx - 1, cy = my - 1;
-    for (let y = cy; y < cy + 2; y++) for (let x = cx; x < cx + 2; x++) if (x >= 0 && y >= 0 && x < MW && y < MH && !M.reserved[cellIdx(x, y)]) M.reserved[cellIdx(x, y)] = 6;
-    out.push({ id: 'm_' + s.id, cx, cy, x: (cx + 1) * CELL, y: (cy + 1) * CELL, front: true, mount: s.id });
-  }
-  return out;
-}
 /** Building plots: behind the Bulwark, around the gate (nearest first): inside the Curtain and in
  *  the ring between the two walls. Candidates on roads or other reservations are dropped. */
 function makePlots(M: any): Plot[] {
   const cand: [number, number][] = [];
-  for (const r of [72, 166, 200]) for (let k = 0; k <= 10; k++) for (const sgn of k ? [-1, 1] : [1]) {
+  for (const r of [86, 210, 252]) for (let k = 0; k <= 10; k++) for (const sgn of k ? [-1, 1] : [1]) {
     const a = sgn * k * 0.16;
     if (Math.abs(a) > 1.45) continue;
     cand.push([Math.round((GATE.x + Math.cos(a) * r) / CELL - 1), Math.round((GATE.y + Math.sin(a) * r) / CELL - 1)]);
@@ -182,10 +172,8 @@ function makePlots(M: any): Plot[] {
   return out;
 }
 export function plotAtCell(cx: number, cy: number): Plot | null {
-  if (!G.map || !G.map.plots) return null;
-  const res = G.map.reserved[cellIdx(cx, cy)];
-  if (res !== 5 && res !== 6 && res !== 4) return null;
-  for (const p of G.map.plots) if ((res === 5) !== !!p.mount && cx >= p.cx && cx < p.cx + 2 && cy >= p.cy && cy < p.cy + 2) return p;
+  if (!G.map || !G.map.plots || G.map.reserved[cellIdx(cx, cy)] !== 5) return null;
+  for (const p of G.map.plots) if (cx >= p.cx && cx < p.cx + 2 && cy >= p.cy && cy < p.cy + 2) return p;
   return null;
 }
 export function siteAtCell(cx: number, cy: number): WallSite | null {

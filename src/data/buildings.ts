@@ -5,31 +5,31 @@
 
 /** Materials price of a tower by tier (index 0 = construction, 1 and 2 = upgrades). */
 export const TOWER_MAT: Record<string, number[]> = {
-  brimstone: [6, 10, 16], tesla: [6, 10, 16], necrotic: [5, 9, 15], frost: [5, 9, 15],
-  artillery: [7, 11, 18], harvester: [5, 9, 14], arcane: [7, 11, 18], abomination: [8, 12, 18],
+  brimstone: [4, 6, 10], tesla: [4, 6, 10], necrotic: [3, 5, 9], frost: [3, 5, 9],
+  artillery: [4, 7, 11], harvester: [3, 5, 8], arcane: [4, 7, 11], abomination: [5, 7, 11],
 };
 
 export interface BuildingDef { name: string; tiers: string[]; desc: string; per: string; cost: number[]; icon: string; }
 export const BUILDINGS: Record<string, BuildingDef> = {
   forge: { name: 'Bone Forge', tiers: ['Bone Forge', 'Marrow Foundry', 'Forge of the Grave-King'], icon: 'forge',
-    desc: 'Grinds the bones of the fallen into blades.', per: '+10% damage for every undead, tower and spell', cost: [8, 13, 20] },
+    desc: 'Grinds the bones of the fallen into blades.', per: '+10% damage for every undead, tower and spell', cost: [13, 21, 32] },
   vault: { name: 'Ossuary Vault', tiers: ['Ossuary Vault', 'Reliquary of Bone', 'Catacomb Cathedral'], icon: 'vault',
-    desc: 'Stores spare bones to knit wounded undead back together.', per: '+12% health for every undead', cost: [8, 13, 20] },
+    desc: 'Stores spare bones to knit wounded undead back together.', per: '+12% health for every undead', cost: [13, 21, 32] },
   cistern: { name: 'Soul Cistern', tiers: ['Soul Cistern', 'Soul Reservoir', 'Abyssal Font'], icon: 'cistern',
-    desc: 'Catches souls that would slip away.', per: '+10% souls from every source', cost: [7, 12, 18] },
+    desc: 'Catches souls that would slip away.', per: '+10% souls from every source', cost: [11, 19, 29] },
   barracks: { name: 'Barrow Barracks', tiers: ['Barrow Barracks', 'Hall of the Risen', 'Necropolis Garrison'], icon: 'barracks',
-    desc: 'Bunks the dead in rank and file.', per: '+1 undead in every squad (existing squads gain theirs at once)', cost: [9, 15, 22] },
+    desc: 'Bunks the dead in rank and file.', per: '+1 undead in every squad (existing squads gain theirs at once)', cost: [15, 24, 35] },
   sanctum: { name: 'Lich Sanctum', tiers: ['Lich Sanctum', 'Sepulchral Library', 'Throne of Night'], icon: 'sanctum',
-    desc: 'Where the Lich hones forbidden rites.', per: '+15% spell damage and −8% spell cooldowns', cost: [7, 12, 18] },
+    desc: 'Where the Lich hones forbidden rites.', per: '+15% spell damage and −8% spell cooldowns', cost: [11, 19, 29] },
   embalm: { name: "Embalmer's Hall", tiers: ["Embalmer's Hall", 'House of Preservation', 'Undying Workshop'], icon: 'embalm',
-    desc: 'Ichor vats that keep rotting flesh in the fight.', per: 'undead regenerate 0.8% health per second', cost: [7, 12, 18] },
+    desc: 'Ichor vats that keep rotting flesh in the fight.', per: 'undead regenerate 0.8% health per second', cost: [11, 19, 29] },
   bell: { name: 'War Bell', tiers: ['War Bell', 'Tolling Belfry', 'Bell of the Last Hour'], icon: 'bell',
-    desc: 'Its toll drives the dead forward.', per: '+8% attack speed for every undead and tower', cost: [8, 13, 20] },
+    desc: 'Its toll drives the dead forward.', per: '+8% attack speed for every undead and tower', cost: [13, 21, 32] },
   quarry: { name: 'Bone Quarry', tiers: ['Bone Quarry', 'Ossuary Mine', 'Grave-Pit Works'], icon: 'quarry',
-    desc: 'Cuts stone and bone for the builders.', per: '+1 materials after every wave', cost: [6, 11, 17] },
+    desc: 'Cuts stone and bone for the builders.', per: '+1 materials after every wave', cost: [10, 17, 27] },
 };
 export const BUILDING_ORDER = ['forge', 'vault', 'cistern', 'barracks', 'sanctum', 'embalm', 'bell', 'quarry'];
 
-/** Materials earned when a wave is repelled (before the Bone Quarry): 1, +1 per 10 waves, +3 for a boss. */
-export function baseMaterialsIncome(wave: number, boss: boolean) { return 1 + Math.floor(wave / 10) + (boss ? 3 : 0); }
+/** Materials earned when a wave is repelled (before the Bone Quarry): 2, +1 per 6 waves, +4 for a boss. */
+export function baseMaterialsIncome(wave: number, boss: boolean) { return 2 + Math.floor(wave / 6) + (boss ? 4 : 0); }
 export const START_MATERIALS = 10; // a rampart segment and a tower on it (or a building) before wave 1

@@ -9,12 +9,42 @@ import { UNITS } from '../data/units';
 import { BUILDINGS, TOWER_MAT, baseMaterialsIncome } from '../data/buildings';
 import { Plot } from '../world/mapgen';
 import { siteById, siteTier } from './ramparts';
+import { siteAtCell } from '../world/mapgen';
 import { placeTower, removeStructure, spawnUnit } from './combat';
 import { towerMaxHp, recalcAllStats, recalcKeep, bld } from './stats';
 export { bld };
 import { msg, sfx } from '../core/events';
 
-export function plotById(id: string): Plot | null { return (G.map && G.map.plots || []).find((p: Plot) => p.id === id) || null; }
+export function plotById(id: string): Plot | null {
+  if (id && id.startsWith('m_')) { const [, x, y] = id.split('_'); return mountPlot(+x, +y); }
+  return (G.map && G.map.plots || []).find((p: Plot) => p.id === id) || null;
+}
+// ---------------- tower mounts (any section of a built rampart) ----------------
+/** Mount plot for a wall cell (no checks): the tower stands on that cell. */
+function mountPlot(cx: number, cy: number): Plot | null {
+  const s = siteAtCell(cx, cy);
+  return s ? { id: `m_${cx}_${cy}`, cx: cx - 1, cy: cy - 1, x: cx * CELL + 8, y: cy * CELL + 8, front: true, mount: s.id } : null;
+}
+/** Towers (or their ruins) standing on wall cells, as cell coordinates. */
+function mountedCells(): [number, number][] {
+  const out: [number, number][] = [];
+  for (const t of G.towers) if (t.mount && !t.dead) out.push([t.cx + 1, t.cy + 1]);
+  for (const id in (G.run && G.run.ruins) || {}) if (id.startsWith('m_')) { const [, x, y] = id.split('_'); out.push([+x, +y]); }
+  return out;
+}
+/** A tower may stand on any section of a BUILT rampart, two cells or more from another tower. */
+export function mountAt(cx: number, cy: number): Plot | null {
+  const p = mountPlot(cx, cy);
+  if (!p || !mountReady(p)) return null;
+  for (const [x, y] of mountedCells()) if (Math.max(Math.abs(x - cx), Math.abs(y - cy)) < 2) return null;
+  return p;
+}
+/** Every wall cell a tower could be placed on right now. */
+export function mountCells(): Plot[] {
+  const out: Plot[] = [];
+  for (const s of (G.map && G.map.sites) || []) if (siteTier(s) > 0) for (const [x, y] of s.cells) { const p = mountAt(x, y); if (p) out.push(p); }
+  return out;
+}
 /** What stands on a plot: a tower entity, a building entity, a ruin record, or nothing. */
 export function plotContent(p: Plot): { tower?: any; building?: any; ruin?: any } {
   const tower = G.towers.find((t: any) => t.plot === p.id && !t.dead);

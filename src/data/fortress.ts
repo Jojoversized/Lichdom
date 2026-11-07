@@ -13,9 +13,14 @@ import { FORT_FIT, FORT_PROFILE, FORT_FIT_LIGHTS, FORT_PORTCULLIS } from './fort
 
 /** Centre of the defence: the gatehouse's outer face. */
 export const GATE = { x: 256, y: 412 };
-export const R_CURTAIN = 112, R_BULWARK = 232;
-/** How far from the gate the host forms up and engages (a little beyond the Bulwark). */
-export const DEFENSE_R = R_BULWARK + 48;
+export const R_CURTAIN = 140, R_BULWARK = 290;
+/** How far from the gate the host forms up and engages (beyond the Bulwark); foes whose attacks reach
+ *  into this zone (archers, casters, siege) are engaged too — see `threatensZone`. */
+export const DEFENSE_R = R_BULWARK + 64;
+/** A foe is fair game for the host when it stands in the defence zone or can hit something inside it. */
+export function threatensZone(e: any, margin = 0): boolean {
+  return gateDist(e.x, e.y) - (e.range || 0) <= DEFENSE_R + margin;
+}
 
 /** x of the fortress's outer face at world y (the fortress fills everything left of it). */
 export function fortWallX(wy: number): number {

@@ -2,7 +2,7 @@
 import { G } from '../core/state';
 import { dist, dist2, rnd, rndi, pick, clamp, TAU } from '../core/util';
 import { CELL, KEEP, GUARD_LINE_X, LANES, PAL, WW, WH } from '../config/constants';
-import { fortWallX, LICH_POS, GATE, R_CURTAIN, R_BULWARK, DEFENSE_R, gateDist } from '../data/fortress';
+import { fortWallX, LICH_POS, GATE, R_CURTAIN, R_BULWARK, threatensZone } from '../data/fortress';
 import { sfx } from '../core/events';
 import { flowStep, worldToCell, cellIdx, flowDist } from '../world/mapgen';
 import {
@@ -208,10 +208,11 @@ function guardPosition(u: any, _idx: number, count: number) {
   x = Math.max(x, fortWallX(y) + 8);
   return { x, y };
 }
-/** Ground undead defend the gate: they plan only against foes inside the defence zone. */
+/** Ground undead defend the gate: they plan only against foes in the defence zone or shooting into it
+ *  (ranged crusaders parked just outside used to pepper the host unanswered). */
 function inZone(u: any, e: any) {
   if (u.summon) return true;
-  return gateDist(e.x, e.y) <= DEFENSE_R + (u.flying ? 120 : 0) || dist2(u.x, u.y, e.x, e.y) < 50 * 50;
+  return threatensZone(e, u.flying ? 120 : 0) || dist2(u.x, u.y, e.x, e.y) < 60 * 60;
 }
 
 export function planArmy(dt: number) {
@@ -298,7 +299,7 @@ export function updateUnit(u: any, dt: number) {
   }
   if (u.engage && !u.engage.dead) t = u.engage;
   // never chase a foe out of the defence zone: hit it if it is in reach, otherwise go back to the post
-  if (t && !u.summon && !u.flying && gateDist(t.x, t.y) > DEFENSE_R + 30 && dist(u.x, u.y, t.x, t.y) - (t.rad || 4) > u.range) t = null;
+  if (t && !u.summon && !u.flying && !threatensZone(t, 40) && dist(u.x, u.y, t.x, t.y) - (t.rad || 4) > u.range) t = null;
   if (t) {
     u.atPost = false;
     const td = dist(u.x, u.y, t.x, t.y) - (t.rad || 4);

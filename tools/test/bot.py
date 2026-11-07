@@ -27,9 +27,9 @@ BOT = r"""
       const weak = r.wave >= 6 ? (G.map.sites || []).find(s => L.siteTier(s) === 1) : null;
       if (weak && r.materials >= L.siteUpgradeCost(weak) + 2) opts.push(() => L.upgradeSite(weak));
       const tt = r.unlockedTowers[Math.floor(Math.random() * r.unlockedTowers.length)];
-      const fp = free.find(p => p.mount && L.mountReady(p));
+      const mc = L.mountCells(), fp = mc[Math.floor(Math.random() * mc.length)];
       if (fp && r.materials >= L.towerMatCost(tt)) opts.push(() => L.constructTower(tt, fp));
-      const bp = free.find(p => !p.mount);
+      const bp = free[0];
       for (const k of ['forge', 'vault', 'quarry', 'barracks', 'bell', 'embalm', 'cistern', 'sanctum']) {
         const lv = L.bld(k), ent = G.buildings.find(b => b.type === k);
         if (lv === 0 && bp && r.materials >= 8) { opts.push(() => L.constructBuilding(k, bp)); break; }
@@ -45,8 +45,8 @@ BOT = r"""
       if (r.souls >= L.recruitCost(u)) L.recruit(u); else if (r.unlockedUnits.every(x => r.souls < L.recruitCost(x))) break;
     }
     // incremental sinks
-    for (let i = 0; i < 4; i++) { if (r.souls > 600) L.buyWell(['asc_dmg', 'asc_hp', 'asc_squad', 'legion'][i]); }
-    { const lk = L.lockedUnitTypes(); if (lk.length && r.souls > L.unearthCost(r) * 1.5) L.unearthUnit(lk[Math.floor(Math.random() * lk.length)]); }
+    for (let i = 0; i < 4; i++) { if (r.souls > 600) L.buyWell(['asc_dmg', 'asc_hp', 'asc_souls', 'legion'][i]); }
+    { const lk = L.lockedUnitTypes(); if (lk.length) { const k = lk[Math.floor(Math.random() * lk.length)]; if (r.souls > L.unearthCost(r, k) * 1.5) L.unearthUnit(k); } }
   }
   while (G.phase !== 'over' && G.run.wave < maxWave && guard++ < 400000) {
     if (G.run.pendingLevels > 0) { const c = L.rollCards(3); if (!L.offerIsClean(c)) dupes++; if (c.length) L.applyCard(c[Math.floor(Math.random() * c.length)]); G.run.pendingLevels--; continue; }
@@ -67,7 +67,7 @@ with sync_playwright() as p:
     for i in range(runs):
         pg = b.new_page(viewport={'width': 1280, 'height': 720})
         pg.on('pageerror', lambda e: errs.append(str(e) + '\n' + (e.stack or '')[:600]))
-        pg.goto('http://127.0.0.1:8765/play.html'); pg.wait_for_timeout(2500)
+        pg.goto('http://127.0.0.1:8765/play.html'); pg.wait_for_function('window.__LICH && window.__LICH.G && window.__LICH.G.stats', timeout=60000); pg.wait_for_timeout(500)
         res = pg.evaluate(BOT, [maxw, metamax])
         for l in res['log'][-6:] if runs > 1 else res['log']: print(l)
         print({k: v for k, v in res.items() if k != 'log'})

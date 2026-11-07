@@ -63,7 +63,7 @@ with sync_playwright() as p:
     pg.on('pageerror', lambda e: errs.append(str(e)))
     for cfg in cfgs:
         for i in range(runs):
-            pg.goto('http://127.0.0.1:' + PORT + '/play.html'); pg.wait_for_timeout(1800)
+            pg.goto('http://127.0.0.1:' + PORT + '/play.html'); pg.wait_for_function('window.__LICH && window.__LICH.G && window.__LICH.G.stats', timeout=60000); pg.wait_for_timeout(300)
             res = pg.evaluate(SIM, [cfg, maxw, 1000 + i * 7919])
             print(json.dumps(res), flush=True)
     if errs: print('ERRORS', errs[:3], flush=True)

@@ -11,7 +11,7 @@ import { TOWERS, FORTS, WALL_TIERS, WALL_MAX_TIER } from '../data/towers';
 import { siteTier, siteUpgradeCost } from '../systems/ramparts';
 import { towerStats, metaLv } from '../systems/stats';
 import { cellIdx, canBuildAt, siteAtCell, plotAtCell, worldToCell } from '../world/mapgen';
-import { plotContent, mountReady } from '../systems/keep';
+import { plotContent, mountAt, mountCells } from '../systems/keep';
 import { SPELLS } from '../data/spells';
 import { animFrameIndex, makeLightTextures, makeShadowTextures, PX_FONT, PX_DIGITS } from './textures';
 import { TEXEL_RES, VIEW } from '../config/zoom';
@@ -227,24 +227,39 @@ export class WorldRenderer {
     if (!b.shadow) b.shadow = this.scene.add.image(b.x, b.cy * CELL + 2 * CELL - 4, 'shadow_32').setDepth(DEPTH.shadows).setScale(SC);
   }
 
-  /** Construction plots: shown while placing a tower/building (free = green/red by cost) or on the Keep tab. */
+  /** Construction spots: building foundations (Buildings tab / placing a building) and tower mounts —
+   *  every section of a built rampart that can take a tower (Towers tab / placing a tower). */
   drawPlots(g: Phaser.GameObjects.Graphics) {
     const b = G.build, placing = b && (b.kind === 'tower' || b.kind === 'building');
     if (!placing && !G.showPlots) return;
-    const hov = G.mouse.onCanvas ? plotAtCell(...worldToCell(G.mouse.world[0], G.mouse.world[1])) : null;
-    const wantMounts = placing ? b.kind === 'tower' : G.showPlots === 'mounts';
+    const towers = placing ? b.kind === 'tower' : G.showPlots === 'mounts';
+    const [hx, hy] = worldToCell(G.mouse.world[0], G.mouse.world[1]);
+    const corners = (X: number, Y: number, S: number, col: number, a: number) => {
+      g.fillStyle(col, a);
+      for (const [dx, dy, w, h] of [[0, 0, 4, SC], [0, 0, SC, 4], [S - 4, 0, 4, SC], [S - SC, 0, SC, 4], [0, S - SC, 4, SC], [0, S - 4, SC, 4], [S - 4, S - SC, 4, SC], [S - SC, S - 4, SC, 4]]) g.fillRect(X + dx, Y + dy, w, h);
+    };
+    if (towers) {
+      const ok = !placing || G.run.materials >= b.cost;
+      const col = !placing ? 0xc8b890 : ok ? 0x5dff7a : 0xff5050;
+      const hov = placing && G.mouse.onCanvas ? mountAt(hx, hy) : null;
+      for (const p of mountCells()) {
+        const on = hov && hov.id === p.id, X = p.x - 8, Y = p.y - 8;
+        g.fillStyle(col, on ? 0.35 : 0.12); g.fillRect(X + 1, Y + 1, CELL - 2, CELL - 2);
+        corners(X, Y, CELL, col, on ? 1 : 0.7);
+      }
+      if (hov) { const range = TOWERS[b.type].range * (1 + G.run.m.range); this.ellipse(g, hov.x, hov.y, range, range * 0.75, ok ? '#c8ffd0' : '#ff8080', 0.7, 2); }
+      return;
+    }
+    const hov = G.mouse.onCanvas ? plotAtCell(hx, hy) : null;
     for (const p of G.map.plots || []) {
-      if (!!p.mount !== wantMounts) continue;
-      const c = plotContent(p), free = !c.tower && !c.building && !c.ruin && (!p.mount || mountReady(p));
+      const c = plotContent(p), free = !c.tower && !c.building && !c.ruin;
       if (!placing && !free) continue;
       const ok = free && placing && G.run.materials >= b.cost;
       const col = !placing ? 0xc8b890 : !free ? 0x6a645c : ok ? 0x5dff7a : 0xff5050;
       const on = hov === p;
       const X = p.cx * CELL, Y = p.cy * CELL, S = 2 * CELL;
       g.fillStyle(col, on ? 0.3 : free ? 0.14 : 0.06); g.fillRect(X + 1, Y + 1, S - 2, S - 2);
-      g.fillStyle(col, on ? 1 : 0.75);
-      for (const [dx, dy, w, h] of [[0, 0, 5, SC], [0, 0, SC, 5], [S - 5, 0, 5, SC], [S - SC, 0, SC, 5], [0, S - SC, 5, SC], [0, S - 5, SC, 5], [S - 5, S - SC, 5, SC], [S - SC, S - 5, SC, 5]]) g.fillRect(X + dx, Y + dy, w, h);
-      if (on && placing && free && b.kind === 'tower') { const range = TOWERS[b.type].range * (1 + G.run.m.range); this.ellipse(g, p.x, p.y + 6, range, range * 0.75, ok ? '#c8ffd0' : '#ff8080', 0.7, 2); }
+      corners(X, Y, S, col, on ? 1 : 0.75);
     }
   }
 

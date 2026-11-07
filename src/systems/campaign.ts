@@ -10,7 +10,7 @@ import { FORTRESSES } from '../data/world';
 import { msg, lichSay, sfx, hooks } from '../core/events';
 import { generateMap, computeFlow, canBuildAt } from '../world/mapgen';
 import { metaLv, fb, recalcKeep, squadSize, globalDmg, computeFervor, bountyMult, ascSouls, recalcAllStats, bld } from './stats';
-import { materialsIncome, rebuildRuins, spawnBuilding, plotById } from './keep';
+import { materialsIncome, rebuildRuins, spawnBuilding, plotById, mountAt } from './keep';
 import { START_MATERIALS } from '../data/buildings';
 import { WALL_TIERS } from '../data/towers';
 import { upgradeSite } from './ramparts';
@@ -66,8 +66,8 @@ export function newCampaign(fortKey: string) {
   msg(`Your host rises: ${roster.map(t => UNITS[t].tiers[0].name).join(', ')}.`, PAL.necro);
   for (let i = 0; i < metaLv('m_start'); i++) { const t = randomUnitType(false, 3); if (t) spawnSquad(t, KEEP.x1 + 40, KEEP.y + rnd(-50, 50)); }
   if (metaLv('f_free')) { // a Bone Palisade on the Curtain's gate segment with a Necrotic Spire on top
-    const site = G.map.sites.find((s: any) => s.id === 'keep_g'), mount = G.map.plots.find((p: any) => p.mount === 'keep_g');
-    if (site && mount) { G.run.materials += WALL_TIERS[1].mat; upgradeSite(site); placeTower('necrotic', mount.cx, mount.cy, 0, { plot: mount.id, matInvested: 5 }); }
+    const site = G.map.sites.find((s: any) => s.id === 'keep_g');
+    if (site) { G.run.materials += WALL_TIERS[1].mat; upgradeSite(site); const [mx, my] = site.cells[site.cells.length >> 1], mount = mountAt(mx, my); if (mount) placeTower('necrotic', mount.cx, mount.cy, 0, { plot: mount.id, matInvested: 3 }); }
   }
   G.phase = 'prep'; G.speed = 1; G.paused = false;
   G.camera.x = KEEP.x1 + 160; G.camera.y = KEEP.y;
@@ -118,8 +118,9 @@ export function spawnSquad(type: string, x: number, y: number, opts: any = {}) {
  *  a full squad of it rises immediately. */
 export function lockedUnitTypes(): string[] { return UNIT_ORDER.filter(k => !G.run.unlockedUnits.includes(k)); }
 export function unearthUnit(type: string): boolean {
-  const r = G.run, c = unearthCost(r);
+  const r = G.run;
   if (!UNITS[type] || r.unlockedUnits.includes(type)) return false;
+  const c = unearthCost(r, type);
   if (r.souls < c) { sfx('error'); return false; }
   r.souls -= c; r.unearthed = (r.unearthed || 0) + 1;
   r.unlockedUnits.push(type);

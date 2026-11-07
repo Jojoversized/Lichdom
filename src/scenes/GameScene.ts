@@ -10,7 +10,7 @@ import { stepVisual } from '../systems/fx';
 import { placeFort } from '../systems/combat';
 import { canBuildAt, worldToCell, cellIdx, generateMap, siteAtCell, plotAtCell } from '../world/mapgen';
 import { upgradeSite, siteById } from '../systems/ramparts';
-import { constructTower, constructBuilding } from '../systems/keep';
+import { constructTower, constructBuilding, mountAt } from '../systems/keep';
 import { loadMeta, saveRun, saveMeta, saveRunSoon } from '../systems/save';
 import { UI } from '../ui/ui';
 import { initAudio, startMusic } from '../audio/audio';
@@ -117,8 +117,8 @@ export class GameScene extends Phaser.Scene {
     if (b.kind === 'spell') { if (castSpell(b.type, wx, wy)) G.build = null; return; }
     if (b.kind === 'tower' || b.kind === 'building') {
       if (painting) return;
-      const p = plotAtCell(...worldToCell(wx, wy));
-      if (!p) { hooks.sfx('error'); hooks.msg(b.kind === 'tower' ? 'Towers stand on top of the ramparts: pick the mount of a built wall segment.' : 'Buildings rise on the foundations behind the walls.', '#c8b890'); return; }
+      const p = b.kind === 'tower' ? mountAt(...worldToCell(wx, wy)) : plotAtCell(...worldToCell(wx, wy));
+      if (!p) { hooks.sfx('error'); hooks.msg(b.kind === 'tower' ? 'Towers stand on top of built ramparts, at least two sections apart.' : 'Buildings rise on the foundations behind the walls.', '#c8b890'); return; }
       const made = b.kind === 'tower' ? constructTower(b.type, p) : constructBuilding(b.type, p);
       if (made) { G.build = null; G.selected = made; UI.infoKey = ''; UI.renderBuild(); saveRunSoon(); }
       return;
@@ -145,6 +145,9 @@ export class GameScene extends Phaser.Scene {
 
   selectAt(wx: number, wy: number) {
     const [cx, cy] = worldToCell(wx, wy + 6);
+    // towers on the ramparts claim no cells: pick them by their sprite (they stand above the wall)
+    const mt = G.towers.find((t: any) => t.mount && !t.dead && Math.abs(wx - t.x) < 11 && wy > t.y - 48 && wy < t.y + 8);
+    if (mt) { G.selected = mt; UI.infoKey = ''; hooks.sfx('click'); return; }
     const s = G.map.struct[cellIdx(cx, cy)] || G.map.struct[cellIdx(...worldToCell(wx, wy + 16))];
     if (s && s.site) { G.selected = siteSel(s.site); UI.infoKey = ''; hooks.sfx('click'); return; }
     if (s) { G.selected = s; UI.infoKey = ''; hooks.sfx('click'); return; }

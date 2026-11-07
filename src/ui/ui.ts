@@ -459,11 +459,11 @@ export const UI: any = {
 
   /** Soul Well → Unearth a Crypt: choose which locked undead type to unlock (and raise a squad of). */
   showUnearth(back?: () => void) {
-    const r = G.run, cost = unearthCost(r), locked = lockedUnitTypes();
+    const r = G.run, locked = lockedUnitTypes(), price = (k: string) => unearthCost(r, k);
     const m = this.openModal(`<h2>${icon('raise', 2, 'pix')} Unearth a Crypt</h2>
-      <div class="dim center">Unlock one undead type for recruiting — a full squad rises at once. Cost ${SOUL()} <b>${fmt(cost)}</b> (you have ${fmt(r.souls)}). Each crypt opened costs more.<br>Hover for a summary · right-click for full details.</div>
-      <div class="ugrid">${locked.map(k => { const d = UNITS[k]; return `<button class="ucard ${cost > r.souls ? 'poor' : ''}" data-u="${k}">
-        <div class="uart">${spriteIcon(d.tiers[0].spr, 0, 72)}</div><div class="uname">${d.tiers[0].name}</div><div class="urole">${unitRole(k)}</div>
+      <div class="dim center">Unlock one undead type for recruiting — a full squad rises at once. Stronger undead cost more to unearth; each crypt opened raises every price. You have ${SOUL()} <b>${fmt(r.souls)}</b>.<br>Hover for a summary · right-click for full details.</div>
+      <div class="ugrid">${locked.map(k => { const d = UNITS[k]; return `<button class="ucard ${price(k) > r.souls ? 'poor' : ''}" data-u="${k}">
+        <div class="uart">${spriteIcon(d.tiers[0].spr, 0, 72)}</div><div class="uname">${d.tiers[0].name}</div><div class="ucost">${SOUL()} ${fmt(price(k))}</div><div class="urole">${unitRole(k)}</div>
         <div class="ustat">${statBars(k, true)}</div><div class="udesc">${d.desc}</div></button>`; }).join('')}</div>
       <div class="center"><button class="btn" id="u-back">${back ? '← Back to the Soul Well' : 'Close'}</button></div>`, 'unearthm');
     m.querySelectorAll('.ucard').forEach((b: HTMLElement) => {

@@ -106,7 +106,7 @@ Imported AI art never overwrites generated assets. It is layered at boot:
   the generated `src/data/fortress_fit.ts` (per-row wall face = solid cells; torch/window/portcullis lights detected by
   colour — flames have g/r < 0.65, the yellowed bones must not glow). Gameplay geometry (gate, Curtain/Bulwark arcs,
   defence radius, KEEP gate cells, Soul Well) is in `src/data/fortress.ts`, `config/constants.ts` and
-  `makeWallSites`/`makeMounts`/`makePlots` in mapgen.
+  `makeWallSites`/`makePlots` in mapgen; tower mounts are made on demand (`mountAt` in systems/keep.ts).
   Composition prompts that worked: "flat map view, no horizon", wall "shaped like a ')' bracket from the very top
   edge to the very bottom edge" (a plain "three-quarter angle" prompt gives isometric perspective shots).
 - Batch workflow that works: in the 'Undead lich army pixel art' session, *Edit prompt* on an earlier entry (keeps
@@ -161,6 +161,10 @@ Key rules:
 - After any change: typecheck, run smoke + ui_flow, run the bot for balance changes, update `docs/CHECKLIST.md`.
 
 ## Current status
+
+v0.7.2 — wider wall rings and defence zone (the host answers ranged foes shooting into it), towers on any built rampart
+section, faster materials (cheaper towers, dearer buildings), Soul Well crypts priced by unit strength, Ossuary Expansion
+removed (squad size only from level-up cards).
 
 v0.7.1 — fortress art at its original proportions (no warping), correct torch/window lights; **gate-centred defence**:
 Curtain + Bulwark rampart arcs around the gatehouse (materials), **towers stand on top of built wall segments**,

@@ -15,9 +15,9 @@ export const VIEW_TARGET_W = 480, VIEW_TARGET_H = 270;
  *  the flow-field goal and the anchor for spawns and spells. */
 export const KEEP = { x: 208, y: 408, x0: 160, x1: 256, y0: 384, y1: 432, cx0: 10, cx1: 15, cy0: 24, cy1: 26 };
 /** The Soul Well stands behind the walls, between the Curtain and the Bulwark, north of the gate. */
-export const WELL_POS = { x: 352, y: 290, cx0: 21, cx1: 23, cy0: 16, cy1: 18 };
+export const WELL_POS = { x: 376, y: 240, cx0: 22, cx1: 24, cy0: 13, cy1: 15 };
 /** Where idle undead form up: a line in front of the keep gate. */
-export const GUARD_LINE_X = 400;
+export const GUARD_LINE_X = 460;
 
 export interface Lane { id: string; name: string; cy: number; minWave: number; }
 export const LANES: Lane[] = [

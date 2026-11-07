@@ -82,8 +82,17 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 - [ ] Keep damage states on the fortress art (cracks/fires as keep HP drops)
 - [ ] Enemy art (Dreamina) — next
 
+## Defence & economy tuning (v0.7.2)
+- [x] Wider rings: Curtain R 140, Bulwark R 290 (4 segments; the south one leaves the map); defence zone = Bulwark + 64 px
+- [x] **Ranged foes can't snipe the host**: a foe is engaged when it stands in the zone *or its attack range reaches into it* (`threatensZone`); units may chase such foes 40 px further
+- [x] **Towers anywhere on a built rampart**: any wall cell of a built segment can take a tower (mounts made on demand, `mountAt`/`mountCells`, id `m_<cx>_<cy>`), at least 2 cells from another tower; mounted towers are selectable by their sprite
+- [x] Materials: income 2 + 1 per 6 waves (+4 for a boss); towers ≈ 40% cheaper (3–5 to build, 5–7 / 8–11 upgrades); buildings ≈ 60% dearer (10–15 / 17–24 / 27–35)
+- [x] **Soul Well**: Unearth a Crypt is priced per type — (120 + 1.7 × the unit's squad cost + 250 per crypt opened) × 1.07^wave (zombies ≈ 340, golems ≈ 1,480 at wave 1); the picker shows each price. Ossuary Expansion (+1 per squad) removed from the Well — that bonus comes only from the Mass Graves / Necropolis level-up cards
+- [x] Bot (no meta, 3 runs): waves 23–27 (v0.7.1: 30+) — hosts are ~40% smaller by wave 25 without Ossuary Expansion and cheap elite crypts; the bot now spends materials mostly on towers (10–13 by wave 25)
+- [ ] Watch difficulty after the snowball nerfs; if early-mid game feels too hard, ease Fervor growth or wave size rather than restoring the Well
+
 ## Towers on the ramparts (v0.7.1)
-- [x] Every rampart segment has a **mount** (a plot with `mount` = site id, centred on the segment's middle cell): once the segment is built, a tower can be placed on it (materials, same `TOWER_MAT` costs and upgrades). Mounted towers claim no pathing cells (the wall blocks), draw on the battlements above the wall blocks, and fall to a ruin that is rebuilt after the wave as before
+- [x] Towers on built rampart segments (v0.7.2: on any section, see above) (materials, same `TOWER_MAT` costs and upgrades). Mounted towers claim no pathing cells (the wall blocks), draw on the battlements above the wall blocks, and fall to a ruin that is rebuilt after the wave as before
 - [x] Buildings only on the foundations behind the walls; towers only on mounts (Towers tab shows mounts, Buildings tab shows foundations)
 - [x] **Ramparts cost materials** (flat per segment: Palisade 2, Stone 3, Bone Rampart 5); repairs still cost souls. Start materials 6 → 10 (a wall segment and a tower before wave 1)
 - [x] Regression: smoke + ui_flow pass; bot (no meta, 3 runs) all reach wave 30 with the keep intact (towers on walls + the host holding the gate)

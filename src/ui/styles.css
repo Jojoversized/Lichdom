@@ -196,3 +196,4 @@ img.pixd { image-rendering: auto; vertical-align: middle; }
 /* v0.6 materials */
 .bcost.mat { color: #e6d6ac; }
 #buildlist .bnote b { color: #e8dcc0; }
+.ucard .ucost { color: #c8b890; font-size: 12px; margin: 2px 0; }
