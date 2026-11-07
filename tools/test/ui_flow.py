@@ -64,7 +64,10 @@ with sync_playwright() as p:
     wl = pg.evaluate("() => window.__LICH.G.run.walls"); print('ramparts:', wl); assert wl.get('wall_2') == 2
     shot(pg, 'c3_ramparts')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
-    pg.click('#b-wave'); pg.wait_for_timeout(6000); shot(pg, 'd_wave')
+    pg.click('#b-wave'); pg.wait_for_timeout(400); shot(pg, 'd0_crusade')
+    print('crusade offer:', pg.evaluate("() => window.__LICH.G.crusadeOffer.waves.map(w => w.total)"))
+    pg.click('.card.crusade >> nth=2'); pg.wait_for_timeout(6000); shot(pg, 'd_wave')
+    print('wave tier:', pg.evaluate("() => window.__LICH.G.wave && window.__LICH.G.wave.tier"))
     # force level up, check modal covers HUD
     pg.evaluate("() => { window.__LICH.G.run.pendingLevels = 1; }"); pg.wait_for_timeout(500); shot(pg, 'e_levelup')
     pg.keyboard.press('2'); pg.wait_for_timeout(200)

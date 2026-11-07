@@ -82,6 +82,14 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 - [ ] Keep damage states on the fortress art (cracks/fires as keep HP drops)
 - [ ] Enemy art (Dreamina) — next
 
+## Roguelite layer (v0.8)
+- [x] **Crusade choice before every wave** (`data/events.ts` `CRUSADE_TIERS`, `crusadeOffer`/`startWave(tier)` in campaign.ts): Skirmish (×0.6 soldiers, ×0.6 souls, −1 material), Crusade (baseline), Holy War (×1.5 soldiers, +15% health, ×1.8 souls, +3 materials). Each option is its own rolled wave (theme, top enemy types shown with counts, boss); kills and the wave bonus pay ×reward. Auto-start, Enter-less starts and the bot use the last choice (default Crusade)
+- [x] **Story events every 3 waves** (`EVENTS`, `systems/events.ts`): 6 events × 3 choices — A Village Burns (materials / soul tithe over 5 waves / massacre: a random horde split body-by-body across your undead types), The Forsaken Chapel, Deserters at the Crossroads, A Rival Necromancer, The Plague Wagon, An Abandoned Siege Camp. Effects: materials, souls, tithes, random hordes, spirits, level-ups, curses on the crusade (smaller / weaker for N waves), war buffs, permanent boons with a price, unit unlocks. Unseen events first; numbers scale with the wave; the result text is shown before play resumes
+- [x] Run state `run.rogue` (tithes, curses, buffs, last tier, pending event) — saved with the run; older saves get defaults
+- [x] Bot (no meta, baseline crusades, random event choices): waves 30 / 29 / 30 (v0.7.2 without events: 23–27)
+- [ ] More events (and rarer, stranger ones late in a campaign); event art; event outcomes that depend on luck
+- [ ] Show active tithes / curses / war buffs in the HUD
+
 ## Defence & economy tuning (v0.7.2)
 - [x] Wider rings: Curtain R 140, Bulwark R 290 (4 segments; the south one leaves the map); defence zone = Bulwark + 64 px
 - [x] **Ranged foes can't snipe the host**: a foe is engaged when it stands in the zone *or its attack range reaches into it* (`threatensZone`); units may chase such foes 40 px further

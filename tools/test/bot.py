@@ -11,7 +11,7 @@ BOT = r"""
   const L = window.__LICH, G = L.G;
   if (metamax) for (const m of Object.values(L.META_BY_ID || {})) G.meta.lv[m.id] = m.max;
   L.newCampaign('haunted');
-  const log = []; const t0 = performance.now(); let guard = 0, dupes = 0;
+  const log = []; const t0 = performance.now(); let guard = 0, dupes = 0; const evlog = [];
   function build() {
     const r = G.run;
     let tries = 0;
@@ -50,6 +50,7 @@ BOT = r"""
   }
   while (G.phase !== 'over' && G.run.wave < maxWave && guard++ < 400000) {
     if (G.run.pendingLevels > 0) { const c = L.rollCards(3); if (!L.offerIsClean(c)) dupes++; if (c.length) L.applyCard(c[Math.floor(Math.random() * c.length)]); G.run.pendingLevels--; continue; }
+    if (G.phase === 'prep' && L.pendingEvent()) { const ev = L.pendingEvent(); evlog.push(ev.id); L.resolveEvent(Math.floor(Math.random() * 3)); continue; }
     if (G.phase === 'prep') {
       build();
       log.push({ w: G.run.wave, keep: Math.round(G.keep.hp), souls: Math.round(G.run.souls), lvl: G.run.level, towers: G.towers.length, mat: G.run.materials, blds: G.buildings.map(b => b.type + (b.tier + 1)).join(','), units: G.units.length, kinds: G.run.unlockedUnits.length, kills: G.run.kills, fervor: +(G.run.fervor || 1).toFixed(2), ms: Math.round(performance.now() - t0) });
@@ -58,7 +59,7 @@ BOT = r"""
     for (const s of G.run.spells) if (L.canCast(s) && G.enemies.length > 8) { const e = G.enemies[0]; L.castSpell(s, e.x, e.y); }
     L.step(1 / 30); L.stepVisual(1 / 30, 186, 416);
   }
-  return { log, dupes, phase: G.phase, wave: G.run.wave, keep: Math.round(G.keep.hp), ms: Math.round(performance.now() - t0) };
+  return { log, dupes, events: evlog.join(','), phase: G.phase, wave: G.run.wave, keep: Math.round(G.keep.hp), ms: Math.round(performance.now() - t0) };
 }
 """
 errs = []

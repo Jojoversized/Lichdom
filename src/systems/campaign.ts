@@ -14,6 +14,8 @@ import { materialsIncome, rebuildRuins, spawnBuilding, plotById, mountAt } from 
 import { START_MATERIALS } from '../data/buildings';
 import { WALL_TIERS } from '../data/towers';
 import { upgradeSite } from './ramparts';
+import { CRUSADE_TIERS } from '../data/events';
+import { rogue, tierMods, waveMods, afterWave, stepRogue } from './events';
 import {
   spawnUnit, spawnSummon, spawnEnemy, placeTower, placeFort, fireProjectile, aoeDamage, dealDamage, addHazard, raiseCorpse,
   updateProjectiles, updateHazards, bakeCorpse, NEUTRAL_SRC,
@@ -191,7 +193,7 @@ function computeAdapt() {
   return a;
 }
 
-export function genWave(n: number) {
+export function genWave(n: number, tier = 1) {
   const boss = BOSSES.find(b => b.wave === n) || (n > 60 && n % 10 === 0 ? Object.assign({}, BOSSES[(n / 10 - 1) % 6], { wave: n, ascended: true }) : null);
   const lanes = LANES.filter(l => l.minWave <= n).map(l => l.id);
   const themes = THEMES.filter(t => !t.min || t.min <= n);
@@ -216,7 +218,8 @@ export function genWave(n: number) {
   const roll = () => { let x = Math.random() * wTot; for (let i = 0; i < types.length; i++) { x -= weights[i]; if (x <= 0) return types[i]; } return types[0]; };
   // incremental: armies grow steadily in size, then strength scales on top
   let count = Math.floor((10 + n * 2.2 + Math.pow(n, 1.25) * 0.6) * (theme.swarm ? 1.3 : theme.elite ? 0.6 : 1) * (boss ? 0.7 : 1));
-  count = Math.min(count, 260);
+  const tm = tierMods(tier);
+  count = Math.max(4, Math.round(Math.min(count, 260) * tm.count));
   const spawns: any[] = [];
   let t = 1.5;
   while (spawns.length < count) {
@@ -228,24 +231,35 @@ export function genWave(n: number) {
   if (n % 5 === 0 && !boss) { const el = types.filter(k => ENEMIES[k].bounty >= 10 && !ENEMIES[k].structOnly); spawns.push({ t: t * 0.5, type: el.length ? pick(el) : 'footman', lane: pick(lanes), champion: true }); }
   if (boss) spawns.push({ t: Math.max(4, t * 0.35), boss, lane: 'E' });
   spawns.sort((a, b) => a.t - b.t);
-  return { n, spawns, idx: 0, t: 0, theme, boss, total: spawns.length, keepDamaged: false, fallen: [] as any[] };
+  return { n, spawns, idx: 0, t: 0, theme, boss, total: spawns.length, keepDamaged: false, fallen: [] as any[], tier };
 }
 export function previewWave(n: number) {
   const boss: any = BOSSES.find(b => b.wave === n) || (n > 60 && n % 10 === 0);
   return { boss: boss ? (boss.name || 'Ascended Champion') : null, newLane: LANES.find(l => l.minWave === n && n > 1) };
 }
 
-export function startWave() {
+/** The three crusades offered for the next wave (rolled once per wave, kept until one is chosen). */
+export function crusadeOffer() {
+  const r = G.run, n = r.wave + 1;
+  if (!G.crusadeOffer || G.crusadeOffer.n !== n) G.crusadeOffer = { n, waves: [0, 1, 2].map(t => genWave(n, t)) };
+  return G.crusadeOffer;
+}
+/** Starts the next wave against crusade `tier` (0 Skirmish, 1 Crusade, 2 Holy War; default: the last choice). */
+export function startWave(tier?: number) {
   if (G.phase !== 'prep') return;
-  const r = G.run;
+  const r = G.run, ro = rogue();
+  tier = tier ?? ro.lastTier ?? 1;
+  ro.lastTier = tier;
   r.wave++;
   r.spellsCastWave = 0;
   r.fervor = computeFervor();
-  G.wave = genWave(r.wave);
+  const off = G.crusadeOffer && G.crusadeOffer.n === r.wave ? G.crusadeOffer.waves[tier] : null;
+  G.wave = off || genWave(r.wave, tier);
+  G.crusadeOffer = null;
   G.phase = 'wave'; G.autoT = 0;
   const nl = LANES.find(l => l.minWave === r.wave);
   if (nl && r.wave > 1) msg(`A new approach opens: the ${nl.name}!`, '#ffb060');
-  msg(`Wave ${r.wave}: ${G.wave.theme.name}${r.fervor > 1.05 ? ` (Crusade Fervor ×${r.fervor.toFixed(2)})` : ''}`, '#e0d0b0');
+  msg(`Wave ${r.wave}: ${CRUSADE_TIERS[tier].name} — ${G.wave.theme.name}${r.fervor > 1.05 ? ` (Crusade Fervor ×${r.fervor.toFixed(2)})` : ''}`, '#e0d0b0');
   if (!G.wave.boss) lichSay('wave');
   sfx('horn', 0.7);
   saveRun();
@@ -280,12 +294,13 @@ function reviveFallen() {
 function waveCleared() {
   const r = G.run;
   G.phase = 'prep';
-  const bonus = Math.round((40 + r.wave * 10) * bountyMult(r.wave) * (1 + metaLv('s_gain') * 0.1 + fb('souls')) * ascSouls());
+  const wm = waveMods();
+  const bonus = Math.round((40 + r.wave * 10) * bountyMult(r.wave) * (1 + metaLv('s_gain') * 0.1 + fb('souls')) * ascSouls() * wm.reward);
   r.souls += bonus;
   let interest = 0;
   if (metaLv('s_interest')) { interest = Math.min(Math.round(metaLv('s_interest') * 80 * bountyMult(r.wave)), Math.floor(r.souls * metaLv('s_interest') * 0.03)); r.souls += interest; }
   const revived = reviveFallen();
-  const mats = materialsIncome(r.wave, !!(G.wave && G.wave.boss));
+  const mats = Math.max(1, materialsIncome(r.wave, !!(G.wave && G.wave.boss)) + wm.mats);
   r.materials += mats;
   const rebuilt = rebuildRuins();
   msg(`Wave ${r.wave} repelled. +${bonus} souls, +${mats} materials${interest ? `, +${interest} interest` : ''}${revived ? ` · ${revived} fallen undead rise again` : ''}${rebuilt ? ` · ${rebuilt} tower${rebuilt > 1 ? 's' : ''} rebuilt` : ''}.`, PAL.necro);
@@ -294,6 +309,7 @@ function waveCleared() {
   G.keep.hp = Math.min(G.keep.maxHp, G.keep.hp + G.keep.maxHp * 0.1);
   G.units.forEach((u: any) => { u.hp = u.maxHp; u.retreat = false; });
   G.bossBar = null;
+  afterWave();
   if (Math.random() < 0.5) lichSay('waveClear');
   checkAchievements();
   saveRun(); saveMeta();
@@ -435,6 +451,7 @@ export function step(dt: number) {
   updateProjectiles(dt);
   updateWaveFx(dt);
   updateStorm(dt);
+  stepRogue(dt);
   if (G.tdT > 0) G.tdT -= dt;
   if (G.frenzyT > 0) G.frenzyT -= dt;
   if (G.keep.ward > 0) G.keep.ward -= dt;

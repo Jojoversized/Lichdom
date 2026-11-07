@@ -12,13 +12,15 @@ import { BUILDINGS, BUILDING_ORDER, TOWER_MAT } from '../data/buildings';
 import { bld, towerMatCost, towerUpgradeCost, upgradeTowerMat, demolishTower, buildingUpgradeCost, upgradeBuilding, materialsIncome } from '../systems/keep';
 import { UNITS, UNIT_ORDER, SUMMONS } from '../data/units';
 import { unearthCost, SPELLS, SPELL_ORDER, WELL } from '../data/spells';
+import { CRUSADE_TIERS } from '../data/events';
+import { rogue, pendingEvent, resolveEvent } from '../systems/events';
 import { ENEMIES, BOSSES } from '../data/enemies';
 import { META, META_BRANCHES, META_BY_ID, metaCost, ACHIEVEMENTS, CONTENT_GATES } from '../data/meta';
 import { FORTRESSES } from '../data/world';
 import { RARITY, rollCards, applyCard } from '../systems/cards';
 import { metaLv, contentAvailable, towerStats, recruitCost, fortCost, squadSize, applyUnitStats, towerMaxHp } from '../systems/stats';
 import { spawnUnit, removeStructure, addRing, explosion } from '../systems/combat';
-import { spawnSquad, unearthUnit, lockedUnitTypes, startWave, previewWave, castSpell, canCast, spellCd, buyWell, wellCost, wellAvailable, newCampaign, loadRun } from '../systems/campaign';
+import { spawnSquad, unearthUnit, lockedUnitTypes, startWave, crusadeOffer, previewWave, castSpell, canCast, spellCd, buyWell, wellCost, wellAvailable, newCampaign, loadRun } from '../systems/campaign';
 import { essenceBreakdown, buyMeta, endCampaign, checkAchievements, codexSee } from '../systems/progression';
 import { saveRun, saveRunSoon, saveMeta, saveMetaSoon, hasRunSave, clearRunSave, loadMeta, store, SAVE_META, SAVE_RUN } from '../systems/save';
 import { startMusic, applyMusicVolume } from '../audio/audio';
@@ -106,7 +108,7 @@ export const UI: any = {
     });
     $('#b-collapse').onclick = () => { this.collapsed = !this.collapsed; sfx('click'); this.renderBuild(); };
     ui.querySelectorAll('.speed button').forEach((b: HTMLElement) => b.onclick = () => { const s = +b.dataset.speed; if (s === 0) G.paused = !G.paused; else { G.speed = s; G.paused = false; } sfx('click'); this.updateSpeed(); });
-    $('#b-wave').onclick = () => { if (G.phase === 'prep') { startWave(); this.renderBuild(); } };
+    $('#b-wave').onclick = () => { if (G.phase === 'prep') this.showCrusade(); };
     $('#b-well').onclick = () => this.showWell();
     $('#b-menu').onclick = () => this.showPause();
     ui.addEventListener('mouseover', (e: any) => { const t = e.target.closest('[data-tip]'); if (t && t.dataset.tip !== 'x') this.showTip(t, this.tipFor(t)); });
@@ -251,7 +253,7 @@ export const UI: any = {
       }
       const locked = TOWER_ORDER.filter(t => !r.unlockedTowers.includes(t)).length;
       if (locked) L.appendChild(h('div', 'bnote', `${locked} more tower${locked > 1 ? 's' : ''} can be unlocked through level-ups${TOWER_ORDER.some(t => !contentAvailable('tower', t)) ? ' and the Phylactery' : ''}. Towers cost ${MAT()} materials, earned after each wave.`));
-      L.appendChild(h('div', 'bnote', `Towers stand on top of the ramparts: build a wall segment first (Fortify tab), then place a tower on its mount.`));
+      L.appendChild(h('div', 'bnote', `Towers stand on top of the ramparts: build a wall segment first (Fortify tab), then place a tower on any section of it.`));
     } else if (this.tab === 'buildings') {
       for (const k of BUILDING_ORDER) {
         const d = BUILDINGS[k], lv = bld(k), ent = G.buildings.find((o: any) => o.type === k);
@@ -393,6 +395,49 @@ export const UI: any = {
     return m;
   },
   closeModal() { const m = $('#modal'); m.className = 'hidden'; m.innerHTML = ''; G.modal = null; document.body.classList.remove('modal-open'); },
+
+  /** Before every wave: choose which crusade marches (smaller / baseline / larger, each with its own theme). */
+  showCrusade() {
+    if (!G.run || G.phase !== 'prep' || G.modal) return;
+    const r = G.run, off = crusadeOffer(), ro = rogue();
+    const colors = ['#8fb4c8', '#d8cfb4', '#ff8a5a'];
+    const curse = ro.curses.length ? `<div class="center good">The crusade is weakened: ${ro.curses.map((c: any) => [c.count < 1 ? `${Math.round((1 - c.count) * 100)}% smaller` : '', c.hp < 1 ? `${Math.round((1 - c.hp) * 100)}% less health` : ''].filter(Boolean).join(', ') + ` (${c.waves} wave${c.waves > 1 ? 's' : ''})`).join(' · ')}</div>` : '';
+    const m = this.openModal(`<h2>${icon('rally', 2, 'pix')} Wave ${off.n}: Which Crusade Marches?</h2>
+      <div class="center dim">Scouts report three hosts gathering in the east. Choose the one you will face — the greater the host, the greater the spoils.</div>${curse}
+      <div class="cards">${off.waves.map((W: any, i: number) => {
+        const t = CRUSADE_TIERS[i], counts: Record<string, number> = {};
+        for (const s of W.spawns) if (s.type) counts[s.type] = (counts[s.type] || 0) + 1;
+        const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 4);
+        const rew = [t.reward !== 1 ? `${SOUL()} souls ×${t.reward}` : `${SOUL()} souls ×1`, t.mats ? `${MAT()} ${t.mats > 0 ? '+' : ''}${t.mats} materials` : `${MAT()} materials as usual`].join('<br>');
+        return `<div class="card crusade" data-i="${i}" style="--rc:${colors[i]}"><div class="rar">${i === 1 ? 'Baseline' : i === 0 ? 'Fewer · leaner spoils' : 'More · richer spoils'}</div>
+          <div class="cname">${t.name}</div><div class="cdesc">${t.desc}</div>
+          <div class="cstat"><b>${W.total}</b> soldiers${t.hp !== 1 ? ` · <b>+${Math.round((t.hp - 1) * 100)}%</b> health` : ''}<br><span class="dim">${W.theme.name}</span>${W.boss ? `<br><b class="bad">Boss: ${W.boss.name}</b>` : ''}</div>
+          <div class="cfoes">${top.map(([k, c]) => `<span title="${ENEMIES[k].name}">${spriteIcon(k, 0, 34)}<i>${c}</i></span>`).join('')}</div>
+          <div class="crew">${rew}</div><div class="key">${i + 1}</div></div>`;
+      }).join('')}</div>`, 'levelup crusadem');
+    m.querySelectorAll('.card.crusade').forEach((el: HTMLElement) => el.onclick = () => this.pickCrusade(+el.dataset.i));
+  },
+  pickCrusade(i: number) {
+    if (!G.run || G.phase !== 'prep') return;
+    this.closeModal();
+    startWave(i); this.renderBuild(); sfx('click');
+  },
+  /** Every few waves: a story event with three choices; the result is shown before play resumes. */
+  showEvent() {
+    const ev = pendingEvent(); if (!ev || G.modal) return;
+    const m = this.openModal(`<h2>${icon(ev.icon, 2, 'pix')} ${ev.title}</h2><div class="evtext">${ev.text}</div>
+      <div class="evchoices">${ev.choices.map((c, i) => `<button class="evchoice" data-i="${i}"><span class="key">${i + 1}</span><b>${c.label}</b><small>${c.hint}</small></button>`).join('')}</div>`, 'eventm', false);
+    m.querySelectorAll('.evchoice').forEach((el: HTMLElement) => el.onclick = () => this.pickEvent(+el.dataset.i));
+  },
+  pickEvent(i: number) {
+    const ev = pendingEvent(); if (!ev) return;
+    const text = resolveEvent(i);
+    this.closeModal();
+    const m = this.openModal(`<h2>${icon(ev.icon, 2, 'pix')} ${ev.title}</h2><div class="evtext"><b>${ev.choices[i].label}.</b> ${text}</div>
+      <div class="center"><button class="btn" id="ev-ok">Continue</button></div>`, 'eventm');
+    $('#ev-ok').onclick = () => this.closeModal();
+    this.renderBuild(); saveRunSoon();
+  },
 
   showLevelUp() {
     const r = G.run;
@@ -640,6 +685,8 @@ export const UI: any = {
       keys[e.key.toLowerCase()] = true;
       if (G.phase === 'menu') return;
       if (G.modal === 'levelup' && ['1', '2', '3'].includes(e.key)) { this.pickCard(+e.key - 1); return; }
+      if (G.modal === 'levelup crusadem' && ['1', '2', '3'].includes(e.key)) { this.pickCrusade(+e.key - 1); return; }
+      if (G.modal === 'eventm' && pendingEvent() && ['1', '2', '3'].includes(e.key)) { this.pickEvent(+e.key - 1); return; }
       if (e.key === 'Escape') {
         if (G.modal && G.modal !== 'levelup') this.closeModal();
         else if (this.screenOpen() && G.phase !== 'over') this.closeScreen();
@@ -653,7 +700,7 @@ export const UI: any = {
       const k = e.key.toLowerCase();
       if (k === 'f') { G.speed = G.speed >= 4 ? 1 : G.speed * 2; G.paused = false; this.updateSpeed(); }
       if (k === 'b') { this.collapsed = !this.collapsed; this.renderBuild(); }
-      if (e.key === 'Enter' && G.phase === 'prep') startWave();
+      if (e.key === 'Enter' && G.phase === 'prep' && !G.modal) this.showCrusade();
       if (k === 'e') this.showWell();
       if (/^[1-8]$/.test(e.key)) { const id = G.run.spells[+e.key - 1]; if (id) this.trySpell(id); }
     });

@@ -131,6 +131,7 @@ src/
     ai.ts                 mortal AI, autonomous undead army planner, towers, forts, the Lich
     campaign.ts           new/load campaign, wave generation, wave-end revival, spells, Soul Well, step()
     cards.ts              level-up card pool
+    events.ts             roguelite layer: crusade tiers, story events, tithes/curses/war buffs
     progression.ts        XP, codex, achievements, bosses slain, defeat/essence, meta purchases
     bosses.ts             boss abilities/intros
     fx.ts                 particle/ring/bolt/text data (+ visual step)
@@ -161,6 +162,9 @@ Key rules:
 - After any change: typecheck, run smoke + ui_flow, run the bot for balance changes, update `docs/CHECKLIST.md`.
 
 ## Current status
+
+v0.8 — **roguelite layer**: choose the crusade before every wave (Skirmish / Crusade / Holy War: size vs. spoils) and a
+story event with three choices every 3 waves (`data/events.ts`, `systems/events.ts`, state in `run.rogue`).
 
 v0.7.2 — wider wall rings and defence zone (the host answers ranged foes shooting into it), towers on any built rampart
 section, faster materials (cheaper towers, dearer buildings), Soul Well crypts priced by unit strength, Ossuary Expansion

@@ -9,6 +9,7 @@ import { TOWERS, FORTS } from '../data/towers';
 import { msg, lichSay, sfx } from '../core/events';
 import { addParticle, spawnBurst, addRing, addFlash, addText, addSoulParticle, explosion, lightningBolt, stampDecal } from './fx';
 import { applyUnitStats, towerMaxHp, fortMaxHp, metaLv, fb, globalDmg, dtypeMult, towerStats, waveHpMult, waveDmgMult, bountyMult, ascSouls } from './stats';
+import { waveMods } from './events';
 import { SHEETS } from '../config/manifest';
 import { cellIdx } from '../world/mapgen';
 import { gainXp, codexSee, bossKilled, keepFallen } from './progression';
@@ -73,11 +74,11 @@ export function spawnEnemy(type: string | null, lane: string, opts: any = {}): E
   const n = G.run.wave;
   const fervor = G.run.fervor || 1;
   const e = Object.assign(baseEnt('enemy', p.x, p.y), { type: isBoss ? d.id : type!, def: d, team: 'm' as const, flying: !!d.flying, lane });
-  const hpM = waveHpMult(n) * fervor * (opts.champion ? 5 : 1);
+  const hpM = waveHpMult(n) * fervor * (opts.champion ? 5 : 1) * waveMods().hp;
   const dmgM = waveDmgMult(n) * Math.sqrt(fervor) * (opts.champion ? 1.6 : 1);
   if (isBoss) {
     const extra = Math.max(0, n - d.wave);
-    e.maxHp = e.hp = Math.round(d.hp * waveHpMult(n) / waveHpMult(d.wave) * (1 + extra * 0.05) * Math.sqrt(fervor) * 1.6);
+    e.maxHp = e.hp = Math.round(d.hp * waveHpMult(n) / waveHpMult(d.wave) * (1 + extra * 0.05) * Math.sqrt(fervor) * 1.6 * waveMods().hp);
     e.dmg = d.dmg * waveDmgMult(n) / waveDmgMult(d.wave) * 1.3;
   } else {
     e.maxHp = e.hp = Math.round(d.hp * hpM);
@@ -236,7 +237,7 @@ function onEnemyDeath(e: any, src: any, dtype?: string) {
   const i = G.enemies.indexOf(e); if (i >= 0) G.enemies.splice(i, 1);
   e.dieT = 0; G.dying.push(e);
   r.kills++; G.stats.totalKills++;
-  let souls = e.bounty * (1 + r.m.souls + metaLv('s_gain') * 0.1 + fb('souls')) * ascSouls();
+  let souls = e.bounty * (1 + r.m.souls + metaLv('s_gain') * 0.1 + fb('souls')) * ascSouls() * waveMods().reward;
   let hb = 0;
   for (const t of G.towers) if (t.type === 'harvester' && dist2(t.x, t.y, e.x, e.y) < towerStats(t).range ** 2) hb = Math.max(hb, [0.5, 1, 1.5][t.tier]);
   souls *= 1 + hb;

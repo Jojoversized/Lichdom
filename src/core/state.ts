@@ -33,7 +33,7 @@ export const G: any = {
   lich: { anim: 'idle', at: 0, castT: 0, cdT: 1, face: 1 },
   hashE: new SpatialHash<Ent>(24), hashU: new SpatialHash<Ent>(16), stepN: 0,
   time: 0, speed: 1, paused: false, modal: null as string | null, phase: 'menu' as 'menu' | 'prep' | 'wave' | 'over',
-  wave: null, shake: 0, flash: 0, selected: null, build: null, showPlots: false as false | 'mounts' | 'plots',
+  wave: null, shake: 0, flash: 0, selected: null, build: null, showPlots: false as false | 'mounts' | 'plots', crusadeOffer: null as any,
   tdT: 0, frenzyT: 0, stormT: 0, extraRaised: 0, citadelRaised: 0, fleshZombies: 0,
   camera: { x: 400, y: 320 }, mouse: { sx: 0, sy: 0, world: [0, 0] as [number, number], down: false },
   bossBar: null, bossIntro: null, speech: null, lastKeepLine: -99, autoT: 0, timers: [] as any[],

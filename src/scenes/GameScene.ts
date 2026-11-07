@@ -11,6 +11,7 @@ import { placeFort } from '../systems/combat';
 import { canBuildAt, worldToCell, cellIdx, generateMap, siteAtCell, plotAtCell } from '../world/mapgen';
 import { upgradeSite, siteById } from '../systems/ramparts';
 import { constructTower, constructBuilding, mountAt } from '../systems/keep';
+import { pendingEvent } from '../systems/events';
 import { loadMeta, saveRun, saveMeta, saveRunSoon } from '../systems/save';
 import { UI } from '../ui/ui';
 import { initAudio, startMusic } from '../audio/audio';
@@ -55,6 +56,7 @@ export class GameScene extends Phaser.Scene {
         stepVisual(dt, WELL_POS.x, WELL_POS.y - 14);
       } else if (G.run) {
         if (!G.modal && G.run.pendingLevels > 0 && G.phase !== 'over' && !UI.screenOpen()) UI.showLevelUp();
+        else if (!G.modal && G.phase === 'prep' && pendingEvent() && !UI.screenOpen()) UI.showEvent();
         const paused = G.paused || !!G.modal || UI.screenOpen();
         if (!paused) {
           let sim = dt * (G.phase === 'over' ? 1 : G.speed);

@@ -18,7 +18,7 @@ with sync_playwright() as p:
     pg.click('#h-ok'); pg.wait_for_timeout(400)
     pg.screenshot(path=f'{OUT}/02_prep.png')
     print(pg.evaluate("() => { const G = window.__LICH.G; return {phase: G.phase, units: G.units.length, souls: G.run.souls} }"))
-    pg.click('#b-wave'); pg.wait_for_timeout(9000)
+    pg.click('#b-wave'); pg.wait_for_timeout(500); pg.screenshot(path=f'{OUT}/02b_crusade.png'); pg.click('.card.crusade >> nth=1'); pg.wait_for_timeout(9000)
     pg.screenshot(path=f'{OUT}/03_wave.png')
     print(pg.evaluate("() => { const G = window.__LICH.G; return {phase: G.phase, wave: G.run.wave, enemies: G.enemies.length, units: G.units.length, kills: G.run.kills, keep: Math.round(G.keep.hp)} }"))
     print('ERRORS', len(errs)); print('\n'.join(errs[:8]))

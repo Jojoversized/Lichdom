@@ -197,3 +197,19 @@ img.pixd { image-rendering: auto; vertical-align: middle; }
 .bcost.mat { color: #e6d6ac; }
 #buildlist .bnote b { color: #e8dcc0; }
 .ucard .ucost { color: #c8b890; font-size: 12px; margin: 2px 0; }
+
+/* v0.8 roguelite: crusade choice and story events */
+.card.crusade { width: 250px; min-height: 300px; }
+.card.crusade .cstat { font-size: 13px; line-height: 1.35; }
+.card.crusade .cfoes { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; min-height: 40px; }
+.card.crusade .cfoes span { position: relative; display: inline-flex; align-items: flex-end; }
+.card.crusade .cfoes i { position: absolute; right: -4px; bottom: -2px; font-style: normal; font-size: 11px; color: #f0e8d4; background: #000a; padding: 0 2px; }
+.card.crusade .crew { margin-top: auto; font-size: 13px; color: #c8b890; }
+.eventm .mbox { max-width: 640px; }
+.evtext { font-size: 15px; line-height: 1.5; margin: 10px 4px 16px; color: #ddd4bc; }
+.evchoices { display: flex; flex-direction: column; gap: 8px; }
+.evchoice { position: relative; text-align: left; background: #161419; border: 1px solid #3a3530; color: #e8e0cc; padding: 10px 12px 10px 34px; cursor: pointer; font: inherit; }
+.evchoice:hover { border-color: #5dff7a; background: #18201a; }
+.evchoice b { display: block; font-size: 16px; }
+.evchoice small { color: #9a9282; }
+.evchoice .key { position: absolute; left: 12px; top: 12px; color: #6a6458; font-size: 12px; }

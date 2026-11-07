@@ -22,7 +22,9 @@ export function bld(id: string): number { const r = G.run; if (!r || !r.building
 export function ascDmg() { return Math.pow(1.12, G.run.asc.dmg || 0); }
 export function ascHp() { return Math.pow(1.12, G.run.asc.hp || 0); }
 export function ascSouls() { return Math.pow(1.08, G.run.asc.souls || 0) * (1 + 0.1 * bld('cistern')); }
-export function globalDmg() { const r = G.run; return (1 + r.m.dmg + fb('allDmg')) * ascDmg() * (1 + 0.1 * bld('forge')); }
+export function globalDmg() { const r = G.run; return (1 + r.m.dmg + fb('allDmg')) * ascDmg() * (1 + 0.1 * bld('forge')) * warBuff(); }
+/** Temporary war buffs from story events (systems/events.ts). */
+export function warBuff() { let m = 1; for (const b of (G.run && G.run.rogue && G.run.rogue.buffs) || []) m += b.dmg || 0; return m; }
 export function frenzyMult() { return G.frenzyT > 0 ? 1.6 : 1; }
 
 export function towerStats(t: any) {
