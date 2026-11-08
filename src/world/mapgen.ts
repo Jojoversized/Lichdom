@@ -49,7 +49,7 @@ export function generateMap(seed: number, fortKey: string) {
   // obstacles
   const types: [string, number, number][] = [['tree0', 2, 1], ['tree1', 2, 1], ['tree2', 2, 1], ['rock', 1, 1], ['rock2', 2, 1], ['pillar', 1, 1], ['ruinwall', 2, 1]];
   let placed = 0, tries = 0;
-  while (placed < 80 && tries++ < 4000) {
+  while (placed < Math.round(80 * MW / 96) && tries++ < 4000) {
     const x = rng.int(1, MW - 4), y = rng.int(2, MH - 2);
     const [name, w, h] = rng.pick(types);
     if (nearKeep(x, y, 6) || nearRoad(x, y, 2) || nearRoad(x + w - 1, y, 2) || x > MW - 6) continue;
@@ -62,7 +62,7 @@ export function generateMap(seed: number, fortKey: string) {
   }
   // light props
   let braz = 0; tries = 0;
-  while (braz < 22 && tries++ < 3000) {
+  while (braz < Math.round(22 * MW / 96) && tries++ < 3000) {
     const x = rng.int(4, MW - 4), y = rng.int(3, MH - 3);
     if (M.road[cellIdx(x, y)] || !nearRoad(x, y, 1) || M.obstacle[cellIdx(x, y)] || M.reserved[cellIdx(x, y)]) continue;
     if (M.props.some((p: Prop) => p.light && dist(p.x, p.y, x * CELL, y * CELL) < 150)) continue;
@@ -77,7 +77,7 @@ export function generateMap(seed: number, fortKey: string) {
   // small decorative props
   tries = 0; let sp = 0;
   const small = ['grave', 'grave2', 'cross', 'skullpole', 'fence', 'cart', 'banner'];
-  while (sp < 55 && tries++ < 3000) {
+  while (sp < Math.round(55 * MW / 96) && tries++ < 3000) {
     const x = rng.int(1, MW - 2), y = rng.int(2, MH - 2);
     if (M.road[cellIdx(x, y)] || M.obstacle[cellIdx(x, y)] || M.reserved[cellIdx(x, y)] || nearKeep(x, y, 3)) continue;
     const name = rng() < 0.55 ? rng.pick(['grave', 'grave2', 'cross']) : rng.pick(small);

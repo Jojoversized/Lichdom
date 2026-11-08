@@ -463,7 +463,7 @@ export function moveMult(e: any) {
   let m = 1;
   if (s.slowT > 0) m *= 1 - s.slow;
   if (G.tdT > 0) m *= 0.5;
-  for (const f of G.forts) if (f.type === 'ward' && dist2(f.x, f.y, e.x, e.y) < 2500) { m *= 0.7; break; }
+  for (const f of G.wards) if (dist2(f.x, f.y, e.x, e.y) < 2500) { m *= 0.7; break; }
   return m;
 }
 export { lightningBolt, addRing, addFlash, addText, explosion, spawnBurst, addParticle, rndi, MW };

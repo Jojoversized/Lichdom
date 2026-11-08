@@ -4,7 +4,8 @@
 /** Size of one pathing/build cell in world pixels. */
 export const CELL = 16;
 /** Map size in cells. The keep sits on the far left; the crusade enters from the right. */
-export const MW = 96, MH = 40;
+/** v0.9: 64 columns (was 96) — the crusade reaches the gate sooner. */
+export const MW = 64, MH = 40;
 export const WW = MW * CELL, WH = MH * CELL;
 
 /** Target internal resolution (world pixels visible). The game picks the largest

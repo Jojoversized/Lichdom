@@ -14,6 +14,7 @@ import { placeTower, removeStructure, spawnUnit } from './combat';
 import { towerMaxHp, recalcAllStats, recalcKeep, bld } from './stats';
 export { bld };
 import { msg, sfx } from '../core/events';
+import { anPick } from './analytics';
 
 export function plotById(id: string): Plot | null {
   if (id && id.startsWith('m_')) { const [, x, y] = id.split('_'); return mountPlot(+x, +y); }
@@ -68,7 +69,7 @@ export function constructTower(type: string, p: Plot): any {
   if (!mountReady(p)) { msg(p.mount ? 'Raise this rampart first: towers stand on top of built walls.' : 'Towers stand on the ramparts; foundations behind the walls are for buildings.', '#c8b890'); sfx('error'); return null; }
   if (r.materials < cost) { msg('Not enough materials.', '#ff8080'); sfx('error'); return null; }
   r.materials -= cost;
-  const t = placeTower(type, p.cx, p.cy, 0, { plot: p.id, matInvested: cost });
+  const t = placeTower(type, p.cx, p.cy, 0, { plot: p.id, matInvested: cost }); anPick('tower', type, { cost });
   sfx('build');
   return t;
 }
@@ -80,7 +81,7 @@ export function upgradeTowerMat(t: any): boolean {
   if (!next) return false;
   const cost = towerUpgradeCost(t);
   if (r.materials < cost) { msg('Not enough materials.', '#ff8080'); sfx('error'); return false; }
-  r.materials -= cost; t.tier++; t.matInvested = (t.matInvested || 0) + cost;
+  r.materials -= cost; t.tier++; anPick('towerUp', t.type, { tier: t.tier, cost }); t.matInvested = (t.matInvested || 0) + cost;
   const old = t.maxHp; t.maxHp = towerMaxHp(t); t.hp += t.maxHp - old;
   if (t.tier === 2) G.stats.evolved = true;
   msg(`${next.name} awakens.`, '#5dff7a'); sfx('levelup');
@@ -112,7 +113,7 @@ export function constructBuilding(type: string, p: Plot): any {
   if (!plotFree(p) || hasBuilding(type) || p.mount) { if (p.mount) msg('Rampart mounts carry towers; buildings stand on the foundations behind the walls.', '#c8b890'); sfx('error'); return null; }
   if (r.materials < cost) { msg('Not enough materials.', '#ff8080'); sfx('error'); return null; }
   r.materials -= cost;
-  r.buildings[p.id] = { type, tier: 0 };
+  r.buildings[p.id] = { type, tier: 0 }; anPick('building', type, { cost });
   const b = spawnBuilding(type, p, 0);
   onBuildingChanged(type, 1);
   msg(`${BUILDINGS[type].name} raised: ${BUILDINGS[type].per}.`, '#e8d8a8'); sfx('build');
@@ -123,7 +124,7 @@ export function upgradeBuilding(b: any): boolean {
   const r = G.run, cost = buildingUpgradeCost(b);
   if (!cost) return false;
   if (r.materials < cost) { msg('Not enough materials.', '#ff8080'); sfx('error'); return false; }
-  r.materials -= cost; b.tier++; r.buildings[b.plot].tier = b.tier;
+  r.materials -= cost; b.tier++; r.buildings[b.plot].tier = b.tier; anPick('buildingUp', b.type, { tier: b.tier, cost });
   onBuildingChanged(b.type, 1);
   msg(`${BUILDINGS[b.type].tiers[b.tier]} completed.`, '#e8d8a8'); sfx('levelup');
   return true;

@@ -28,13 +28,14 @@ GitHub Pages: every push to `main` runs `.github/workflows/deploy.yml` (install 
    - `tools/test/ui_flow.py` — real clicks through build, drawer, level-up, Soul Well, save/reload, codex
    - `tools/test/bot.py [maxWave] [runs] [metaMax]` — automated campaigns for balance/regression (also asserts no duplicate upgrade tiers in offers)
    - `tools/test/closeup.py [outdir] [zoom] [w] [h]` — staged skirmish screenshot for art/render review
+   - `LICH_AN_OUT=runs.json tools/test/bot.py …` also saves analytics records → `python3 tools/analytics/report.py runs.json`
    - `tools/test/balance.py '<json configs>' [runs] [maxWave]` — unit balance: campaigns restricted to fixed undead types (solo/combo), same spending policy, no towers/walls (`LICH_PORT=8766` to run against a frozen copy of the build while you keep editing)
 
 `window.__LICH` exposes the state `G` and every system function for tests.
 
 ## Pixel-art standards (do not drift)
 
-- **World cell:** 16 px. Map 96 × 40 cells (1536 × 640 world px). All gameplay coordinates are world px.
+- **World cell:** 16 px. Map 64 × 40 cells (1024 × 640 world px; 96 before v0.9). All gameplay coordinates are world px.
 - **Texel density:** art is authored at **2 texels per world px** (`TEXEL_RES` in `src/config/zoom.ts`,
   `RES` in `tools/assets/hires.mjs`, `res` in the manifest). Every sheet sprite, shadow, the terrain and the
   decal canvas are drawn at scale ½; the light buffers live at texel resolution too.
@@ -135,6 +136,7 @@ src/
     progression.ts        XP, codex, achievements, bosses slain, defeat/essence, meta purchases
     bosses.ts             boss abilities/intros
     fx.ts                 particle/ring/bolt/text data (+ visual step)
+    analytics.ts          run analytics (per-wave records + decisions, localStorage, JSON export)
     save.ts               localStorage persistence
   render/                 WorldRenderer (all Phaser objects), textures (lights, pixel font)
   audio/                  SFX playback via Phaser, live ambient score
@@ -162,6 +164,10 @@ Key rules:
 - After any change: typecheck, run smoke + ui_flow, run the bot for balance changes, update `docs/CHECKLIST.md`.
 
 ## Current status
+
+v0.9 — **run analytics** for balance work (Settings → Run analytics → Export JSON; `tools/analytics/report.py`; the bot can
+dump the same format with `LICH_AN_OUT`), render/AI performance for 3k+ hosts (culling, change-only sprite updates, Blitter
+shadows, sliced planner), map shortened to 64 columns, fast mortals escort slow/siege units.
 
 v0.8.1 — HUD modifier strip and floating soul/material gains, end-of-wave summary (damage and kills per unit type /
 tower / spell, losses), materials income 3 + 1 per 5 waves, Skirmish keeps full materials.

@@ -24,6 +24,7 @@ import { spawnSquad, unearthUnit, lockedUnitTypes, startWave, crusadeOffer, prev
 import { essenceBreakdown, buyMeta, endCampaign, checkAchievements, codexSee } from '../systems/progression';
 import { saveRun, saveRunSoon, saveMeta, saveMetaSoon, hasRunSave, clearRunSave, loadMeta, store, SAVE_META, SAVE_RUN } from '../systems/save';
 import { startMusic, applyMusicVolume } from '../audio/audio';
+import { anPick, anExport, anCount, anClear, persist } from '../systems/analytics';
 
 const $ = (s: string, el: ParentNode = document) => el.querySelector(s) as HTMLElement;
 const h = (tag: string, cls?: string, html?: string) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -618,7 +619,7 @@ export const UI: any = {
     $('#p-set').onclick = () => { this.closeModal(); this.showSettings(true); };
     $('#p-help').onclick = () => { this.closeModal(); this.showHelp(true); };
     $('#p-menu').onclick = () => { saveRun(); this.closeModal(); toMenu(); };
-    $('#p-abandon').onclick = () => { const b = $('#p-abandon'); if (b.dataset.sure) { this.closeModal(); G.run.phylUsed = true; G.keep.hp = 0; endCampaign(); } else { b.dataset.sure = '1'; b.textContent = 'Click again to confirm'; } };
+    $('#p-abandon').onclick = () => { const b = $('#p-abandon'); if (b.dataset.sure) { this.closeModal(); G.run.phylUsed = true; G.run.anOutcome = 'abandoned'; G.keep.hp = 0; endCampaign(); } else { b.dataset.sure = '1'; b.textContent = 'Click again to confirm'; } };
   },
 
   // ---------------- full screens ----------------
@@ -742,6 +743,8 @@ export const UI: any = {
       <label>Damage numbers <input type="checkbox" id="st-dmg" ${S.dmgNumbers ? 'checked' : ''}></label>
       <label>Auto-start waves <input type="checkbox" id="st-auto" ${S.autoWave ? 'checked' : ''}></label>
       <label>Effects quality <select id="st-fx"><option value="low">Low</option><option value="med">Medium</option><option value="high">High</option></select></label>
+      <div class="an-row">Run analytics: <span class="num" id="st-an-n">${anCount()}</span> runs recorded
+        <button class="btn sm" id="st-an-exp">Export JSON</button><button class="btn sm red" id="st-an-clr">Clear</button></div>
       <div><button class="btn sm red" id="st-reset">Erase all progress</button></div>
     </div><div class="center"><button class="btn" id="st-back">Back</button></div>`, 'setscreen');
     ($('#st-fx') as HTMLSelectElement).value = S.fx;
@@ -752,6 +755,14 @@ export const UI: any = {
     $('#st-auto').onchange = (e: any) => (S.autoWave = e.target.checked);
     $('#st-fx').onchange = (e: any) => (S.fx = e.target.value);
     $('#st-reset').onclick = () => { const b = $('#st-reset'); if (!b.dataset.sure) { b.dataset.sure = '1'; b.textContent = 'Click again to erase EVERYTHING'; return; } store.del(SAVE_META); store.del(SAVE_RUN); loadMeta(); toMenu(); };
+    $('#st-an-exp').onclick = () => {
+      if (G.run && G.run.an && G.phase !== 'menu') persist(); // include the run in progress
+      const blob = new Blob([JSON.stringify(anExport(), null, 1)], { type: 'application/json' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = `lich-analytics-${new Date().toISOString().slice(0, 10)}.json`; document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    };
+    $('#st-an-clr').onclick = () => { const b = $('#st-an-clr'); if (!b.dataset.sure) { b.dataset.sure = '1'; b.textContent = 'Sure?'; return; } anClear(); $('#st-an-n').textContent = '0'; b.textContent = 'Cleared'; };
     $('#st-back').onclick = () => { saveMeta(); fromGame ? this.closeScreen() : this.showMenu(); };
   },
 
@@ -893,7 +904,7 @@ export function recruit(type: string) {
   const r = G.run, c = recruitCost(type), d = UNITS[type];
   if (r.souls < c) { sfx('error'); msgFn('Not enough souls.', '#ff8080'); return false; }
   r.souls -= c;
-  r.bought[type] = (r.bought[type] || 0) + 1;
+  r.bought[type] = (r.bought[type] || 0) + 1; anPick('recruit', type, { cost: c });
   spawnSquad(type, KEEP.x1 + 30, KEEP.y + rnd(-30, 30));
   codexSee('unit', type);
   sfx('raise', 0.3);

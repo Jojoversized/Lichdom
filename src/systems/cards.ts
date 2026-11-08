@@ -8,6 +8,7 @@ import { KEEP } from '../config/constants';
 import { pick, rnd } from '../core/util';
 import { spawnSquad, randomUnitType } from './campaign';
 import { contentAvailable, metaLv, recalcKeep, recalcAllStats, fortMaxHp, towerMaxHp } from './stats';
+import { anPick } from './analytics';
 
 // ============================================================
 // Level-up card pool (three-choice roguelite upgrades)
@@ -173,7 +174,7 @@ export function offerIsClean(cards: any[]) { const f = cards.map((c: any) => c.f
 
 export function applyCard(c: any) {
   const r = G.run;
-  r.picks[c.id] = (r.picks[c.id] || 0) + 1;
+  r.picks[c.id] = (r.picks[c.id] || 0) + 1; anPick('card', c.id, { rar: c.rar });
   c.apply(r);
   if (c.rar === 4) { G.stats.legendary = true; lichSay('legendary'); }
   recalcAllStats();

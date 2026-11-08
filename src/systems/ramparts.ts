@@ -8,6 +8,7 @@ import { cellIdx, WallSite } from '../world/mapgen';
 import { placeFort } from './combat';
 import { fortMaxHp } from './stats';
 import { msg, sfx } from '../core/events';
+import { anPick } from './analytics';
 
 export function siteById(id: string): WallSite | null { return (G.map && G.map.sites || []).find((s: WallSite) => s.id === id) || null; }
 export function siteTier(site: WallSite): number { return (G.run && G.run.walls && G.run.walls[site.id]) || 0; }
@@ -50,7 +51,7 @@ export function upgradeSite(site: WallSite): boolean {
   const cost = siteUpgradeCost(site);
   if (G.run.materials < cost) { msg('Not enough materials.', '#ff8080'); sfx('error'); return false; }
   G.run.materials -= cost;
-  G.run.walls[site.id] = t + 1;
+  G.run.walls[site.id] = t + 1; anPick('wall', site.id, { tier: t + 1, cost });
   restore(site);
   sfx('build');
   return true;

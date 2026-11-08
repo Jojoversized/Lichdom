@@ -34,6 +34,9 @@ export class WorldRenderer {
   gGround: Phaser.GameObjects.Graphics; gFx: Phaser.GameObjects.Graphics; gOver: Phaser.GameObjects.Graphics;
   dark: Phaser.GameObjects.RenderTexture; glow: Phaser.GameObjects.RenderTexture;
   stamps: Phaser.GameObjects.Image[] = [];
+  cull: { x0: number; y0: number; x1: number; y1: number } | null = null;
+  /** Unit / enemy shadows are Blitter bobs (one batched object per shadow size) rather than 3,000+ Images. */
+  shadowBlits: Record<string, Phaser.GameObjects.Blitter> = {};
   keep?: Phaser.GameObjects.Sprite; lich?: Phaser.GameObjects.Sprite; well?: Phaser.GameObjects.Sprite; fortress?: Phaser.GameObjects.Image;
   props: Phaser.GameObjects.Sprite[] = [];
   worldVersion = -1;
@@ -79,6 +82,7 @@ export class WorldRenderer {
     this.worldVersion = G.worldVersion;
     // destroy any view still attached to old entities
     for (const k of ['units', 'enemies', 'towers', 'forts', 'buildings', 'corpses', 'dying']) for (const o of G[k]) this.destroyView(o);
+    for (const k in this.shadowBlits) this.shadowBlits[k].destroy(); this.shadowBlits = {};
     this.props.forEach(p => p.destroy()); this.props = [];
     this.terrain?.destroy(); this.keep?.destroy(); this.lich?.destroy(); this.well?.destroy(); this.fortress?.destroy(); this.fortress = undefined;
     if (s.textures.exists('terrain')) s.textures.remove('terrain');
@@ -115,6 +119,15 @@ export class WorldRenderer {
   destroyView(o: any) {
     if (o.view) { o.view.destroy(); o.view = null; }
     if (o.shadow) { o.shadow.destroy(); o.shadow = null; }
+    if (o.sbob) { if (o.sbob.parent && o.sbob.parent.children) o.sbob.destroy(); o.sbob = null; }
+  }
+  /** A shadow bob from the blitter of texture `key` (bob coordinates are in texel space: the blitter is scaled SC). */
+  private shadowBob(key: string) {
+    let bl = this.shadowBlits[key];
+    if (!bl) { bl = this.scene.add.blitter(0, 0, key).setDepth(DEPTH.shadows).setScale(SC); this.shadowBlits[key] = bl; }
+    const src = this.scene.textures.get(key).getSourceImage() as HTMLImageElement;
+    const bob: any = bl.create(0, 0); bob.hw = src.width / 2; bob.hh = src.height / 2;
+    return bob;
   }
 
   // ---------- per-frame ----------
@@ -131,6 +144,8 @@ export class WorldRenderer {
     let ox = Math.round(G.camera.x - vw / 2), oy = Math.round(G.camera.y - vh / 2);
     if (G.shake > 0 && G.settings.shake) { ox += Math.round(rnd(-G.shake, G.shake) * 0.5); oy += Math.round(rnd(-G.shake, G.shake) * 0.5); }
     cam.setScroll(ox, oy);
+    // actors outside the view (plus a margin for tall sprites) are hidden and not updated
+    this.cull = { x0: ox - 40, y0: oy - 20, x1: ox + vw + 40, y1: oy + vh + 70 };
     const animF = Math.floor(now / 140);
     // static set pieces
     this.keep.setFrame(animF % 4);
@@ -163,29 +178,40 @@ export class WorldRenderer {
     return o.view as Phaser.GameObjects.Sprite;
   }
 
+  /** Per-frame sync of a unit / enemy. Off-screen actors are hidden and skipped; on-screen ones only
+   *  touch what changed (Phaser re-sorts the whole display list on every setDepth call, and frame
+   *  and tint changes are not free either) — this keeps 3,000+ undead cheap. */
   syncActor(e: any) {
     const meta = SHEETS[e.spr];
     if (!meta) return;
     const spr = this.ensureSprite(e, e.spr);
+    const c = this.cull;
+    if (c && (e.x < c.x0 || e.x > c.x1 || e.y < c.y0 || e.y > c.y1)) {
+      if (spr.visible) { spr.setVisible(false); if (e.sbob) e.sbob.visible = false; }
+      return;
+    }
+    if (!spr.visible) { spr.setVisible(true); if (e.sbob) e.sbob.visible = true; }
     const bob = e.flying ? Math.sin(G.time * 3 + e.id) * 2 : 0;
     spr.setPosition(snap(e.x), snap(e.y - e.alt + bob + 1));
-    spr.setFrame(animFrameIndex(meta, e.anim, e.at, ((e.id * 0.6180339) % 1) * 2));
-    spr.setFlipX(e.face < 0);
-    spr.setDepth(e.y + (e.flying ? 40 : 0));
+    const fr = animFrameIndex(meta, e.anim, e.at, ((e.id * 0.6180339) % 1) * 2);
+    if (e._fr !== fr) { e._fr = fr; spr.setFrame(fr); }
+    const flip = e.face < 0; if (spr.flipX !== flip) spr.setFlipX(flip);
+    const depth = Math.round(e.y) + (e.flying ? 40 : 0);
+    if (spr.depth !== depth) spr.setDepth(depth);
     let alpha = 1;
     if (e.temp > 0 && e.temp < 3 && Math.floor(G.time * 8) % 2) alpha = 0.5;
     if (e.type === 'banshee' || e.type === 'wraith' || e.type === 'wraiths' || e.type === 'devourer') alpha *= 0.88;
-    spr.setAlpha(alpha);
-    if (e.hitT > 0) spr.setTintFill(0xffffff);
-    else if (e.st.freezeT > 0) spr.setTint(0x9fe6ff);
-    else if (e.st.prisonT > 0) spr.setTint(0xd0a0ff);
-    else spr.clearTint();
-    if (!e.shadow) {
-      const w = clamp(Math.round(e.rad * 2.4 / 4) * 4, 8, 48);
-      const key = (e.team === 'm' ? 'eshadow_' : 'shadow_') + nearestShadow(w);
-      e.shadow = this.scene.add.image(0, 0, key).setDepth(DEPTH.shadows).setScale(SC);
+    if (spr.alpha !== alpha) spr.setAlpha(alpha);
+    const tint = e.hitT > 0 ? 1 : e.st.freezeT > 0 ? 2 : e.st.prisonT > 0 ? 3 : 0;
+    if (e._tint !== tint) {
+      e._tint = tint;
+      if (tint === 1) spr.setTintFill(0xffffff); else if (tint === 2) spr.setTint(0x9fe6ff); else if (tint === 3) spr.setTint(0xd0a0ff); else spr.clearTint();
     }
-    e.shadow.setPosition(snap(e.x), snap(e.y));
+    if (!e.sbob) {
+      const w = clamp(Math.round(e.rad * 2.4 / 4) * 4, 8, 48);
+      e.sbob = this.shadowBob((e.team === 'm' ? 'eshadow_' : 'shadow_') + nearestShadow(w));
+    }
+    const b = e.sbob; b.x = snap(e.x) / SC - b.hw; b.y = snap(e.y) / SC - b.hh;
   }
 
   syncDying(e: any) {
@@ -199,6 +225,7 @@ export class WorldRenderer {
     if (e.dieT < 0.1) spr.setTintFill(0xffffff); else spr.clearTint();
     spr.setAlpha(e.corpse ? 1 : 1 - Math.max(0, (e.dieT - 0.2) / 0.3));
     if (e.shadow) { e.shadow.destroy(); e.shadow = null; }
+    if (e.sbob) { if (e.sbob.parent && e.sbob.parent.children) e.sbob.destroy(); e.sbob = null; }
   }
 
   syncCorpse(c: any) {
@@ -509,7 +536,9 @@ export class WorldRenderer {
     };
     const inView = (x: number, y: number) => x > ox - 30 && x < ox + vw + 30 && y > oy - 30 && y < oy + vh + 60;
     for (const e of G.enemies) if (inView(e.x, e.y)) bars(e);
-    for (const u of G.units) if (inView(u.x, u.y)) bars(u);
+    // a huge host only shows the bars of badly wounded undead (thousands of bars would swamp the overlay)
+    const uMin = G.units.length > 800 ? 0.6 : 1;
+    for (const u of G.units) if ((uMin >= 1 || u.hp < u.maxHp * uMin) && inView(u.x, u.y)) bars(u);
     for (const t of G.towers) if (inView(t.x, t.y)) bars(t);
     for (const f of G.forts) if (f.def.hp && inView(f.x, f.y)) bars(f);
     for (const t of G.texts) { const a = 1 - t.t / t.life; this.text(g, t.s, t.x, t.y - t.t * 14, col(t.color), Math.min(1, a * 2), t.big ? 1.5 : 1); }

@@ -2,7 +2,7 @@
 import { G } from '../core/state';
 import { dist, dist2, rnd, rndi, pick, clamp, TAU } from '../core/util';
 import { CELL, KEEP, GUARD_LINE_X, LANES, PAL, WW, WH } from '../config/constants';
-import { fortWallX, LICH_POS, GATE, R_CURTAIN, R_BULWARK, threatensZone } from '../data/fortress';
+import { fortWallX, LICH_POS, GATE, R_CURTAIN, R_BULWARK, threatensZone, gateDist, DEFENSE_R } from '../data/fortress';
 import { sfx } from '../core/events';
 import { flowStep, worldToCell, cellIdx, flowDist } from '../world/mapgen';
 import {
@@ -96,10 +96,39 @@ export function updateEnemy(e: any, dt: number) {
   if (here && here.type === 'lava') { e.st.lavaT = (e.st.lavaT || 0) - dt; if (e.st.lavaT <= 0) { e.st.lavaT = 0.5; dealDamage(e, here.def.dps * 0.5 * Math.pow(1.08, G.run.wave) * dtypeMult('fire') * globalDmg(), 'fire', NEUTRAL_SRC, { aoe: true, noCrit: true }); } }
   if (here && here.type === 'rune' && here.trapT <= 0) triggerRune(here);
   if (d.charge && !e.charged) spd *= 1.2;
+  spd = escortSpeed(e, spd, dt);
+  if (spd <= 0) { if (e.anim === 'walk') setAnim(e, 'idle'); return; }
   const tx = ncx * CELL + 8 + ((e.id * 7) % 9 - 4), ty = ncy * CELL + 8 + ((e.id * 13) % 9 - 4);
   moveToward(e, tx, ty, spd, dt);
   if ((e.id + G.stepN) % 2 === 0) { let n = 0; G.hashE.query(e.x, e.y, 7, (o: any) => { if (o !== e && !o.flying) { const dx = e.x - o.x, dy = e.y - o.y, dd = Math.hypot(dx, dy) || 1; e.x += (dx / dd) * 16 * dt; e.y += (dy / dd) * 16 * dt; return ++n >= 5; } }); }
   setAnim(e, 'walk');
+}
+
+// ---------------- escorts ----------------
+/** Slow crusaders (siege engines, constructs, bosses) that faster soldiers escort on the march. */
+const isEscortee = (o: any) => !o.dead && !o.flying && (o.spd <= 16 || o.def.siege) && o.team === 'm';
+/** Faster crusaders on the march keep pace with a slow engine marching behind them instead of rushing
+ *  ahead and dying alone: they match its speed, and wait if they get more than ~3 cells ahead. Only
+ *  outside the battle (beyond the defence zone, no target) — once the fighting starts, everyone charges. */
+function escortSpeed(e: any, spd: number, dt: number): number {
+  if (e.boss || isEscortee(e) || e.def.charge || gateDist(e.x, e.y) < DEFENSE_R + 70) return spd;
+  e.escT = (e.escT || 0) - dt;
+  if (e.escT <= 0) {
+    e.escT = 0.8 + Math.random() * 0.4;
+    if (e.escort && (e.escort.dead || dist2(e.x, e.y, e.escort.x, e.escort.y) > 200 * 200)) e.escort = null;
+    if (!e.escort) {
+      let best: any = null, bd = 130 * 130;
+      G.hashE.query(e.x, e.y, 130, (o: any) => { if (o !== e && isEscortee(o)) { const dd = dist2(o.x, o.y, e.x, e.y); if (dd < bd) { bd = dd; best = o; } } });
+      e.escort = best;
+    }
+  }
+  const o = e.escort;
+  if (!o || o.dead) return spd;
+  const f = G.map.flow, fe = f[cellIdx(...worldToCell(e.x, e.y))], fo = f[cellIdx(...worldToCell(o.x, o.y))];
+  const lead = fo - fe; // > 0: we are ahead of the engine (closer to the gate)
+  if (lead > 3) return 0;                        // too far ahead: wait for it
+  if (lead > 0.5) return Math.min(spd, o.spd * (o.st.slowT > 0 ? 0.6 : 1)); // in front of it: keep its pace
+  return spd;                                    // beside or behind it: close up at full speed
 }
 
 function enemyFindTarget(e: any) {
@@ -184,9 +213,15 @@ function isRanged(u: any) { return !!u.def.ranged; }
  *  evenly spread, never stack, and don't reshuffle when others die. The formation grows
  *  with the host — a tight block at the gate for a small army, out toward midfield for a
  *  large one — melee in front, ranged mixed into the rear ranks, flyers above the front. */
-function guardPosition(u: any, _idx: number, count: number) {
+/** Formation context shared by every guard post of one planning pass (computed once, not per unit). */
+function formationCtx() {
+  const lanes = LANES.filter(l => l.minWave <= Math.max(1, G.run.wave + 1));
+  let wy = 0, ws = 0; for (const l of lanes) { const w = 1 + (laneHeat[l.id] || 0); wy += (l.cy * CELL + 8) * w; ws += w; }
+  return { fallback: G.enemies.some((e: any) => e.boss), lean: ((ws ? wy / ws : GATE.y) - GATE.y) / 400 };
+}
+function guardPosition(u: any, ctx: any, count: number) {
   // with a boss on the field the host tightens behind the Curtain, under the towers
-  const fallback = G.enemies.some((e: any) => e.boss);
+  const fallback = ctx.fallback;
   const ranged = isRanged(u);
   let r0: number, r1: number;
   if (fallback) { r0 = ranged ? 40 : 70; r1 = R_CURTAIN + 30; }
@@ -198,9 +233,7 @@ function guardPosition(u: any, _idx: number, count: number) {
   const rm = (r0 + r1) / 2;
   const spread = clamp((Math.max(1, count) * cell * cell) / ((r1 - r0) * rm), 0.9, 2.9);
   // lean toward the roads that carried recent pressure
-  const lanes = LANES.filter(l => l.minWave <= Math.max(1, G.run.wave + 1));
-  let wy = 0, ws = 0; for (const l of lanes) { const w = 1 + (laneHeat[l.id] || 0); wy += (l.cy * CELL + 8) * w; ws += w; }
-  const a0 = clamp(((ws ? wy / ws : GATE.y) - GATE.y) / 400, -0.5, 0.5) * (1 - spread / 3.2);
+  const a0 = clamp(ctx.lean, -0.5, 0.5) * (1 - spread / 3.2);
   const n = u.id + 1;
   const fr = (0.5 + n * 0.7548776662) % 1, fa = (0.5 + n * 0.5698402910) % 1;
   const r = r0 + fr * (r1 - r0), a = clamp(a0 + (fa - 0.5) * spread, -1.5, 1.5);
@@ -209,34 +242,41 @@ function guardPosition(u: any, _idx: number, count: number) {
   return { x, y };
 }
 /** Ground undead defend the gate: they plan only against foes in the defence zone or shooting into it
- *  (ranged crusaders parked just outside used to pepper the host unanswered). */
-function inZone(u: any, e: any) {
+ *  (ranged crusaders parked just outside used to pepper the host unanswered). `t.z0` / `t.z1`: the
+ *  zone tests for ground / flying undead, computed once per threat. */
+function inZone(u: any, t: any) {
   if (u.summon) return true;
-  return threatensZone(e, u.flying ? 120 : 0) || dist2(u.x, u.y, e.x, e.y) < 60 * 60;
+  return (u.flying ? t.z1 : t.z0) || dist2(u.x, u.y, t.e.x, t.e.y) < 60 * 60;
 }
+/** The planner runs in PLAN_SLICES interleaved slices on consecutive ticks, so a 3,000-strong host
+ *  never plans all at once (that used to spike a single step to 30–50 ms). */
+const PLAN_SLICES = 3;
+let planSlice = 0, planCrowd = new Map<any, number>();
 
 export function planArmy(dt: number) {
   planT -= dt;
   for (const k in laneHeat) laneHeat[k] *= Math.pow(0.9, dt);
   if (planT > 0) return;
-  planT = 0.35;
-  for (const e of G.enemies) laneHeat[e.lane] = Math.min(20, (laneHeat[e.lane] || 0) + 0.05);
-  const crowd = new Map<any, number>();
+  planT = 0.35 / PLAN_SLICES;
+  const slice = planSlice; planSlice = (planSlice + 1) % PLAN_SLICES;
+  if (slice === 0) { for (const e of G.enemies) laneHeat[e.lane] = Math.min(20, (laneHeat[e.lane] || 0) + 0.05); planCrowd = new Map(); }
+  const crowd = planCrowd;
   const ground = G.units.filter((u: any) => !isRanged(u) && !u.flying).length;
   // enemies sorted by urgency (closest to keep first)
-  const threats = G.enemies.map((e: any) => ({ e, fd: e.flying ? Math.max(0, e.x - KEEP.x1) / CELL : flowDist(e.x, e.y) }));
+  const threats = G.enemies.map((e: any) => ({ e, fd: e.flying ? Math.max(0, e.x - KEEP.x1) / CELL : flowDist(e.x, e.y), z0: threatensZone(e, 0), z1: threatensZone(e, 120) }));
   // only the most urgent threats are worth planning around (keeps huge hosts cheap)
   threats.sort((a: any, b: any) => a.fd - b.fd);
   if (threats.length > 90) threats.length = 90;
-  let gi = 0, ri = 0;
   const nRanged = G.units.filter((u: any) => isRanged(u)).length;
-  for (const u of G.units) {
-    u.guard = isRanged(u) ? guardPosition(u, ri++, nRanged) : guardPosition(u, gi++, Math.max(1, ground));
+  const ctx = formationCtx();
+  for (let i = slice; i < G.units.length; i += PLAN_SLICES) {
+    const u = G.units[i];
+    u.guard = isRanged(u) ? guardPosition(u, ctx, nRanged) : guardPosition(u, ctx, Math.max(1, ground));
     if (u.retreat) { u.plan = null; continue; }
     let best: any = null, bc = Infinity;
     for (const t of threats) {
       const e = t.e;
-      if (!inZone(u, e)) continue;
+      if (!inZone(u, t)) continue;
       const travel = dist(u.x, u.y, e.x, e.y);
       const c = crowd.get(e) || 0;
       let cost = travel * 0.8 + t.fd * CELL * 0.6 + c * (u.def.taunt ? 5 : 22);

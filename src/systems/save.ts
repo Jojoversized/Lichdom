@@ -32,6 +32,8 @@ export function serializeRun() {
   if (!G.run || G.phase === 'over' || G.phase === 'menu') return null;
   const r = Object.assign({}, G.run);
   if (G.phase === 'wave') r.wave = Math.max(0, r.wave - 1);
+  // the analytics record lives in its own store (systems/analytics.ts); the run save only points at it
+  if (r.an) { r.anId = r.an.id; delete r.an; }
   return {
     v: 2, ts: Date.now(), run: r, keepHp: G.keep.hp,
     towers: G.towers.map((t: any) => ({ type: t.type, tier: t.tier, cx: t.cx, cy: t.cy, hp: Math.round(t.hp), mode: t.mode, kills: t.kills, invested: t.invested, plot: t.plot, mat: t.matInvested })),

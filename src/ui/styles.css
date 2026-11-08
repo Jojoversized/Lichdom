@@ -164,6 +164,7 @@ body.menu .hud-el { display: none !important; }
 .settings { max-width: 520px; margin: 0 auto 16px; display: flex; flex-direction: column; gap: 10px; }
 .settings label { display: flex; justify-content: space-between; align-items: center; }
 .settings select { font-family: inherit; background: #1a181d; color: #ddd; border: 1px solid #3a3640; }
+.settings .an-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 @media (max-width: 1150px) { #objective { display: none; } .tree { grid-template-columns: repeat(3, 1fr); } #buildbar { max-width: calc(100vw - 520px); } }
 .bname .sq { color: #5dff7a; }
 

@@ -25,6 +25,7 @@ import { updateEnemy, updateUnit, updateTower, updateFort, updateLich, updateNet
 import { xpForLevel, codexSee, checkAchievements } from './progression';
 import { announceBoss } from './bosses';
 import { defaultMods, saveRun, saveMeta, readRunSave } from './save';
+import { anStart, anResume, anPick, anWaveStart, anWaveEnd } from './analytics';
 
 export function resetWorld() {
   for (const k of ['units', 'enemies', 'towers', 'forts', 'buildings', 'corpses', 'dying']) for (const o of G[k]) if (o.view || o.shadow) G.retired.push(o);
@@ -73,6 +74,7 @@ export function newCampaign(fortKey: string) {
   }
   G.phase = 'prep'; G.speed = 1; G.paused = false;
   G.camera.x = KEEP.x1 + 160; G.camera.y = KEEP.y;
+  anStart();
   lichSay('start');
   msg(`A new stronghold rises: ${G.map.theme.name}.`, G.map.theme.accent);
   saveRun();
@@ -96,6 +98,7 @@ export function loadRun(): boolean {
   for (const f of s.forts) placeFort(f.type, f.cx, f.cy, { hp: f.hp, site: f.site, wtier: f.wt });
   const summonVals: Record<string, number> = {};
   for (const u of s.units) {
+    u.x = Math.min(u.x, WW - 24); // saves from before v0.9 had a 96-column map
     if (u.summon) { if (!SUMMONS[u.type]) continue; const made = spawnSummonSingle(u.type, u.x, u.y, u.value); made.x = u.x; made.y = u.y; continue; }
     if (!UNITS[u.type]) continue;
     spawnUnit(u.type, u.x, u.y, { free: u.free, tierSpr: u.spr || undefined, mult: u.mult });
@@ -103,6 +106,7 @@ export function loadRun(): boolean {
   computeFlow(G.map);
   G.phase = 'prep'; G.speed = 1; G.paused = false;
   G.camera.x = KEEP.x1 + 160; G.camera.y = KEEP.y;
+  anResume();
   msg(`Campaign resumed — preparing for wave ${G.run.wave + 1}.`, PAL.necro);
   return true;
 }
@@ -125,7 +129,7 @@ export function unearthUnit(type: string): boolean {
   const c = unearthCost(r, type);
   if (r.souls < c) { sfx('error'); return false; }
   r.souls -= c; r.unearthed = (r.unearthed || 0) + 1;
-  r.unlockedUnits.push(type);
+  r.unlockedUnits.push(type); anPick('unearth', type, { cost: c });
   const made = spawnSquad(type, KEEP.x1 + 40, KEEP.y + rnd(-40, 40));
   sfx('well');
   msg(`A crypt is unearthed: ${made.length}× ${UNITS[type].tiers[r.unitTier[type] || 0].name} rise, and more can now be recruited.`, PAL.necro);
@@ -257,6 +261,7 @@ export function startWave(tier?: number) {
   G.wave = off || genWave(r.wave, tier);
   G.wave.souls0 = r.soulsEarned; G.wave.kills0 = r.kills; G.wave.keep0 = G.keep.hp;
   G.crusadeOffer = null;
+  anPick('crusade', CRUSADE_TIERS[tier].name); anWaveStart();
   G.phase = 'wave'; G.autoT = 0;
   const nl = LANES.find(l => l.minWave === r.wave);
   if (nl && r.wave > 1) msg(`A new approach opens: the ${nl.name}!`, '#ffb060');
@@ -311,6 +316,7 @@ function waveCleared() {
     souls: r.soulsEarned - (G.wave.souls0 ?? r.soulsEarned), bonus, interest, mats, kills: r.kills - (G.wave.kills0 ?? r.kills),
     keepLost: Math.max(0, Math.round((G.wave.keep0 ?? G.keep.hp) - G.keep.hp)), revived, rebuilt,
     src: Object.values(rep.src).filter((s: any) => s.dmg > 0 || s.n > 0).sort((a: any, b: any) => b.dmg - a.dmg), fallen: rep.fallen, names: rep.names || {} };
+  anWaveEnd(G.waveSummary);
   if (!G.wave.keepDamaged && G.wave.total >= 10) G.stats.flawless = true;
   G.stats.bestWave = Math.max(G.stats.bestWave, r.wave);
   G.keep.hp = Math.min(G.keep.maxHp, G.keep.hp + G.keep.maxHp * 0.1);
@@ -333,7 +339,7 @@ export function castSpell(id: string, x?: number, y?: number) {
   const r = G.run, s = SPELLS[id];
   if (!canCast(id)) return false;
   r.spellCd[id] = spellCd(id);
-  r.souls -= s.cost; r.spellsCastWave++;
+  r.souls -= s.cost; r.spellsCastWave++; anPick('spell', id);
   G.lich.anim = 'cast'; G.lich.at = 0; G.lich.castT = 0.8;
   codexSee('spell', id);
   const P = spellPower();
@@ -394,7 +400,7 @@ export function buyWell(id: string): boolean {
   if (id === 'unearth') return false; // needs a choice: the UI opens the crypt picker → unearthUnit(type)
   const c = wellCost(item);
   if (r.souls < c) { sfx('error'); return false; }
-  r.souls -= c;
+  r.souls -= c; anPick('well', id, { cost: c });
   sfx('well');
   switch (id) {
     case 'asc_dmg': r.asc.dmg++; recalcAllStats(); msg(`Dark Empowerment ${r.asc.dmg}: all damage ×${Math.pow(1.12, r.asc.dmg).toFixed(2)}`, PAL.necro); break;
@@ -447,6 +453,7 @@ export function step(dt: number) {
   updateWave(dt);
   G.hashE.clear(); for (const e of G.enemies) G.hashE.insert(e);
   G.hashU.clear(); for (const u of G.units) G.hashU.insert(u);
+  G.wards = G.forts.filter((f: any) => f.type === 'ward'); // looked up by every moving crusader
   planArmy(dt);
   for (let i = G.enemies.length - 1; i >= 0; i--) { const e = G.enemies[i]; if (e) updateEnemy(e, dt); }
   for (let i = G.units.length - 1; i >= 0; i--) { const u = G.units[i]; if (u) updateUnit(u, dt); }

@@ -10,6 +10,7 @@ import { msg, sfx } from '../core/events';
 import { spawnUnit } from './combat';
 import { recalcAllStats, recalcKeep, bountyMult } from './stats';
 import { spawnSquad, randomUnitType } from './campaign';
+import { anPick } from './analytics';
 
 /** Roguelite state on the run (older saves lack it). */
 export function rogue(r: any = G.run) {
@@ -69,6 +70,7 @@ function raiseRandom(n: number, types: string[]): string {
 export function resolveEvent(choice: number): string {
   const ev = pendingEvent(); if (!ev) return '';
   const c = ev.choices[choice]; if (!c) return '';
+  anPick('event', ev.id, { choice });
   const r = G.run, ro = rogue(), v: Record<string, any> = {};
   for (const e of c.effects) {
     switch (e.kind) {

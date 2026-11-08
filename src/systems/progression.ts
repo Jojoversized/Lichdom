@@ -9,6 +9,7 @@ import { metaLv } from './stats';
 import { aoeDamage, NEUTRAL_SRC } from './combat';
 import { explosion, addSoulParticle } from './fx';
 import { saveMeta, saveMetaSoon, clearRunSave } from './save';
+import { anEnd } from './analytics';
 
 export function xpForLevel(l: number) { return Math.round(14 * Math.pow(1.17, l - 1) + l * 5); }
 export function gainXp(x: number) {
@@ -62,6 +63,7 @@ export function essenceBreakdown() {
 export function endCampaign() {
   G.phase = 'over';
   const b = essenceBreakdown();
+  anEnd(G.run.anOutcome || 'defeat', b.total);
   G.meta.essence += b.total; G.meta.totalEssence += b.total;
   G.stats.runs++;
   G.stats.bestWave = Math.max(G.stats.bestWave, G.run.wave - 1);

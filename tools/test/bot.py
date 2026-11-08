@@ -1,6 +1,9 @@
 """Automated balance/regression bot: plays campaigns at simulation speed
 (towers near roads, recruits, Soul Well purchases, spells, card picks).
-Usage: python3 tools/test/bot.py [maxWave] [runs] [metaMax(0/1)]"""
+Usage: python3 tools/test/bot.py [maxWave] [runs] [metaMax(0/1)]
+LICH_AN_OUT=file.json also saves every run's analytics record (for tools/analytics/report.py)."""
+import json
+import os
 import sys
 from playwright.sync_api import sync_playwright
 maxw = int(sys.argv[1]) if len(sys.argv) > 1 else 25
@@ -63,6 +66,7 @@ BOT = r"""
 }
 """
 errs = []
+an_out = os.environ.get('LICH_AN_OUT'); an_runs = []
 with sync_playwright() as p:
     b = p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox', '--use-gl=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist'])
     for i in range(runs):
@@ -72,6 +76,9 @@ with sync_playwright() as p:
         res = pg.evaluate(BOT, [maxw, metamax])
         for l in res['log'][-6:] if runs > 1 else res['log']: print(l)
         print({k: v for k, v in res.items() if k != 'log'})
+        if an_out: an_runs += pg.evaluate('window.__LICH.analytics.anExport().runs')
         pg.close()
+    if an_out:
+        with open(an_out, 'w') as f: json.dump({'runs': an_runs, 'source': 'bot'}, f)
     print('ERRORS', len(errs)); print('\n'.join(errs[:5]))
     b.close()
