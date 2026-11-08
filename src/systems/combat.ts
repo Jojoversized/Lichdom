@@ -146,6 +146,20 @@ const MAGIC: Record<string, number> = { fire: 1, frost: 1, shock: 1, necro: 1, a
 export const DCOL: Record<string, string> = { fire: '#ffb04a', frost: '#9fe6ff', shock: '#d8f6ff', necro: '#8dffa0', arcane: '#d0a0ff', holy: '#fff3c4', phys: '#e8e8e0', siege: '#e8e8e0' };
 export const NEUTRAL_SRC = { team: 'u', def: {}, kind: 'spell' };
 
+// ---------------- per-wave report (end-of-wave summary) ----------------
+/** The running report of the current wave: damage and kills per source, undead fallen. */
+export function waveReport() {
+  if (!G.wave) return null;
+  return G.wave.report || (G.wave.report = { src: {} as Record<string, any>, fallen: {} as Record<string, any> });
+}
+function reportSrc(src: any) {
+  const rep = waveReport(); if (!rep) return null;
+  const key = !src ? 'x:other' : src.kind === 'unit' ? 'u:' + src.type : src.kind === 'tower' ? 't:' + src.type : src.kind === 'lich' ? 'x:lich' : 'x:spell';
+  let rec = rep.src[key];
+  if (!rec) rec = rep.src[key] = { key, dmg: 0, kills: {}, n: 0, spr: src && (src.kind === 'unit' ? src.spr : src.kind === 'tower' ? 'tower_' + src.type : null), tier: src && src.tier || 0, type: src && src.type, kind: src && src.kind };
+  return rec;
+}
+
 export function dealDamage(t: any, amount: number, dtype: string, src: any, opt: any = {}): number {
   if (!t || t.dead || amount <= 0) return 0;
   if (t.kind === 'keep') { damageKeep(amount, src); return amount; }
@@ -176,6 +190,7 @@ export function dealDamage(t: any, amount: number, dtype: string, src: any, opt:
   const dealt = Math.min(dmg, Math.max(0, t.hp)); // lifesteal never feeds on overkill
   t.hp -= dmg;
   t.hitT = 0.12;
+  if (t.team === 'm' && G.phase === 'wave') { const rec = reportSrc(src); if (rec) rec.dmg += dealt; }
   // damage numbers: one merged number per target every 0.35s (crits always pop) so big fights stay readable
   if (G.settings.dmgNumbers && (t.team === 'm' || dmg > t.maxHp * 0.08)) {
     t.dmgAcc = (t.dmgAcc || 0) + dmg;
@@ -237,6 +252,7 @@ function onEnemyDeath(e: any, src: any, dtype?: string) {
   const i = G.enemies.indexOf(e); if (i >= 0) G.enemies.splice(i, 1);
   e.dieT = 0; G.dying.push(e);
   r.kills++; G.stats.totalKills++;
+  { const rec = reportSrc(src); if (rec) { const k = e.spr || e.type; rec.kills[k] = (rec.kills[k] || 0) + 1; rec.n++; const rep = waveReport(); (rep.names || (rep.names = {}))[k] = e.name || k; } }
   let souls = e.bounty * (1 + r.m.souls + metaLv('s_gain') * 0.1 + fb('souls')) * ascSouls() * waveMods().reward;
   let hb = 0;
   for (const t of G.towers) if (t.type === 'harvester' && dist2(t.x, t.y, e.x, e.y) < towerStats(t).range ** 2) hb = Math.max(hb, [0.5, 1, 1.5][t.tier]);
@@ -271,6 +287,7 @@ function onEnemyDeath(e: any, src: any, dtype?: string) {
 function onUnitDeath(u: any) {
   const i = G.units.indexOf(u); if (i >= 0) G.units.splice(i, 1);
   u.dieT = 0; G.dying.push(u);
+  { const rep = waveReport(); if (rep && !u.temp) { const k = u.spr; const f = rep.fallen[k] || (rep.fallen[k] = { n: 0, type: u.type }); f.n++; } }
   // every non-temporary undead returns when the wave is repelled
   if (!u.temp && G.wave) G.wave.fallen.push({ type: u.type, summon: !!u.summon, free: !!u.free, spr: u.fixedSpr ? u.spr : null, value: u.summonValue || 0, mult: u.raisedMult || 1 });
   if (u.type === 'zombie' && G.run.mods.zom_explode) { aoeDamage(u.x, u.y, 34, 40 + u.maxHp * 0.4, 'necro', u); explosion(u.x, u.y, 34, PAL.necro); }

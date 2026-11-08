@@ -6,7 +6,7 @@
  *  materials earned when the wave is repelled. The middle choice is the baseline. */
 export interface CrusadeTier { id: string; name: string; desc: string; count: number; hp: number; reward: number; mats: number; }
 export const CRUSADE_TIERS: CrusadeTier[] = [
-  { id: 'skirmish', name: 'Skirmish', desc: 'A wary vanguard probes the walls. Fewer soldiers, leaner spoils.', count: 0.6, hp: 1, reward: 0.6, mats: -1 },
+  { id: 'skirmish', name: 'Skirmish', desc: 'A wary vanguard probes the walls. Fewer soldiers, leaner spoils of souls.', count: 0.6, hp: 1, reward: 0.6, mats: 0 },
   { id: 'crusade', name: 'Crusade', desc: 'The crusade marches as foretold.', count: 1, hp: 1, reward: 1, mats: 0 },
   { id: 'holywar', name: 'Holy War', desc: 'Zealots answer every bell in the realm. A far greater, hardier host, and far richer spoils.', count: 1.5, hp: 1.15, reward: 1.8, mats: 3 },
 ];

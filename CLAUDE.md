@@ -163,6 +163,9 @@ Key rules:
 
 ## Current status
 
+v0.8.1 — HUD modifier strip and floating soul/material gains, end-of-wave summary (damage and kills per unit type /
+tower / spell, losses), materials income 3 + 1 per 5 waves, Skirmish keeps full materials.
+
 v0.8 — **roguelite layer**: choose the crusade before every wave (Skirmish / Crusade / Holy War: size vs. spoils) and a
 story event with three choices every 3 waves (`data/events.ts`, `systems/events.ts`, state in `run.rogue`).
 

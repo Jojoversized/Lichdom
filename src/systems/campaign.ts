@@ -255,6 +255,7 @@ export function startWave(tier?: number) {
   r.fervor = computeFervor();
   const off = G.crusadeOffer && G.crusadeOffer.n === r.wave ? G.crusadeOffer.waves[tier] : null;
   G.wave = off || genWave(r.wave, tier);
+  G.wave.souls0 = r.soulsEarned; G.wave.kills0 = r.kills; G.wave.keep0 = G.keep.hp;
   G.crusadeOffer = null;
   G.phase = 'wave'; G.autoT = 0;
   const nl = LANES.find(l => l.minWave === r.wave);
@@ -304,6 +305,12 @@ function waveCleared() {
   r.materials += mats;
   const rebuilt = rebuildRuins();
   msg(`Wave ${r.wave} repelled. +${bonus} souls, +${mats} materials${interest ? `, +${interest} interest` : ''}${revived ? ` · ${revived} fallen undead rise again` : ''}${rebuilt ? ` · ${rebuilt} tower${rebuilt > 1 ? 's' : ''} rebuilt` : ''}.`, PAL.necro);
+  // end-of-wave summary (shown by the UI before level-ups and events)
+  const rep = G.wave.report || { src: {}, fallen: {} };
+  G.waveSummary = { n: r.wave, tier: CRUSADE_TIERS[G.wave.tier ?? 1].name, theme: G.wave.theme.name, boss: G.wave.boss && G.wave.boss.name,
+    souls: r.soulsEarned - (G.wave.souls0 ?? r.soulsEarned), bonus, interest, mats, kills: r.kills - (G.wave.kills0 ?? r.kills),
+    keepLost: Math.max(0, Math.round((G.wave.keep0 ?? G.keep.hp) - G.keep.hp)), revived, rebuilt,
+    src: Object.values(rep.src).filter((s: any) => s.dmg > 0 || s.n > 0).sort((a: any, b: any) => b.dmg - a.dmg), fallen: rep.fallen, names: rep.names || {} };
   if (!G.wave.keepDamaged && G.wave.total >= 10) G.stats.flawless = true;
   G.stats.bestWave = Math.max(G.stats.bestWave, r.wave);
   G.keep.hp = Math.min(G.keep.maxHp, G.keep.hp + G.keep.maxHp * 0.1);

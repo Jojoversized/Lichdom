@@ -36,6 +36,8 @@ const msgFn = (t: string, c?: string) => hooks.msg(t, c);
 let game: Phaser.Game;
 const iconCache = new Map<string, { url: string; w: number; h: number }>();
 /** Crops one frame of a sprite sheet to its opaque bounds and returns an <img> tag. */
+/** Escapes text for an HTML attribute. */
+const esc = (t: string) => String(t).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 function spriteIcon(key: string, frame = 0, box = 32) {
   const id = key + ':' + frame;
   let c = iconCache.get(id);
@@ -63,7 +65,7 @@ const buildingIcon = (type: string, tier = 0, box = 34) => spriteIcon('building_
 const MAT = () => icon('materials');
 
 export const UI: any = {
-  tab: 'towers', collapsed: false, last: 0, lichT: 0, typing: null as any, infoKey: '', cards: null as any[], banishMode: false,
+  tab: 'towers', collapsed: false, last: 0, lichT: 0, typing: null as any, infoKey: '', cards: null as any[], banishMode: false, gains: null as any,
 
   init(g: Phaser.Game) {
     game = g;
@@ -80,6 +82,7 @@ export const UI: any = {
         <div class="stat" id="s-units" data-tip="units"></div>
         <div class="stat" id="s-fervor" data-tip="fervor"></div>
       </div>
+      <div id="mods" class="hud-el"></div>
       <div id="bossbar" class="hidden hud-el"><div class="bname" id="b-name"></div><div class="bar boss"><i id="b-hp"></i></div><div class="btitle" id="b-title"></div></div>
       <div id="lichbox" class="panel hidden hud-el"><div id="lichface"></div><div id="lichtext"></div></div>
       <div id="objective" class="panel hud-el"></div>
@@ -168,8 +171,10 @@ export const UI: any = {
     $('#s-wave').innerHTML = `<span class="lbl">Wave</span> ${r.wave}${G.phase === 'prep' ? '<em> prep</em>' : ''}`;
     $('#s-level').innerHTML = `<span class="lbl">Lv</span> ${r.level}`;
     ($('#s-xp') as HTMLElement).style.width = (r.xp / r.xpNext) * 100 + '%';
-    $('#s-souls').innerHTML = `${SOUL()} ${fmt(r.souls)}`;
-    $('#s-mat').innerHTML = `${MAT()} ${fmt(r.materials)}`;
+    this.setStat('#s-souls', `${SOUL()} ${fmt(r.souls)}`);
+    this.setStat('#s-mat', `${MAT()} ${fmt(r.materials)}`);
+    this.trackGains();
+    this.renderMods();
     $('#s-ess').innerHTML = `${ESS()} ${fmt(G.meta.essence)}`;
     const kp = $('#s-keep'); kp.style.width = clamp((G.keep.hp / G.keep.maxHp) * 100, 0, 100) + '%'; kp.className = G.keep.hp / G.keep.maxHp < 0.3 ? 'low' : '';
     $('#s-keeptxt').textContent = fmt(Math.max(0, Math.ceil(G.keep.hp)));
@@ -196,6 +201,12 @@ export const UI: any = {
     this.refreshAffordability();
     if (G.selected) this.renderInfo(); else $('#infopanel').classList.add('hidden');
     this.updateSpeed();
+  },
+  /** Updates a top-bar stat's text without wiping its floating gain labels. */
+  setStat(sel: string, html: string) {
+    const el = $(sel); let v = el.querySelector('.sv') as HTMLElement;
+    if (!v) { v = h('span', 'sv', ''); el.prepend(v); }
+    if (v.innerHTML !== html) v.innerHTML = html;
   },
   updateSpeed() { document.querySelectorAll('.speed button').forEach((b: HTMLElement) => { const s = +b.dataset.speed; b.classList.toggle('on', s === 0 ? G.paused : !G.paused && G.speed === s); }); },
 
@@ -395,6 +406,75 @@ export const UI: any = {
     return m;
   },
   closeModal() { const m = $('#modal'); m.className = 'hidden'; m.innerHTML = ''; G.modal = null; document.body.classList.remove('modal-open'); },
+
+  /** Active roguelite modifiers under the top bar: the crusade being fought (or picked last),
+   *  soul tithes, curses on the crusade and war buffs, each with its remaining waves. */
+  renderMods() {
+    const r = G.run, ro = rogue(r), chips: string[] = [];
+    const tier = CRUSADE_TIERS[(G.phase === 'wave' && G.wave ? G.wave.tier : ro.lastTier) ?? 1];
+    const tcol = ['#8fb4c8', '#d8cfb4', '#ff8a5a'][CRUSADE_TIERS.indexOf(tier)];
+    const tierTip = `${tier.desc}<br>Soldiers ×${tier.count}${tier.hp !== 1 ? ` · health ×${tier.hp}` : ''} · souls ×${tier.reward}${tier.mats ? ` · ${tier.mats > 0 ? '+' : ''}${tier.mats} materials` : ''}`;
+    chips.push(`<span class="mchip" style="--mc:${tcol}" data-tipx="${esc(tierTip)}">${icon('rally')} ${G.phase === 'wave' ? tier.name : 'Last: ' + tier.name}</span>`);
+    const w = (n: number) => `<em>${n} wave${n > 1 ? 's' : ''}</em>`;
+    for (const t of ro.tithes) chips.push(`<span class="mchip good" data-tipx="Enslaved villagers: souls trickle in during waves.">${SOUL()} +${t.ps}/s ${w(t.waves)}</span>`);
+    for (const c of ro.curses) {
+      const parts = [c.count < 1 ? `${Math.round((1 - c.count) * 100)}% smaller` : '', c.hp < 1 ? `${Math.round((1 - c.hp) * 100)}% less health` : ''].filter(Boolean).join(', ');
+      chips.push(`<span class="mchip good" data-tipx="A curse on the crusade: ${parts}.">${icon('skull')} Crusade ${parts} ${w(c.waves)}</span>`);
+    }
+    for (const b of ro.buffs) chips.push(`<span class="mchip good" data-tipx="War drums: all damage of your host and towers.">${icon('frenzy')} +${Math.round(b.dmg * 100)}% damage ${w(b.waves)}</span>`);
+    const html = chips.join('');
+    const el = $('#mods');
+    if (el.dataset.k !== html) {
+      el.dataset.k = html; el.innerHTML = html;
+      el.querySelectorAll('[data-tipx]').forEach((c: HTMLElement) => { c.onmouseenter = () => this.showTip(c, c.dataset.tipx); c.onmouseleave = () => this.hideTip(); });
+    }
+  },
+  /** Floating "+N" next to the souls / materials counters for every gain (merged over 0.35 s). */
+  trackGains() {
+    const r = G.run, g = this.gains || (this.gains = { souls: r.souls, materials: r.materials, accS: 0, accM: 0, t: 0 });
+    if (r.souls > g.souls) g.accS += r.souls - g.souls;
+    if (r.materials > g.materials) g.accM += r.materials - g.materials;
+    g.souls = r.souls; g.materials = r.materials;
+    const now = performance.now();
+    if (now - g.t < 350) return;
+    g.t = now;
+    const pop = (sel: string, n: number, cls: string) => {
+      const host = $(sel); const f = h('span', 'gain ' + cls + (n >= 100 ? ' big' : ''), '+' + fmt(n));
+      host.appendChild(f); setTimeout(() => f.remove(), 1300);
+    };
+    if (g.accS >= 1) { pop('#s-souls', Math.round(g.accS), 'gs'); g.accS = 0; }
+    if (g.accM >= 1) { pop('#s-mat', Math.round(g.accM), 'gm'); g.accM = 0; }
+  },
+  /** End-of-wave summary: spoils, losses, and damage / kills per unit type, tower and spell. */
+  showWaveSummary() {
+    const S = G.waveSummary; if (!S) return;
+    G.waveSummary = null;
+    if (!G.settings.waveReport) return;
+    const nameOf = (s: any) => s.kind === 'unit' ? (UNITS[s.type] ? UNITS[s.type].tiers[G.run.unitTier[s.type] || 0].name : SUMMONS[s.type] ? SUMMONS[s.type].name : s.type)
+      : s.kind === 'tower' ? TOWERS[s.type].name : s.key === 'x:lich' ? 'The Lich' : 'Spells, curses & hazards';
+    const iconOf = (s: any) => s.spr && SHEETS[s.spr] ? spriteIcon(s.spr, s.kind === 'tower' ? (s.tier || 0) * 4 : 0, 30) : s.key === 'x:lich' ? spriteIcon('lich', 0, 30) : icon('soul', 2, 'pix');
+    const kicon = (k: string, n: number) => `<span class="kico" title="${esc(S.names[k] || k)}">${SHEETS[k] ? spriteIcon(k, 0, 22) : icon('skull')}<i>×${n}</i></span>`;
+    const top = S.src.slice(0, 14), maxD = Math.max(1, ...top.map((s: any) => s.dmg));
+    const rows = top.map((s: any) => `<tr><td class="ri">${iconOf(s)}</td><td class="rn">${nameOf(s)}</td>
+      <td class="rd"><div class="dbar"><i style="width:${(s.dmg / maxD) * 100}%"></i></div>${fmt(Math.round(s.dmg))}</td>
+      <td class="rk">${Object.entries(s.kills).sort((a: any, b: any) => b[1] - a[1]).map(([k, n]: any) => kicon(k, n)).join('') || '<span class="dim">—</span>'}</td></tr>`).join('');
+    const fallen = Object.entries(S.fallen).sort((a: any, b: any) => b[1].n - a[1].n);
+    const fallenN = fallen.reduce((a: number, [, f]: any) => a + f.n, 0);
+    const m = this.openModal(`<h2>${icon('skull', 2, 'pix')} Wave ${S.n} Repelled</h2>
+      <div class="center dim">${S.tier} · ${S.theme}${S.boss ? ` · <b class="bad">${S.boss}</b> destroyed` : ''}</div>
+      <div class="wsum">
+        <div><b>${SOUL()} +${fmt(S.souls)}</b><small>souls this wave<br>(wave bonus ${fmt(S.bonus)}${S.interest ? `, interest ${fmt(S.interest)}` : ''})</small></div>
+        <div><b>${MAT()} +${S.mats}</b><small>materials</small></div>
+        <div><b>${icon('skull')} ${S.kills}</b><small>crusaders slain</small></div>
+        <div><b>${icon('rally')} ${fallenN}</b><small>undead fell${S.revived ? `<br>${S.revived} rise again` : ''}</small></div>
+        <div><b>${icon('keep')} ${S.keepLost ? '−' + fmt(S.keepLost) : 'unharmed'}</b><small>keep${S.rebuilt ? `<br>${S.rebuilt} tower${S.rebuilt > 1 ? 's' : ''} rebuilt` : ''}</small></div>
+      </div>
+      <table class="wtable"><thead><tr><th></th><th>Source</th><th>Damage</th><th>Kills</th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="dim center">No damage dealt.</td></tr>'}</tbody></table>
+      ${fallen.length ? `<div class="wfallen"><b>Fallen:</b> ${fallen.map(([k, f]: any) => `<span class="kico" title="${esc(UNITS[f.type] ? UNITS[f.type].tiers[0].name : SUMMONS[f.type] ? SUMMONS[f.type].name : f.type)}">${SHEETS[k] ? spriteIcon(k, 0, 22) : ''}<i>×${f.n}</i></span>`).join('')}</div>` : ''}
+      <div class="wfoot"><label><input type="checkbox" id="ws-show" ${G.settings.waveReport ? 'checked' : ''}> Show after every wave</label><button class="btn" id="ws-ok">Continue</button></div>`, 'wavesum');
+    ($('#ws-show') as HTMLInputElement).onchange = (e: any) => { G.settings.waveReport = e.target.checked; saveMetaSoon(); };
+    $('#ws-ok').onclick = () => this.closeModal();
+  },
 
   /** Before every wave: choose which crusade marches (smaller / baseline / larger, each with its own theme). */
   showCrusade() {

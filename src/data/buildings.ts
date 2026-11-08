@@ -30,6 +30,6 @@ export const BUILDINGS: Record<string, BuildingDef> = {
 };
 export const BUILDING_ORDER = ['forge', 'vault', 'cistern', 'barracks', 'sanctum', 'embalm', 'bell', 'quarry'];
 
-/** Materials earned when a wave is repelled (before the Bone Quarry): 2, +1 per 6 waves, +4 for a boss. */
-export function baseMaterialsIncome(wave: number, boss: boolean) { return 2 + Math.floor(wave / 6) + (boss ? 4 : 0); }
+/** Materials earned when a wave is repelled (before the Bone Quarry): 3, +1 per 5 waves, +5 for a boss. */
+export function baseMaterialsIncome(wave: number, boss: boolean) { return 3 + Math.floor(wave / 5) + (boss ? 5 : 0); }
 export const START_MATERIALS = 10; // a rampart segment and a tower on it (or a building) before wave 1

@@ -55,7 +55,8 @@ export class GameScene extends Phaser.Scene {
         G.camera.x = 520 + Math.sin(G.time * 0.05) * 320; G.camera.y = KEEP.y + Math.cos(G.time * 0.04) * 90;
         stepVisual(dt, WELL_POS.x, WELL_POS.y - 14);
       } else if (G.run) {
-        if (!G.modal && G.run.pendingLevels > 0 && G.phase !== 'over' && !UI.screenOpen()) UI.showLevelUp();
+        if (!G.modal && G.waveSummary && G.phase === 'prep' && !UI.screenOpen()) UI.showWaveSummary();
+        else if (!G.modal && G.run.pendingLevels > 0 && G.phase !== 'over' && !UI.screenOpen()) UI.showLevelUp();
         else if (!G.modal && G.phase === 'prep' && pendingEvent() && !UI.screenOpen()) UI.showEvent();
         const paused = G.paused || !!G.modal || UI.screenOpen();
         if (!paused) {

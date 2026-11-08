@@ -14,7 +14,7 @@ export function defaultMods() {
 }
 export function defaultMeta() { return { essence: 0, totalEssence: 0, lv: {} as Record<string, number> }; }
 export function defaultStats() { return { totalKills: 0, bestWave: 0, bosses: {}, maxArmy: 0, maxTowers: 0, evolved: false, legendary: false, castApoc: false, runs: 0, flawless: false, seenHelp: false, ach: {}, codex: { enemy: {}, tower: {}, unit: {}, spell: {} } }; }
-export function defaultSettings() { return { sfx: 0.6, music: 0.4, shake: true, dmgNumbers: true, fx: 'high', autoWave: false, zoom: 0 }; }
+export function defaultSettings() { return { sfx: 0.6, music: 0.4, shake: true, dmgNumbers: true, fx: 'high', autoWave: false, zoom: 0, waveReport: true }; }
 
 let metaT: any = null;
 export function saveMetaSoon() { clearTimeout(metaT); metaT = setTimeout(saveMeta, 800); }

@@ -88,7 +88,9 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 - [x] Run state `run.rogue` (tithes, curses, buffs, last tier, pending event) — saved with the run; older saves get defaults
 - [x] Bot (no meta, baseline crusades, random event choices): waves 30 / 29 / 30 (v0.7.2 without events: 23–27)
 - [ ] More events (and rarer, stranger ones late in a campaign); event art; event outcomes that depend on luck
-- [ ] Show active tithes / curses / war buffs in the HUD
+- [x] v0.8.1 HUD: modifier strip under the top bar (crusade tier being fought / last picked, soul tithes, curses on the crusade, war buffs, each with waves left and a tooltip); floating "+N" on the souls and materials counters for every gain (kills, wave bonus, tithes, events), merged per 0.35 s
+- [x] v0.8.1 **End-of-wave summary** (`G.waveSummary`, `UI.showWaveSummary`): souls this wave (bonus, interest), materials, kills, undead fallen (and risen again), keep damage, towers rebuilt; per source (each undead type, each tower type, the Lich, spells/hazards): damage dealt with a bar, kills as enemy sprites ×count; fallen undead as sprites ×count. Per-wave tracking in `combat.ts` (`waveReport`); can be turned off in the popup ("Show after every wave")
+- [x] v0.8.1 materials: income 3 + 1 per 5 waves (+5 for a boss); Skirmish no longer costs a material. Bot (no meta): waves 28 / 30 / 29
 
 ## Defence & economy tuning (v0.7.2)
 - [x] Wider rings: Curtain R 140, Bulwark R 290 (4 segments; the south one leaves the map); defence zone = Bulwark + 64 px
