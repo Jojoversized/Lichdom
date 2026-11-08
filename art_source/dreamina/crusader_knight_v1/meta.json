@@ -1,0 +1,19 @@
+{
+ "asset": "ai_crusader_knight",
+ "used_as": "enemies/knight override",
+ "tool": "Dreamina (dreamina.capcut.com) - AI Image",
+ "model": "Seedream 4.6",
+ "settings": {
+  "ratio": "1:1",
+  "resolution": "2K",
+  "images_per_run": 4
+ },
+ "reference": "original Lichdom style reference image (Undead lich army pixel art session)",
+ "postprocess": "Dreamina canvas Remove BG (2 credits) -> tools/assets/strip_shadow.py --keep-dist 40 --grow 10 -> tools/assets/import_ai_sprite.py --H 25 --res 4 --category enemies --override knight",
+ "credits_spent": {
+  "generation_4_images": 8,
+  "remove_bg": 2
+ },
+ "date": "2026-11-08",
+ "prompt": "Make a character sprite for my game in this image's exact art style: high resolution shaded pixel art, gritty, dark and desaturated, muted colors, same lighting and same top-down three-quarter camera angle and same character scale as the reference. It is an enemy of the undead lich's army: a soldier of the holy human crusade, a direct foil to the undead. Worn, battle-scarred ivory and tarnished gold, weathered steel, off-white cloth stained with mud and soot, deep crimson trim, and soft warm holy-light glows (pale candle gold) where the undead have necrotic green; still muted and gritty enough to sit on the same dark battlefield. The character is a Knight of the Realm: a heavily armored knight in full steel plate with gold trim, a crimson and ivory surcoat with a heraldic lion, a closed helm with a small crimson plume, a longsword and a heater shield. Full body, advancing, facing right. It is the ONLY character, standing alone in an open, empty patch of the dark battlefield ground with nothing touching or overlapping it, fully visible with clear space around it. Not a cartoon, not bright, no saturated colors."
+}

@@ -437,6 +437,383 @@
    "flying": false,
    "category": "units",
    "source": "art_source/dreamina/lich_v1/cutout.png"
+  },
+  "ai_crusader_cavalry": {
+   "file": "sprites/enemies/ai/ai_crusader_cavalry.png",
+   "fw": 163,
+   "fh": 138,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 32.0,
+   "res": 4,
+   "flying": false,
+   "category": "enemies",
+   "source": "art_source/dreamina/crusader_cavalry_v1/cutout_noshadow.png"
+  },
+  "ai_boss_divine_champion": {
+   "file": "sprites/bosses/ai/ai_boss_divine_champion.png",
+   "fw": 224,
+   "fh": 194,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 46.0,
+   "res": 4,
+   "flying": false,
+   "category": "bosses",
+   "source": "art_source/dreamina/boss_divine_champion_v1/cutout_noshadow.png"
+  },
+  "ai_boss_united_kings": {
+   "file": "sprites/bosses/ai/ai_boss_united_kings.png",
+   "fw": 203,
+   "fh": 178,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 42.0,
+   "res": 4,
+   "flying": false,
+   "category": "bosses",
+   "source": "art_source/dreamina/boss_united_kings_v1/cutout_noshadow.png"
+  },
+  "ai_boss_grand_inquisitor": {
+   "file": "sprites/bosses/ai/ai_boss_grand_inquisitor.png",
+   "fw": 126,
+   "fh": 170,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 40.0,
+   "res": 4,
+   "flying": false,
+   "category": "bosses",
+   "source": "art_source/dreamina/boss_grand_inquisitor_v1/cutout_noshadow.png"
+  },
+  "ai_boss_archmage": {
+   "file": "sprites/bosses/ai/ai_boss_archmage.png",
+   "fw": 151,
+   "fh": 170,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 40.0,
+   "res": 4,
+   "flying": false,
+   "category": "bosses",
+   "source": "art_source/dreamina/boss_archmage_v1/cutout_noshadow.png"
+  },
+  "ai_boss_dragonslayer": {
+   "file": "sprites/bosses/ai/ai_boss_dragonslayer.png",
+   "fw": 230,
+   "fh": 178,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 42.0,
+   "res": 4,
+   "flying": false,
+   "category": "bosses",
+   "source": "art_source/dreamina/boss_dragonslayer_v1/cutout_noshadow.png"
+  },
+  "ai_boss_saint": {
+   "file": "sprites/bosses/ai/ai_boss_saint.png",
+   "fw": 155,
+   "fh": 170,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 40.0,
+   "res": 4,
+   "flying": true,
+   "category": "bosses",
+   "source": "art_source/dreamina/boss_saint_v1/cutout_noshadow.png"
+  },
+  "ai_crusader_paladin": {
+   "file": "sprites/enemies/ai/ai_crusader_paladin.png",
+   "fw": 114,
+   "fh": 114,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 26.0,
+   "res": 4,
+   "flying": false,
+   "category": "enemies",
+   "source": "art_source/dreamina/crusader_paladin_v1/cutout_noshadow.png"
+  },
+  "ai_crusader_inquisitor": {
+   "file": "sprites/enemies/ai/ai_crusader_inquisitor.png",
+   "fw": 82,
+   "fh": 110,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 25.0,
+   "res": 4,
+   "flying": false,
+   "category": "enemies",
+   "source": "art_source/dreamina/crusader_inquisitor_v1/cutout_noshadow.png"
+  },
+  "ai_crusader_angel": {
+   "file": "sprites/enemies/ai/ai_crusader_angel.png",
+   "fw": 115,
+   "fh": 114,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 26.0,
+   "res": 4,
+   "flying": true,
+   "category": "enemies",
+   "source": "art_source/dreamina/crusader_angel_v1/cutout_noshadow.png"
+  },
+  "ai_crusader_griffon": {
+   "file": "sprites/enemies/ai/ai_crusader_griffon.png",
+   "fw": 135,
+   "fh": 130,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 30.0,
+   "res": 4,
+   "flying": true,
+   "category": "enemies",
+   "source": "art_source/dreamina/crusader_griffon_v1/cutout_noshadow.png"
+  },
+  "ai_crusader_construct": {
+   "file": "sprites/enemies/ai/ai_crusader_construct.png",
+   "fw": 149,
+   "fh": 146,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 34.0,
+   "res": 4,
+   "flying": false,
+   "category": "enemies",
+   "source": "art_source/dreamina/crusader_construct_v1/cutout_noshadow.png"
+  },
+  "ai_crusader_knight": {
+   "file": "sprites/enemies/ai/ai_crusader_knight.png",
+   "fw": 96,
+   "fh": 110,
+   "frames": 13,
+   "anims": {
+    "idle": [
+     0,
+     4
+    ],
+    "walk": [
+     4,
+     4
+    ],
+    "atk": [
+     8,
+     3
+    ],
+    "cast": [
+     11,
+     2
+    ]
+   },
+   "H": 25.0,
+   "res": 4,
+   "flying": false,
+   "category": "enemies",
+   "source": "art_source/dreamina/crusader_knight_v1/cutout_noshadow.png"
   }
  },
  "overrides": {
@@ -453,7 +830,20 @@
   "wyvern": "ai_bone_wyvern",
   "abomination": "ai_flesh_abomination",
   "golem": "ai_bone_golem",
-  "lich": "lich_ai"
+  "lich": "lich_ai",
+  "cavalry": "ai_crusader_cavalry",
+  "b_champion": "ai_boss_divine_champion",
+  "b_kings": "ai_boss_united_kings",
+  "b_inquisitor": "ai_boss_grand_inquisitor",
+  "b_archmage": "ai_boss_archmage",
+  "b_dragonslayer": "ai_boss_dragonslayer",
+  "b_saint": "ai_boss_saint",
+  "paladin": "ai_crusader_paladin",
+  "inquisitor": "ai_crusader_inquisitor",
+  "angel": "ai_crusader_angel",
+  "griffon": "ai_crusader_griffon",
+  "construct": "ai_crusader_construct",
+  "knight": "ai_crusader_knight"
  },
  "images": {
   "fortress": {

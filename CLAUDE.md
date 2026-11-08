@@ -28,6 +28,7 @@ GitHub Pages: every push to `main` runs `.github/workflows/deploy.yml` (install 
    - `tools/test/ui_flow.py` — real clicks through build, drawer, level-up, Soul Well, save/reload, codex
    - `tools/test/bot.py [maxWave] [runs] [metaMax]` — automated campaigns for balance/regression (also asserts no duplicate upgrade tiers in offers)
    - `tools/test/closeup.py [outdir] [zoom] [w] [h]` — staged skirmish screenshot for art/render review
+   - `tools/test/showcase.py [out.png] [zoom] [w] [h] [marchMs]` — every crusader type + boss in rows, paused (enemy art review)
    - `tools/test/strategy.py '<json configs>' [runs] [maxWave]` — player-model bot (tier, focus unit, card policy, econ-first, walls) for testing strategies seen in real-run analytics
    - `LICH_AN_OUT=runs.json tools/test/bot.py …` also saves analytics records → `python3 tools/analytics/report.py runs.json`
    - `tools/test/balance.py '<json configs>' [runs] [maxWave]` — unit balance: campaigns restricted to fixed undead types (solo/combo), same spending policy, no towers/walls (`LICH_PORT=8766` to run against a frozen copy of the build while you keep editing)
@@ -102,7 +103,15 @@ Imported AI art never overwrites generated assets. It is layered at boot:
 - **Imported so far (all 14 allied units):** skeleton, zombie, acolyte (skeleton cleric), deathknight (haunted
   armor), wendigo (new unit); v0.6.1: archer, pikeman, bonemage, wraith, banshee, vampire, wyvern, abomination,
   golem (prompts in each `meta.json`, styled after the wendigo); v0.7: the Lich (`lich_v1`) and the necropolis
-  fortress (`fortress_v1`, original + cutout). Credits remaining: 224.
+  fortress (`fortress_v1`, original + cutout); v0.10: **crusaders** — 6 bosses (`boss_*_v1`) and 7 strong units
+  (`crusader_*_v1`), all made by `tools/assets/crusader_batch.py` (prompts, heights, overrides). Credits remaining: 122.
+- **Crusader prompt recipe**: same style preamble, then "an enemy of the undead lich's army: a [soldier|champion] of the holy
+  human crusade, a direct foil to the undead. Worn, battle-scarred ivory and tarnished gold, weathered steel, off-white cloth
+  stained with mud and soot, deep crimson trim, and soft warm holy-light glows (pale candle gold) where the undead have
+  necrotic green; still muted and gritty enough to sit on the same dark battlefield." (Mage-conclave units: arcane violet.)
+  Words like "slayer"/"hunter" with weapons can trip the content filter — describe the role, not the violence.
+- **Shadows**: Remove BG keeps the painted ground shadow; run `tools/assets/strip_shadow.py <cutout> <out>` before importing
+  (`--grow 0` when dark armour touches the shadow, `--keep-dist` larger for floating props).
 - **Fortress**: `python3 tools/assets/import_fortress.py <original> <cutout>` places the art unscaled and unwarped at
   x = 0 (keep the AI art's proportions — warping it looked stretched), writes `sprites/buildings/ai/fortress.png` and
   the generated `src/data/fortress_fit.ts` (per-row wall face = solid cells; torch/window/portcullis lights detected by
@@ -111,6 +120,9 @@ Imported AI art never overwrites generated assets. It is layered at boot:
   `makeWallSites`/`makePlots` in mapgen; tower mounts are made on demand (`mountAt` in systems/keep.ts).
   Composition prompts that worked: "flat map view, no horizon", wall "shaped like a ')' bracket from the very top
   edge to the very bottom edge" (a plain "three-quarter angle" prompt gives isometric perspective shots).
+- Prompts are long: typing them into the prompt box freezes the page — set the text with JS
+  (`document.execCommand('selectAll')` + `insertText` on the focused editor). Remove BG sometimes doesn't start or says
+  "No object detected": wait ~10 s after opening it, re-select the node, press Generate again.
 - Batch workflow that works: in the 'Undead lich army pixel art' session, *Edit prompt* on an earlier entry (keeps
   the reference; pick Seedream 4.6 and the ratio), set the image count, queue several prompts; then per image: detail view →
   *Edit on canvas* → select node → *Remove BG* → Generate → select cutout → download → stage from Downloads.
@@ -165,6 +177,9 @@ Key rules:
 - After any change: typecheck, run smoke + ui_flow, run the bot for balance changes, update `docs/CHECKLIST.md`.
 
 ## Current status
+
+v0.10 — **crusader AI art**: Dreamina sprites for all 6 bosses and 7 strong crusader units (holy foil palette), shadow
+stripping for Remove BG cutouts, `tools/test/showcase.py`.
 
 v0.9.1 — balance from the first real-run export: Fervor = wave schedule × **zeal** (each Holy War +3.5%, lasting) ×
 **host pressure** (host soul value above `1200 + 60·wave²`, ^0.4, max ×2.5); repeat card picks drawn less often

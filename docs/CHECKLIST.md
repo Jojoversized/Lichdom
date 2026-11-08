@@ -19,7 +19,11 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 - [x] Imported: Skeleton Warriors, Zombie Horde, Necromantic Acolyte (cleric), Death Knight (haunted armor), Undead Wendigo (new)
 - [ ] Tier 2/3 forms for imported units (currently tiers 2–3 keep procedural art; Wendigo reuses one sheet)
 - [ ] Real animation poses (currently derived from one pose: bob, squash, lean)
-- [ ] Remaining undead tiers, crusaders, towers, tiles, spell FX (the Lich and the fortress are done: v0.7)
+- [x] **Crusaders (v0.10)**: 6 bosses (Divine Champion, United Kings, Grand Inquisitor, Archmage, Dragon-Slayer, Saint) and 7 strong units (paladin, inquisitor, angel, griffon knight, arcane construct, knight, heavy cavalry). Holy foil to the undead: ivory/tarnished gold/crimson, pale candle-gold glows (arcane violet for the mage conclave). `tools/assets/crusader_batch.py` records prompts, heights and post-processing
+- [x] `tools/assets/strip_shadow.py`: removes the painted ground shadow Remove BG keeps (`--grow 0` where dark armour touches the shadow)
+- [x] `tools/test/showcase.py`: every crusader + boss marching, paused screenshot
+- [ ] Remaining crusaders still procedural: footman, priest, crossbow, battlemage, rams/siege, etc. (they now look blocky next to the AI art). Monster Hunter prompt was flagged twice by Dreamina's guidelines (refunded) — needs a reworded prompt
+- [ ] Remaining undead tiers, towers, tiles, spell FX (the Lich and the fortress are done: v0.7)
 
 ## Roster
 - [x] Random starting roster per campaign: 1 front-line + 1 ranged + 1 wild card (`startingRoster` in campaign.ts)
@@ -80,7 +84,7 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 - [x] Building plots (14) behind the Bulwark, around the gate; Soul Well between the walls north of the gate; save v6
 - [ ] Per-theme fortress variants (all keep themes currently share the one fortress; the old keep sprites remain as fallback)
 - [ ] Keep damage states on the fortress art (cracks/fires as keep HP drops)
-- [ ] Enemy art (Dreamina) — next
+- [x] Enemy art (Dreamina) — bosses and strong units done in v0.10
 
 ## Roguelite layer (v0.8)
 - [x] **Crusade choice before every wave** (`data/events.ts` `CRUSADE_TIERS`, `crusadeOffer`/`startWave(tier)` in campaign.ts): Skirmish (×0.6 soldiers, ×0.6 souls, −1 material), Crusade (baseline), Holy War (×1.5 soldiers, +15% health, ×1.8 souls, +3 materials). Each option is its own rolled wave (theme, top enemy types shown with counts, boss); kills and the wave bonus pay ×reward. Auto-start, Enter-less starts and the bot use the last choice (default Crusade)
@@ -145,7 +149,7 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 - [x] Dreamina sprites for every allied unit: archer, pikeman, bone mage, wraith, banshee, vampire, wyvern, abomination, golem (base-tier overrides; procedural art kept, `manifest_ai.json` `overrides`)
 - [x] Importer ignores detached specks far from the subject (corner badge) when cropping
 - [ ] Evolved tiers (tier 2/3 names) still reuse the base AI sprite; consider tinted/upgraded variants
-- [ ] Enemies/bosses still procedural — next candidates for the Dreamina pass
+- [x] Bosses and strong crusaders imported (v0.10); weaker mortals still procedural
 
 ## UI fonts
 - [x] **Lich Numerals** (`assets/fonts/LichNumerals.ttf`, built by `tools/assets/gen-font.py`): pixel digits and number signs only, loaded with a `unicode-range` ahead of every font stack (Pixelify Sans / Jacquard 24), so every number in the DOM UI uses it (flat-topped 5, open 4/9)

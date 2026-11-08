@@ -1,0 +1,19 @@
+{
+ "asset": "ai_boss_saint",
+ "used_as": "bosses/b_saint override",
+ "tool": "Dreamina (dreamina.capcut.com) - AI Image",
+ "model": "Seedream 4.6",
+ "settings": {
+  "ratio": "1:1",
+  "resolution": "2K",
+  "images_per_run": 4
+ },
+ "reference": "original Lichdom style reference image (Undead lich army pixel art session)",
+ "postprocess": "Dreamina canvas Remove BG (2 credits) -> tools/assets/strip_shadow.py --keep-dist 60 --grow 10 -> tools/assets/import_ai_sprite.py --H 40 --res 4 --category bosses --override b_saint --flying",
+ "credits_spent": {
+  "generation_4_images": 8,
+  "remove_bg": 2
+ },
+ "date": "2026-11-08",
+ "prompt": "Make a character sprite for my game in this image's exact art style: high resolution shaded pixel art, gritty, dark and desaturated, muted colors, same lighting and same top-down three-quarter camera angle and same character scale as the reference. It is an enemy of the undead lich's army: a champion of the holy human crusade, a direct foil to the undead. Worn, battle-scarred ivory and tarnished gold, weathered steel, off-white cloth stained with mud and soot, deep crimson trim, and soft warm holy-light glows (pale candle gold) where the undead have necrotic green; still muted and gritty enough to sit on the same dark battlefield. The character is the Saint of Eternal Dawn, a boss: a serene female saint hovering above the ground with six large feathered ivory and pale gold wings, long flowing ivory and gold vestments, a thin golden halo of soft light behind her head, holding a small glowing sun orb in her raised hand. Full body, hovering in the air above her own faint shadow, facing right. It is the ONLY character, standing alone in an open, empty patch of the dark battlefield ground with nothing touching or overlapping it, fully visible with clear space around it. Not a cartoon, not bright, no saturated colors."
+}
