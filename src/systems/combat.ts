@@ -166,6 +166,7 @@ export function dealDamage(t: any, amount: number, dtype: string, src: any, opt:
   let dmg = amount, crit = false;
   if (src && src.team === 'u' && !opt.noCrit && Math.random() < G.run.m.crit) { dmg *= G.run.m.critMult; crit = true; }
   if (t.team === 'm') {
+    if (G.run.mods.reaper && !t.reaped && src && src.team === 'u') { dmg *= 2; t.reaped = true; } // Reaper's Mark: the first blow lands twice as hard
     if (t.def.dodge && !opt.aoe && Math.random() < t.def.dodge) { addText(t.x, t.y - 18, 'dodge', '#aaaaaa'); return 0; }
     if (opt.proj && t.def.projArmor) dmg *= 1 - t.def.projArmor;
     if (MAGIC[dtype] && t.def.mres) dmg *= 1 - t.def.mres;
@@ -290,6 +291,7 @@ function onUnitDeath(u: any) {
   { const rep = waveReport(); if (rep && !u.temp) { const k = u.spr; const f = rep.fallen[k] || (rep.fallen[k] = { n: 0, type: u.type }); f.n++; } }
   // every non-temporary undead returns when the wave is repelled
   if (!u.temp && G.wave) G.wave.fallen.push({ type: u.type, summon: !!u.summon, free: !!u.free, spr: u.fixedSpr ? u.spr : null, value: u.summonValue || 0, mult: u.raisedMult || 1 });
+  if (G.run.mods.pyre && !u.temp && !u.summon) { aoeDamage(u.x, u.y, 28, u.maxHp * 0.4, 'necro', u); if (Math.random() < 0.3) explosion(u.x, u.y, 24, PAL.necro); } // Martyr's Pyre
   if (u.type === 'zombie' && G.run.mods.zom_explode) { aoeDamage(u.x, u.y, 34, 40 + u.maxHp * 0.4, 'necro', u); explosion(u.x, u.y, 34, PAL.necro); }
   if (!u.summon && !u.temp && G.run.mods.unit_rise && !u.rose && Math.random() < 0.3) {
     G.timers.push({ t: 1.2, fn: () => { if (G.phase !== 'wave') return; const n = spawnUnit(u.type, u.x, u.y, { free: u.free }); n.rose = true; if (G.wave) G.wave.fallen.pop(); addText(u.x, u.y - 20, 'reassembled', PAL.necro); } });

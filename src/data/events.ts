@@ -8,7 +8,7 @@ export interface CrusadeTier { id: string; name: string; desc: string; count: nu
 export const CRUSADE_TIERS: CrusadeTier[] = [
   { id: 'skirmish', name: 'Skirmish', desc: 'A wary vanguard probes the walls. Fewer soldiers, leaner spoils of souls.', count: 0.6, hp: 1, reward: 0.6, mats: 0 },
   { id: 'crusade', name: 'Crusade', desc: 'The crusade marches as foretold.', count: 1, hp: 1, reward: 1, mats: 0 },
-  { id: 'holywar', name: 'Holy War', desc: 'Zealots answer every bell in the realm. A far greater, hardier host, and far richer spoils.', count: 1.5, hp: 1.15, reward: 1.8, mats: 3 },
+  { id: 'holywar', name: 'Holy War', desc: 'Zealots answer every bell in the realm. A far greater, hardier host, and far richer spoils — but every Holy War leaves the crusade more zealous for the rest of the campaign (+3.5% Fervor).', count: 1.5, hp: 1.15, reward: 1.8, mats: 3 },
 ];
 
 /** A story event every few waves. Each choice lists its effects (see systems/events.ts for the

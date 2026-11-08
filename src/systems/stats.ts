@@ -79,13 +79,25 @@ export function waveHpMult(n: number) { return Math.pow(1.135, n - 1) * (1 + 0.0
 export function waveDmgMult(n: number) { return Math.pow(1.065, n - 1) * (1 + 0.02 * (n - 1)); }
 export function bountyMult(n: number) { return Math.pow(1.08, n - 1); }
 
-/** Crusade Fervor: a fixed schedule that rises with the wave number only. It no longer
- *  reacts to the size or strength of your host, so every upgrade and squad you add is a
- *  real gain over the crusade. +3% enemy health per wave (compounding) (damage scales with its root). */
-export function computeFervor(wave = G.run ? G.run.wave : 1) {
-  return Math.pow(FERVOR_GROWTH, Math.max(0, wave - 1));
+/** Crusade Fervor (enemy health; damage scales with its root), v0.9.1 — three parts:
+ *  - schedule: +3% per wave, compounding;
+ *  - zeal: every Holy War fought adds a lasting +3.5% (greed makes every later wave harder);
+ *  - host: when the soul value of your host outgrows a generous allowance for the wave, the crusade
+ *    musters to match — (value / allowance)^0.4, capped at ×2.5. A host the size the baseline bot
+ *    fields stays below the allowance; snowballed hosts (stacked squad cards, Holy War economies) pay. */
+export const FERVOR_GROWTH = 1.03, ZEAL_GROWTH = 1.035, HOST_PRESSURE_EXP = 0.4, HOST_PRESSURE_MAX = 2.5;
+export function hostAllowance(wave: number) { return 1200 + 60 * wave * wave; }
+export function hostValue() { let v = 0; for (const u of G.units) v += unitValue(u); return v; }
+export function fervorParts(wave = G.run ? G.run.wave : 1) {
+  const sched = Math.pow(FERVOR_GROWTH, Math.max(0, wave - 1));
+  const zealN = (G.run && G.run.rogue && G.run.rogue.zeal) || 0, zeal = Math.pow(ZEAL_GROWTH, zealN);
+  const value = G.run ? hostValue() : 0, ratio = value / hostAllowance(Math.max(1, wave));
+  const host = Math.min(HOST_PRESSURE_MAX, Math.pow(Math.max(1, ratio), HOST_PRESSURE_EXP));
+  return { sched, zeal, zealN, host, value: Math.round(value), allowance: hostAllowance(Math.max(1, wave)), total: sched * zeal * host };
 }
-export const FERVOR_GROWTH = 1.03;
+export function computeFervor(wave = G.run ? G.run.wave : 1) { return fervorParts(wave).total; }
+/** Souls to evolve a unit type to its next tier (Ossuary Rites: −40%). */
+export function evolveCost(type: string) { const t = (G.run.unitTier[type] || 0) + 1, nx = UNITS[type].tiers[t]; return nx ? Math.round(nx.cost * (G.run.mods.rites ? 0.6 : 1)) : 0; }
 
 export function applyUnitStats(u: any) {
   const r = G.run;
@@ -93,14 +105,17 @@ export function applyUnitStats(u: any) {
   const d = UNITS[u.type], tier = r.unitTier[u.type] || 0;
   const m: any = { hp: 1, dmg: 1, armor: 0, range: 1, spd: 1, splash: 1, raiser: 1 };
   for (let i = 1; i <= tier; i++) { const t = d.tiers[i]; for (const k in t) if (typeof t[k] === 'number' && k !== 'cost') m[k] = t[k]; }
-  const hpMult = m.hp * (1 + r.m.unitHp + metaLv('n_hp') * 0.1 + fb('unitHp') + (r.unitBuff[u.type] || 0)) * ascHp() * (1 + 0.12 * bld('vault'));
+  // unique cards (v0.9.1): Unholy Covenant scales with the number of undead types raised, Bone Vanguard / Grave Marksmen by role
+  const cov = r.mods.covenant ? 0.05 * r.unlockedUnits.length : 0;
+  const van = r.mods.vanguard && d.melee ? 0.25 : 0, mark = r.mods.marksmen && d.ranged ? 0.15 : 0;
+  const hpMult = m.hp * (1 + r.m.unitHp + metaLv('n_hp') * 0.1 + fb('unitHp') + (r.unitBuff[u.type] || 0) + cov + van) * ascHp() * (1 + 0.12 * bld('vault'));
   const newMax = Math.round(d.hp * hpMult * (u.raisedMult || 1));
   if (u.maxHp) u.hp = Math.max(1, u.hp + (newMax - u.maxHp)); else u.hp = newMax;
   u.maxHp = newMax;
-  u.dmg = d.dmg * m.dmg * (1 + r.m.unitDmg + metaLv('n_dmg') * 0.08 + (r.unitBuff[u.type] || 0)) * globalDmg() * dtypeMult(d.dtype) * (u.raisedMult || 1);
+  u.dmg = d.dmg * m.dmg * (1 + r.m.unitDmg + metaLv('n_dmg') * 0.08 + (r.unitBuff[u.type] || 0) + cov + mark) * globalDmg() * dtypeMult(d.dtype) * (u.raisedMult || 1);
   if (u.type === 'pikeman' && r.mods.pike_wall) u.dmg *= 1.6;
-  u.armor = Math.min(0.8, (d.armor || 0) + (tier ? (m.armor || 0) : 0) + (u.type === 'skeleton' && r.mods.skel_shield ? 0.2 : 0));
-  u.range = d.range * m.range;
+  u.armor = Math.min(0.8, (d.armor || 0) + (tier ? (m.armor || 0) : 0) + (u.type === 'skeleton' && r.mods.skel_shield ? 0.2 : 0) + (van ? 0.1 : 0));
+  u.range = d.range * m.range * (mark ? 1.15 : 1);
   u.spd = d.spd * m.spd * (1 + r.m.unitSpd);
   u.cd = d.cd / (1 + r.m.unitAs + metaLv('m_as') * 0.06 + 0.08 * bld('bell'));
   u.splash = (d.splash || 0) * m.splash;

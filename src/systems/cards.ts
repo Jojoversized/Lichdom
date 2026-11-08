@@ -118,6 +118,15 @@ export function buildCardPool(): any[] {
   mod('feast', 'Feast of Souls', 2, 'Every kill heals undead within 70px by 6% of their max health.', (r: any) => G.units.length >= 3, 1);
   mod('volatile', 'Volatile Remains', 2, '25% of slain mortals explode in necrotic fire.', () => true, 1);
   mod('keep_spikes', 'Bone Spires', 1, 'The keep impales attackers for heavy damage every second.', () => true, 1);
+  // ---- unique picks (v0.9.1): one-time effects that reward variety instead of stacking one unit
+  mod('covenant', 'Unholy Covenant', 2, '+5% undead damage and health for every undead type you have raised.', (r: any) => r.unlockedUnits.length >= 3, 1, { icon: 'raise' });
+  mod('rites', 'Ossuary Rites', 1, 'Evolving an undead type costs 40% fewer souls.', (r: any) => r.unlockedUnits.some((u: string) => UNITS[u].tiers[(r.unitTier[u] || 0) + 1]), 1, { icon: 'level' });
+  mod('pyre', "Martyr's Pyre", 2, 'Fallen undead burst in necrotic fire for 40% of their max health.', (r: any) => G.units.length >= 10, 1, { icon: 'bomb' });
+  mod('bond', 'Phylactery Bond', 2, 'The keep regenerates 1.5% of its max health per second during waves.', () => true, 1, { icon: 'keep' });
+  mod('reaper', "Reaper's Mark", 2, 'The first blow against each mortal deals double damage.', () => true, 1, { icon: 'skull' });
+  mod('knell', 'Death Knell', 3, 'Every 15 s of battle a necrotic nova bursts from the gate (scales with spell power).', () => true, 1, { icon: 'deathwave' });
+  mod('vanguard', 'Bone Vanguard', 1, 'Melee undead gain +25% health and +10% armor.', (r: any) => r.unlockedUnits.some((u: string) => UNITS[u].melee), 1, { icon: 'shield', recalc: true });
+  mod('marksmen', 'Grave Marksmen', 1, 'Ranged undead gain +15% range and +15% damage.', (r: any) => r.unlockedUnits.some((u: string) => UNITS[u].ranged), 1, { icon: 'level' });
   // ---- legendaries
   mod('leg_storm', 'Eye of the Storm', 4, 'All Tesla Obelisks link across any distance; +3 chains; arcs deal triple damage.', T('tesla'), 1, { tower: 'tesla' });
   mod('leg_hellfire', 'Hellgate', 4, 'Every 10s each Brimstone Tower calls a meteor on a random enemy.', T('brimstone'), 1, { tower: 'brimstone' });
@@ -129,6 +138,8 @@ export function buildCardPool(): any[] {
 }
 
 let CARD_POOL: any[] = null;
+/** Weight factor per earlier pick of the same card family (v0.9.1). */
+export const REPEAT_FALLOFF = 0.55;
 
 export function rollCards(n = 3): any[] {
   const r = G.run;
@@ -137,6 +148,10 @@ export function rollCards(n = 3): any[] {
   const out: any[] = [];
   const banned = new Set<string>(); // families whose weaker tier was rerolled away
   const lvBonus = Math.min(1, r.level / 30);
+  let redraws = 0;
+  const famPicks: Record<string, number> = {};
+  for (const c of CARD_POOL) if (r.picks[c.id]) famPicks[c.fam] = (famPicks[c.fam] || 0) + r.picks[c.id];
+  const repeatWeight = (c: any) => Math.pow(REPEAT_FALLOFF, famPicks[c.fam] || 0);
   const drawOne = (): any => {
     // pick rarity first, then card within rarity (fallback lower)
     const weights = RARITY.map((ra: any, idx: number) => ra.w * (idx >= 2 ? 1 + lvBonus * 1.5 : 1));
@@ -147,10 +162,13 @@ export function rollCards(n = 3): any[] {
     for (let rr = rar; rr >= 0 && !cands.length; rr--) cands = open.filter((c: any) => c.rar === rr);
     if (!cands.length) cands = open;
     if (!cands.length) return null;
-    // prefer relevant: modifiers/tower-specific for things owned get weight boost
-    const w = cands.map((c: any) => (c.tower && ownsTower(c.tower)) || (c.unit && ownsUnit(c.unit)) ? 2.5 : 1);
+    // prefer relevant: modifiers/tower-specific for things owned get weight boost;
+    // v0.9.1: every earlier pick of the same family halves its weight (repeat stacking turns up less often)
+    const w = cands.map((c: any) => ((c.tower && ownsTower(c.tower)) || (c.unit && ownsUnit(c.unit)) ? 2.5 : 1) * repeatWeight(c));
     let tw = w.reduce((a, b) => a + b, 0), rl = Math.random() * tw, ch = cands[0];
     for (let k = 0; k < cands.length; k++) { rl -= w[k]; if (rl <= 0) { ch = cands[k]; break; } }
+    // a repeat that wins the draw is still rerolled now and then, across rarities (at most twice)
+    if (famPicks[ch.fam] && Math.random() > repeatWeight(ch) && redraws++ < 2) return drawOne();
     return ch;
   };
   // Never offer two tiers of the same upgrade family: keep the better tier

@@ -9,12 +9,13 @@ import { SPELLS, SPELL_ORDER, WELL, unearthCost } from '../data/spells';
 import { FORTRESSES } from '../data/world';
 import { msg, lichSay, sfx, hooks } from '../core/events';
 import { generateMap, computeFlow, canBuildAt } from '../world/mapgen';
-import { metaLv, fb, recalcKeep, squadSize, globalDmg, computeFervor, bountyMult, ascSouls, recalcAllStats, bld } from './stats';
+import { metaLv, fb, recalcKeep, squadSize, globalDmg, computeFervor, fervorParts, bountyMult, ascSouls, recalcAllStats, bld } from './stats';
 import { materialsIncome, rebuildRuins, spawnBuilding, plotById, mountAt } from './keep';
 import { START_MATERIALS } from '../data/buildings';
 import { WALL_TIERS } from '../data/towers';
 import { upgradeSite } from './ramparts';
 import { CRUSADE_TIERS } from '../data/events';
+import { GATE } from '../data/fortress';
 import { rogue, tierMods, waveMods, afterWave, stepRogue } from './events';
 import {
   spawnUnit, spawnSummon, spawnEnemy, placeTower, placeFort, fireProjectile, aoeDamage, dealDamage, addHazard, raiseCorpse,
@@ -256,7 +257,10 @@ export function startWave(tier?: number) {
   ro.lastTier = tier;
   r.wave++;
   r.spellsCastWave = 0;
-  r.fervor = computeFervor();
+  if (r.mods.covenant) recalcAllStats(); // Unholy Covenant counts the types raised since the last wave
+  const fp = fervorParts(r.wave);
+  r.fervor = fp.total;
+  if (tier === 2) ro.zeal = (ro.zeal || 0) + 1; // Holy War: a lasting rise in Fervor (from the next wave on)
   const off = G.crusadeOffer && G.crusadeOffer.n === r.wave ? G.crusadeOffer.waves[tier] : null;
   G.wave = off || genWave(r.wave, tier);
   G.wave.souls0 = r.soulsEarned; G.wave.kills0 = r.kills; G.wave.keep0 = G.keep.hp;
@@ -266,6 +270,8 @@ export function startWave(tier?: number) {
   const nl = LANES.find(l => l.minWave === r.wave);
   if (nl && r.wave > 1) msg(`A new approach opens: the ${nl.name}!`, '#ffb060');
   msg(`Wave ${r.wave}: ${CRUSADE_TIERS[tier].name} — ${G.wave.theme.name}${r.fervor > 1.05 ? ` (Crusade Fervor ×${r.fervor.toFixed(2)})` : ''}`, '#e0d0b0');
+  if (fp.host > 1.05 && (fp.host > (r.lastHostP || 1) + 0.1 || r.wave % 5 === 0)) msg(`The crusade musters against your swelling host: Fervor ×${fp.host.toFixed(2)} from its size.`, '#ffb060');
+  r.lastHostP = fp.host;
   if (!G.wave.boss) lichSay('wave');
   sfx('horn', 0.7);
   saveRun();
@@ -444,6 +450,20 @@ function updateStorm(dt: number) {
 }
 
 // ---------------- the simulation step ----------------
+/** Unique level-up cards that act over time (v0.9.1). */
+function stepUniqueCards(dt: number) {
+  const r = G.run; if (G.phase !== 'wave') return;
+  if (r.mods.bond) G.keep.hp = Math.min(G.keep.maxHp, G.keep.hp + G.keep.maxHp * 0.015 * dt); // Phylactery Bond
+  if (r.mods.knell) { // Death Knell: a necrotic nova bursts from the gate every 15 s
+    r.knellT = (r.knellT || 0) + dt;
+    if (r.knellT >= 15) {
+      r.knellT = 0;
+      aoeDamage(GATE.x + 40, GATE.y, 140, 120 * spellPower(), 'necro', LICH_SRC);
+      addRing(GATE.x + 40, GATE.y, 10, 140, PAL.necro, 0.7); sfx('deathwave', 0.5);
+    }
+  }
+}
+const LICH_SRC = { team: 'u', def: {}, kind: 'lich' };
 export function step(dt: number) {
   const M = G.map;
   if (M.dirty) computeFlow(M);
@@ -466,6 +486,7 @@ export function step(dt: number) {
   updateWaveFx(dt);
   updateStorm(dt);
   stepRogue(dt);
+  stepUniqueCards(dt);
   if (G.tdT > 0) G.tdT -= dt;
   if (G.frenzyT > 0) G.frenzyT -= dt;
   if (G.keep.ward > 0) G.keep.ward -= dt;

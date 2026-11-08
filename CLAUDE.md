@@ -28,6 +28,7 @@ GitHub Pages: every push to `main` runs `.github/workflows/deploy.yml` (install 
    - `tools/test/ui_flow.py` — real clicks through build, drawer, level-up, Soul Well, save/reload, codex
    - `tools/test/bot.py [maxWave] [runs] [metaMax]` — automated campaigns for balance/regression (also asserts no duplicate upgrade tiers in offers)
    - `tools/test/closeup.py [outdir] [zoom] [w] [h]` — staged skirmish screenshot for art/render review
+   - `tools/test/strategy.py '<json configs>' [runs] [maxWave]` — player-model bot (tier, focus unit, card policy, econ-first, walls) for testing strategies seen in real-run analytics
    - `LICH_AN_OUT=runs.json tools/test/bot.py …` also saves analytics records → `python3 tools/analytics/report.py runs.json`
    - `tools/test/balance.py '<json configs>' [runs] [maxWave]` — unit balance: campaigns restricted to fixed undead types (solo/combo), same spending policy, no towers/walls (`LICH_PORT=8766` to run against a frozen copy of the build while you keep editing)
 
@@ -164,6 +165,10 @@ Key rules:
 - After any change: typecheck, run smoke + ui_flow, run the bot for balance changes, update `docs/CHECKLIST.md`.
 
 ## Current status
+
+v0.9.1 — balance from the first real-run export: Fervor = wave schedule × **zeal** (each Holy War +3.5%, lasting) ×
+**host pressure** (host soul value above `1200 + 60·wave²`, ^0.4, max ×2.5); repeat card picks drawn less often
+(×0.55 weight per earlier pick of the family); 8 new unique cards; `tools/test/strategy.py` player-model bot.
 
 v0.9 — **run analytics** for balance work (Settings → Run analytics → Export JSON; `tools/analytics/report.py`; the bot can
 dump the same format with `LICH_AN_OUT`), render/AI performance for 3k+ hosts (culling, change-only sprite updates, Blitter

@@ -45,7 +45,9 @@ def src_name(key):
 
 def report(runs):
     out = []
-    reached = lambda r: (r.get('end') or {}).get('wave', len(r['waves']) + 1) - 1 if r.get('end') else len(r['waves'])
+    def reached(r):  # waves repelled: the last recorded wave (a run can end after its wave was already repelled)
+        last = max((w['n'] for w in r['waves']), default=0)
+        return max(last, ((r.get('end') or {}).get('wave', 1)) - 1)
 
     # ---------------- runs ----------------
     out.append(f"# LICH run analytics — {len(runs)} runs\n")

@@ -18,7 +18,7 @@ import { ENEMIES, BOSSES } from '../data/enemies';
 import { META, META_BRANCHES, META_BY_ID, metaCost, ACHIEVEMENTS, CONTENT_GATES } from '../data/meta';
 import { FORTRESSES } from '../data/world';
 import { RARITY, rollCards, applyCard } from '../systems/cards';
-import { metaLv, contentAvailable, towerStats, recruitCost, fortCost, squadSize, applyUnitStats, towerMaxHp } from '../systems/stats';
+import { evolveCost, fervorParts, metaLv, contentAvailable, towerStats, recruitCost, fortCost, squadSize, applyUnitStats, towerMaxHp } from '../systems/stats';
 import { spawnUnit, removeStructure, addRing, explosion } from '../systems/combat';
 import { spawnSquad, unearthUnit, lockedUnitTypes, startWave, crusadeOffer, previewWave, castSpell, canCast, spellCd, buyWell, wellCost, wellAvailable, newCampaign, loadRun } from '../systems/campaign';
 import { essenceBreakdown, buyMeta, endCampaign, checkAchievements, codexSee } from '../systems/progression';
@@ -136,8 +136,8 @@ export const UI: any = {
       case 'essence': return `<b>Life Essence</b><br>Permanent currency for the Phylactery.<br>Projected from this campaign: ${essenceBreakdown().total}`;
       case 'keep': return `<b>The Keep</b><br>${fmt(G.keep.hp)} / ${fmt(G.keep.maxHp)}<br>If it falls, the campaign ends.`;
       case 'enemies': return `<b>Mortals on the field</b>`;
-      case 'units': return `<b>Your undead host</b><br>There is no army limit: every recruit raises a whole squad. The crusade's Fervor grows with your host.<br>Total host: ${G.units.length}`;
-      case 'fervor': return `<b>Crusade Fervor ×${(r.fervor || 1).toFixed(2)}</b><br>The crusade grows more zealous every wave (a fixed +3% enemy health per wave, compounding; damage by its square root). It does not react to your army: every squad and upgrade you add is pure gain.`;
+      case 'units': return `<b>Your undead host</b><br>There is no army limit: every recruit raises a whole squad. The crusade's Fervor rises once your host outgrows what the wave expects.<br>Total host: ${G.units.length}`;
+      case 'fervor': { const p = fervorParts(Math.max(1, r.wave)); return `<b>Crusade Fervor ×${(r.fervor || 1).toFixed(2)}</b> <span class="dim">(enemy health; damage by its square root)</span><br>Waves: ×${p.sched.toFixed(2)} — +3% every wave.<br>Zeal: ×${p.zeal.toFixed(2)} — +3.5% for each Holy War fought (${p.zealN}), for the rest of the campaign.<br>Your host: ×${p.host.toFixed(2)} — the crusade musters to match a host worth more than ${fmt(p.allowance)} souls for this wave (yours: ${fmt(p.value)}).`; }
       default: return '';
     }
   },
@@ -291,13 +291,13 @@ export const UI: any = {
         if (!r.unlockedUnits.includes(u)) continue;
         const d = UNITS[u], tier = r.unitTier[u] || 0, next = d.tiers[tier + 1];
         const canEvo = next && (tier < 1 || metaLv('n_evo'));
-        const evoBtn = next ? `<div class="evo ${canEvo ? '' : 'locked'}" data-evo="${u}">⇧ ${fmt(next.cost)}</div>` : '';
+        const evoBtn = next ? `<div class="evo ${canEvo ? '' : 'locked'}" data-evo="${u}">⇧ ${fmt(evolveCost(u))}</div>` : '';
         const b = card(unitIcon(u), `${d.tiers[tier].name} <span class="sq">×${squadSize(u)}</span>`, recruitCost(u), unitTip(u), (ev) => { if ((ev.target as HTMLElement).closest('.evo')) return; recruit(u); }, evoBtn);
         b.oncontextmenu = (ev) => { ev.preventDefault(); this.showUnitDetail(u); };
         const eb = $('.evo', b);
         if (eb) {
           eb.onclick = (ev) => { ev.stopPropagation(); evolveUnit(u); };
-          eb.onmouseenter = (ev) => { ev.stopPropagation(); this.showTip(eb, `<b>Evolve: ${next.name}</b><br>All ${d.name}s (present and future) are transformed.<br>${evoText(next)}${canEvo ? '' : '<br><span class="bad">Requires Rite of Ascension (Phylactery)</span>'}<br>${SOUL()} ${fmt(next.cost)}`); };
+          eb.onmouseenter = (ev) => { ev.stopPropagation(); this.showTip(eb, `<b>Evolve: ${next.name}</b><br>All ${d.name}s (present and future) are transformed.<br>${evoText(next)}${canEvo ? '' : '<br><span class="bad">Requires Rite of Ascension (Phylactery)</span>'}<br>${SOUL()} ${fmt(evolveCost(u))}`); };
         }
       }
       L.appendChild(h('div', 'bnote', 'Hover a card for a summary, right-click it for full details. Each purchase raises a whole squad and there is no army limit. Your undead pick their own battles: they hold the gate and rush to wherever the crusade presses hardest.'));
@@ -307,7 +307,7 @@ export const UI: any = {
   refreshAffordability() {
     if (!G.run) return;
     document.querySelectorAll('#buildlist .bitem').forEach((b: HTMLElement) => b.classList.toggle('poor', +b.dataset.cost > (b.dataset.mat ? G.run.materials : G.run.souls)));
-    document.querySelectorAll('#buildlist .evo[data-evo]').forEach((e: HTMLElement) => { const u = e.dataset.evo, t = G.run.unitTier[u] || 0, nx = UNITS[u].tiers[t + 1]; e.classList.toggle('poor', !nx || nx.cost > G.run.souls); });
+    document.querySelectorAll('#buildlist .evo[data-evo]').forEach((e: HTMLElement) => { const u = e.dataset.evo, t = G.run.unitTier[u] || 0, nx = UNITS[u].tiers[t + 1]; e.classList.toggle('poor', !nx || evolveCost(u) > G.run.souls); });
   },
 
   // ---------------- selection info ----------------
@@ -728,7 +728,7 @@ export const UI: any = {
       <p><b>The keep (materials).</b> After every repelled wave you earn a few <b>materials</b> (more for bosses). Spend them on <b>ramparts</b> (Fortify), <b>towers</b> (placed on top of a built wall segment) and <b>buildings</b> (on the foundations behind the walls). Towers grow stronger every wave and are rebuilt after a wave if they fall. Buildings give permanent bonuses to every undead you have and will have (damage, health, souls, squad size, spells, regeneration, attack speed, more materials). Click a building or tower to upgrade it.</p>
       <p><b>Fortify.</b> <b>Ramparts</b> (materials) stand on fixed sites around the gatehouse: the inner Curtain and the outer Bulwark. Click a site to build, click again to upgrade; repairs cost souls. Towers stand on top of built segments. A closed wall must be breached; gaps funnel the crusade. Your host defends inside the Bulwark. Barricades, traps and wards are painted freely. The drawer can be hidden with ▼ Hide or the B key.</p>
       <p><b>Army.</b> Recruit undead in the <b>Army</b> tab — each purchase raises a whole squad (5 or more) and there is no army limit. They fight on their own and can strike anything, flying or not: they hold a line before the gate, rush to wherever mortals press hardest, ranged troops stay behind the melee, and wounded soldiers fall back to the keep to mend. Every undead slain during a wave rises again when the wave is repelled.</p>
-      <p><b>Souls & the Soul Well (E).</b> Kills give souls and experience. Each level offers three upgrades. In the Soul Well, <b>Ascensions</b> multiply your power and can be bought endlessly; <b>Unearth a Crypt</b> lets you choose a new undead type, and <b>summons</b> raise packs of great creatures that stay forever. The crusade's <b>Fervor</b> rises a fixed amount every wave, whatever the size of your host. Upgrade offers never show two tiers of the same upgrade.</p>
+      <p><b>Souls & the Soul Well (E).</b> Kills give souls and experience. Each level offers three upgrades. In the Soul Well, <b>Ascensions</b> multiply your power and can be bought endlessly; <b>Unearth a Crypt</b> lets you choose a new undead type, and <b>summons</b> raise packs of great creatures that stay forever. The crusade's <b>Fervor</b> rises every wave, with every Holy War you fight, and once your host grows larger than the wave expects. Upgrade offers never show two tiers of the same upgrade.</p>
       <p><b>Spells.</b> Keys 1–8. Some need a target area.</p>
       <p><b>Controls.</b> Drag with right/middle mouse or use WASD/arrows to pan. Wheel zooms. Space pauses, F cycles speed, Enter begins the wave, Esc closes windows.</p>
     </div><div class="center"><button class="btn big" id="h-ok">${fromGame ? 'To war' : 'Back'}</button></div>`, 'helpscreen');
@@ -915,8 +915,9 @@ function evolveUnit(type: string) {
   const r = G.run, d = UNITS[type], t = r.unitTier[type] || 0, next = d.tiers[t + 1];
   if (!next) return;
   if (t >= 1 && !metaLv('n_evo')) { sfx('error'); msgFn('Requires Rite of Ascension (Phylactery).', '#ff8080'); return; }
-  if (r.souls < next.cost) { sfx('error'); return; }
-  r.souls -= next.cost; r.unitTier[type] = t + 1;
+  const cost = evolveCost(type);
+  if (r.souls < cost) { sfx('error'); return; }
+  r.souls -= cost; r.unitTier[type] = t + 1; anPick('evolve', type, { tier: t + 1, cost });
   G.units.filter((u: any) => u.type === type && !u.summon).forEach((u: any) => { applyUnitStats(u); addRing(u.x, u.y, 2, 16, PAL.necro, 0.5); });
   msgFn(`Your ${d.name}s become ${next.name}!`, PAL.necro); sfx('levelup');
   UI.renderBuild(); saveRunSoon();
