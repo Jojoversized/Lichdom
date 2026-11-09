@@ -79,7 +79,7 @@ BOT = r"""
   }
   while (G.phase !== 'over' && G.run.wave < maxWave && guard++ < 600000) {
     if (G.run.pendingLevels > 0) { const c = L.rollCards(3); if (c.length) L.applyCard(c.sort((a, b) => cardScore(b) - cardScore(a))[0]); G.run.pendingLevels--; continue; }
-    if (G.phase === 'prep' && L.pendingEvent()) { L.resolveEvent(cfg.events === 'random' ? Math.floor(Math.random() * 3) : 0); continue; }
+    if (G.phase === 'prep' && L.pendingEvent()) { { const ev = L.pendingEvent(), ok = ev.choices.map((c, i) => i).filter(i => L.canChoose(ev.choices[i])); L.resolveEvent(cfg.events === 'random' ? ok[Math.floor(Math.random() * ok.length)] : ok[0]); } continue; }
     if (G.phase === 'prep') { spendMaterials(); spendSouls(); L.startWave(tier); }
     for (const s of G.run.spells) if (L.canCast(s) && G.enemies.length > 8) { const e = G.enemies[0]; L.castSpell(s, e.x, e.y); }
     L.step(1 / 30);

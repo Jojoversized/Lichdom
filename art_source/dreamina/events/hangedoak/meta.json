@@ -1,0 +1,18 @@
+{
+ "asset": "event_hangedoak",
+ "used_as": "assets/ui/events/hangedoak.png (story event scene art)",
+ "tool": "Dreamina (dreamina.capcut.com) - AI Image",
+ "model": "Seedream 4.6",
+ "settings": {
+  "ratio": "16:9",
+  "resolution": "2K",
+  "images_per_run": 1
+ },
+ "reference": "original Lichdom style reference image (Undead lich army pixel art session)",
+ "postprocess": "tools/assets/import_event_art.py: badge crop (89% window), box downsample to 384x216, 48-colour quantize",
+ "credits_spent": {
+  "generation_1_image": 2
+ },
+ "date": "2026-11-08",
+ "prompt": "Make a scene illustration for a story event in my game, in this image's exact art style: high resolution shaded pixel art, gritty, dark and desaturated, muted colors, same lighting as the reference. A wide cinematic establishing shot from a slightly elevated angle, in a grim dark-fantasy world where an undead lich's skeletal army wars against a holy human crusade. Scene: a huge twisted black oak at a lonely crossroads at night, hung with old ropes and swaying silhouettes of hanged men, crows on every branch, faint ghostly green wisps drifting from the branches. Muted charcoal, mud, ash, bone and muddy green; saturated colour only in magic light and firelight (sickly necrotic green, pale candle gold, torch orange). Detailed pixel-art environment with readable silhouettes and strong depth. No text, no letters, no UI, no border, no frame."
+}

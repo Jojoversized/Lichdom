@@ -80,6 +80,8 @@ export function spawnEnemy(type: string | null, lane: string, opts: any = {}): E
     const extra = Math.max(0, n - d.wave);
     e.maxHp = e.hp = Math.round(d.hp * waveHpMult(n) / waveHpMult(d.wave) * (1 + extra * 0.05) * Math.sqrt(fervor) * 1.6 * waveMods().hp);
     e.dmg = d.dmg * waveDmgMult(n) / waveDmgMult(d.wave) * 1.3;
+    // story events can weaken the next boss (systems/events.ts 'bossHp'); consumed here
+    const ro = G.run.rogue; if (ro && ro.bossHp && ro.bossHp !== 1) { e.maxHp = e.hp = Math.round(e.maxHp * ro.bossHp); ro.bossHp = 1; }
   } else {
     e.maxHp = e.hp = Math.round(d.hp * hpM);
     e.dmg = d.dmg * dmgM;

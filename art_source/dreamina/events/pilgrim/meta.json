@@ -1,0 +1,18 @@
+{
+ "asset": "event_pilgrim",
+ "used_as": "assets/ui/events/pilgrim.png (story event scene art)",
+ "tool": "Dreamina (dreamina.capcut.com) - AI Image",
+ "model": "Seedream 4.6",
+ "settings": {
+  "ratio": "16:9",
+  "resolution": "2K",
+  "images_per_run": 1
+ },
+ "reference": "original Lichdom style reference image (Undead lich army pixel art session)",
+ "postprocess": "tools/assets/import_event_art.py: badge crop (89% window), box downsample to 384x216, 48-colour quantize",
+ "credits_spent": {
+  "generation_1_image": 2
+ },
+ "date": "2026-11-08",
+ "prompt": "Make a scene illustration for a story event in my game, in this image's exact art style: high resolution shaded pixel art, gritty, dark and desaturated, muted colors, same lighting as the reference. A wide cinematic establishing shot from a slightly elevated angle, in a grim dark-fantasy world where an undead lich's skeletal army wars against a holy human crusade. Scene: a blind old pilgrim in a grey hooded robe with milky white eyes, holding up a lantern with a warm holy golden flame, walking calmly along a road at dusk while towering skeleton warriors stand silently on either side of the road watching him. Muted charcoal, mud, ash, bone and muddy green; saturated colour only in magic light and firelight (sickly necrotic green, pale candle gold, torch orange). Detailed pixel-art environment with readable silhouettes and strong depth. No text, no letters, no UI, no border, no frame."
+}

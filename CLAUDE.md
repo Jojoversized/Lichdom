@@ -28,6 +28,7 @@ GitHub Pages: every push to `main` runs `.github/workflows/deploy.yml` (install 
    - `tools/test/ui_flow.py` — real clicks through build, drawer, level-up, Soul Well, save/reload, codex
    - `tools/test/bot.py [maxWave] [runs] [metaMax]` — automated campaigns for balance/regression (also asserts no duplicate upgrade tiers in offers)
    - `tools/test/closeup.py [outdir] [zoom] [w] [h]` — staged skirmish screenshot for art/render review
+   - `tools/test/events_check.py [reps]` — resolves every story-event choice (gambles both ways), checks errors/placeholders/state
    - `tools/test/showcase.py [out.png] [zoom] [w] [h] [marchMs]` — every crusader type + boss in rows, paused (enemy art review)
    - `tools/test/strategy.py '<json configs>' [runs] [maxWave]` — player-model bot (tier, focus unit, card policy, econ-first, walls) for testing strategies seen in real-run analytics
    - `LICH_AN_OUT=runs.json tools/test/bot.py …` also saves analytics records → `python3 tools/analytics/report.py runs.json`
@@ -104,7 +105,12 @@ Imported AI art never overwrites generated assets. It is layered at boot:
   armor), wendigo (new unit); v0.6.1: archer, pikeman, bonemage, wraith, banshee, vampire, wyvern, abomination,
   golem (prompts in each `meta.json`, styled after the wendigo); v0.7: the Lich (`lich_v1`) and the necropolis
   fortress (`fortress_v1`, original + cutout); v0.10: **crusaders** — 6 bosses (`boss_*_v1`) and 7 strong units
-  (`crusader_*_v1`), all made by `tools/assets/crusader_batch.py` (prompts, heights, overrides). Credits remaining: 122.
+  (`crusader_*_v1`), all made by `tools/assets/crusader_batch.py` (prompts, heights, overrides); v0.11: **42 event scenes**
+  (`art_source/dreamina/events/<id>/`, 16:9, 1 image each, no Remove BG). Credits remaining: 38.
+- **Event scenes**: prompt = `_prefix` + scene + `_suffix` from `tools/assets/event_scenes.json` (describe the setting, not the
+  violence). Batch: set the prompt by JS (`__setScene(id)` helper pattern), click submit, repeat; then Assets → tick the tiles
+  (`[role=checkbox][aria-label^="Select"]`, click one at a time with ~250 ms gaps) → Download gives one zip; identify the
+  images on a contact sheet and run `import_event_art.py <id> <image>`.
 - **Crusader prompt recipe**: same style preamble, then "an enemy of the undead lich's army: a [soldier|champion] of the holy
   human crusade, a direct foil to the undead. Worn, battle-scarred ivory and tarnished gold, weathered steel, off-white cloth
   stained with mud and soot, deep crimson trim, and soft warm holy-light glows (pale candle gold) where the undead have
@@ -178,6 +184,10 @@ Key rules:
 - After any change: typecheck, run smoke + ui_flow, run the bot for balance changes, update `docs/CHECKLIST.md`.
 
 ## Current status
+
+v0.11 — **42 story events** (from 6) in three acts with costs, gambles, sacrifices, permanent boons/banes, a weakened
+next boss, zeal ± and three multi-event story chains (flags); extra events between the 3-wave beats (20%); **Dreamina
+scene art for every event** (`import_event_art.py`, `event_scenes.json`); `tools/test/events_check.py`.
 
 v0.10 — **crusader AI art**: Dreamina sprites for all 6 bosses and 7 strong crusader units (holy foil palette), shadow
 stripping for Remove BG cutouts, `tools/test/showcase.py`.

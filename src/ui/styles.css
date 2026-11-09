@@ -206,13 +206,18 @@ img.pixd { image-rendering: auto; vertical-align: middle; }
 .card.crusade .cfoes span { position: relative; display: inline-flex; align-items: flex-end; }
 .card.crusade .cfoes i { position: absolute; right: -4px; bottom: -2px; font-style: normal; font-size: 11px; color: #f0e8d4; background: #000a; padding: 0 2px; }
 .card.crusade .crew { margin-top: auto; font-size: 13px; color: #c8b890; }
-.eventm .mbox { max-width: 640px; }
+.eventm .mbox { max-width: 800px; }
 .evtext { font-size: 15px; line-height: 1.5; margin: 10px 4px 16px; color: #ddd4bc; }
 .evchoices { display: flex; flex-direction: column; gap: 8px; }
 .evchoice { position: relative; text-align: left; background: #161419; border: 1px solid #3a3530; color: #e8e0cc; padding: 10px 12px 10px 34px; cursor: pointer; font: inherit; }
 .evchoice:hover { border-color: #5dff7a; background: #18201a; }
 .evchoice b { display: block; font-size: 16px; }
 .evchoice small { color: #9a9282; }
+.evchoice.locked { opacity: 0.45; cursor: not-allowed; }
+.evchoice.locked:hover { border-color: #3a3530; background: #161419; }
+.evcost { color: #d8b45a; }
+.evart { margin: -6px -6px 10px; border: 1px solid #2a2622; background: #08090b; line-height: 0; }
+.evart img { width: 768px; max-width: 100%; height: auto; image-rendering: pixelated; display: block; margin: 0 auto; }
 .evchoice .key { position: absolute; left: 12px; top: 12px; color: #6a6458; font-size: 12px; }
 
 /* v0.8.1 HUD: modifiers strip, gains, wave summary */

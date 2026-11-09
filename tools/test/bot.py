@@ -53,7 +53,7 @@ BOT = r"""
   }
   while (G.phase !== 'over' && G.run.wave < maxWave && guard++ < 400000) {
     if (G.run.pendingLevels > 0) { const c = L.rollCards(3); if (!L.offerIsClean(c)) dupes++; if (c.length) L.applyCard(c[Math.floor(Math.random() * c.length)]); G.run.pendingLevels--; continue; }
-    if (G.phase === 'prep' && L.pendingEvent()) { const ev = L.pendingEvent(); evlog.push(ev.id); L.resolveEvent(Math.floor(Math.random() * 3)); continue; }
+    if (G.phase === 'prep' && L.pendingEvent()) { const ev = L.pendingEvent(); evlog.push(ev.id); const ok = ev.choices.map((c, i) => i).filter(i => L.canChoose(ev.choices[i])); L.resolveEvent(ok[Math.floor(Math.random() * ok.length)]); continue; }
     if (G.phase === 'prep') {
       build();
       log.push({ w: G.run.wave, keep: Math.round(G.keep.hp), souls: Math.round(G.run.souls), lvl: G.run.level, towers: G.towers.length, mat: G.run.materials, blds: G.buildings.map(b => b.type + (b.tier + 1)).join(','), units: G.units.length, kinds: G.run.unlockedUnits.length, kills: G.run.kills, fervor: +(G.run.fervor || 1).toFixed(2), ms: Math.round(performance.now() - t0) });

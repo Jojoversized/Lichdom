@@ -13,7 +13,8 @@ import { bld, towerMatCost, towerUpgradeCost, upgradeTowerMat, demolishTower, bu
 import { UNITS, UNIT_ORDER, SUMMONS } from '../data/units';
 import { unearthCost, SPELLS, SPELL_ORDER, WELL } from '../data/spells';
 import { CRUSADE_TIERS } from '../data/events';
-import { rogue, pendingEvent, resolveEvent } from '../systems/events';
+import { rogue, pendingEvent, resolveEvent, canChoose, choiceCost } from '../systems/events';
+import { EVENT_ART } from '../data/event_art';
 import { ENEMIES, BOSSES } from '../data/enemies';
 import { META, META_BRANCHES, META_BY_ID, metaCost, ACHIEVEMENTS, CONTENT_GATES } from '../data/meta';
 import { FORTRESSES } from '../data/world';
@@ -506,15 +507,17 @@ export const UI: any = {
   /** Every few waves: a story event with three choices; the result is shown before play resumes. */
   showEvent() {
     const ev = pendingEvent(); if (!ev || G.modal) return;
-    const m = this.openModal(`<h2>${icon(ev.icon, 2, 'pix')} ${ev.title}</h2><div class="evtext">${ev.text}</div>
-      <div class="evchoices">${ev.choices.map((c, i) => `<button class="evchoice" data-i="${i}"><span class="key">${i + 1}</span><b>${c.label}</b><small>${c.hint}</small></button>`).join('')}</div>`, 'eventm', false);
+    const cost = (c: any) => { const k = choiceCost(c); return [k.souls ? `${k.souls} souls` : '', k.mats ? `${k.mats} materials` : ''].filter(Boolean).join(', '); };
+    const m = this.openModal(`${eventArt(ev.id)}<h2>${icon(ev.icon, 2, 'pix')} ${ev.title}</h2><div class="evtext">${ev.text}</div>
+      <div class="evchoices">${ev.choices.map((c, i) => { const ok = canChoose(c), k = cost(c);
+        return `<button class="evchoice${ok ? '' : ' locked'}" data-i="${i}"${ok ? '' : ' disabled'}><span class="key">${i + 1}</span><b>${c.label}</b><small>${k ? `<span class="evcost">Costs ${k}.</span> ` : ''}${c.hint}</small></button>`; }).join('')}</div>`, 'eventm', false);
     m.querySelectorAll('.evchoice').forEach((el: HTMLElement) => el.onclick = () => this.pickEvent(+el.dataset.i));
   },
   pickEvent(i: number) {
-    const ev = pendingEvent(); if (!ev) return;
+    const ev = pendingEvent(); if (!ev || !ev.choices[i] || !canChoose(ev.choices[i])) { sfx('error'); return; }
     const text = resolveEvent(i);
     this.closeModal();
-    const m = this.openModal(`<h2>${icon(ev.icon, 2, 'pix')} ${ev.title}</h2><div class="evtext"><b>${ev.choices[i].label}.</b> ${text}</div>
+    const m = this.openModal(`${eventArt(ev.id)}<h2>${icon(ev.icon, 2, 'pix')} ${ev.title}</h2><div class="evtext"><b>${ev.choices[i].label}.</b> ${text}</div>
       <div class="center"><button class="btn" id="ev-ok">Continue</button></div>`, 'eventm');
     $('#ev-ok').onclick = () => this.closeModal();
     this.renderBuild(); saveRunSoon();
@@ -911,6 +914,8 @@ export function recruit(type: string) {
   UI.renderBuild(); saveRunSoon();
   return true;
 }
+/** Scene art banner for a story event (assets/ui/events/<id>.png, listed in data/event_art.ts). */
+function eventArt(id: string) { return EVENT_ART.includes(id) ? `<div class="evart"><img src="ui/events/${id}.png" alt=""></div>` : ''; }
 function evolveUnit(type: string) {
   const r = G.run, d = UNITS[type], t = r.unitTier[type] || 0, next = d.tiers[t + 1];
   if (!next) return;
