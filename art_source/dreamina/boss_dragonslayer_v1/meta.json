@@ -9,7 +9,7 @@
   "images_per_run": 4
  },
  "reference": "original Lichdom style reference image (Undead lich army pixel art session)",
- "postprocess": "Dreamina canvas Remove BG (2 credits) -> tools/assets/strip_shadow.py --keep-dist 40 --grow 0 -> tools/assets/import_ai_sprite.py --H 42 --res 4 --category bosses --override b_dragonslayer",
+ "postprocess": "Dreamina canvas Remove BG (2 credits) -> tools/assets/strip_shadow.py --keep-dist 30 --grow 0 --black-below 0.72 --black-v 14 --min-piece 1500 -> tools/assets/import_ai_sprite.py --H 42 --res 4 --category bosses --override b_dragonslayer",
  "credits_spent": {
   "generation_4_images": 8,
   "remove_bg": 2

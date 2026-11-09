@@ -20,7 +20,8 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 - [ ] Tier 2/3 forms for imported units (currently tiers 2–3 keep procedural art; Wendigo reuses one sheet)
 - [ ] Real animation poses (currently derived from one pose: bob, squash, lean)
 - [x] **Crusaders (v0.10)**: 6 bosses (Divine Champion, United Kings, Grand Inquisitor, Archmage, Dragon-Slayer, Saint) and 7 strong units (paladin, inquisitor, angel, griffon knight, arcane construct, knight, heavy cavalry). Holy foil to the undead: ivory/tarnished gold/crimson, pale candle-gold glows (arcane violet for the mage conclave). `tools/assets/crusader_batch.py` records prompts, heights and post-processing
-- [x] `tools/assets/strip_shadow.py`: removes the painted ground shadow Remove BG keeps (`--grow 0` where dark armour touches the shadow)
+- [x] `tools/assets/strip_shadow.py`: removes the painted ground shadow Remove BG keeps (`--grow 0` where dark armour touches the shadow; `--black-below/--black-v` strips a near-black ground shadow fused with dark armour below the feet line, enclosed holes are refilled, `--min-piece` drops stray specks)
+- [x] Fixed: United Kings and Dragon-Slayer kept a black ground-shadow blob and stray specks in their cutouts
 - [x] `tools/test/showcase.py`: every crusader + boss marching, paused screenshot
 - [ ] Remaining crusaders still procedural: footman, priest, crossbow, battlemage, rams/siege, etc. (they now look blocky next to the AI art). Monster Hunter prompt was flagged twice by Dreamina's guidelines (refunded) — needs a reworded prompt
 - [ ] Remaining undead tiers, towers, tiles, spell FX (the Lich and the fortress are done: v0.7)

@@ -111,7 +111,8 @@ Imported AI art never overwrites generated assets. It is layered at boot:
   necrotic green; still muted and gritty enough to sit on the same dark battlefield." (Mage-conclave units: arcane violet.)
   Words like "slayer"/"hunter" with weapons can trip the content filter — describe the role, not the violence.
 - **Shadows**: Remove BG keeps the painted ground shadow; run `tools/assets/strip_shadow.py <cutout> <out>` before importing
-  (`--grow 0` when dark armour touches the shadow, `--keep-dist` larger for floating props).
+  (`--grow 0` when dark armour touches the shadow, plus `--black-below 0.72 --black-v 14` if a near-black shadow stays
+  fused to it; `--keep-dist` larger for floating props, `--min-piece` to drop specks). Check every sheet on a magenta background.
 - **Fortress**: `python3 tools/assets/import_fortress.py <original> <cutout>` places the art unscaled and unwarped at
   x = 0 (keep the AI art's proportions — warping it looked stretched), writes `sprites/buildings/ai/fortress.png` and
   the generated `src/data/fortress_fit.ts` (per-row wall face = solid cells; torch/window/portcullis lights detected by

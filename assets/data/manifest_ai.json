@@ -498,7 +498,7 @@
   },
   "ai_boss_united_kings": {
    "file": "sprites/bosses/ai/ai_boss_united_kings.png",
-   "fw": 203,
+   "fw": 204,
    "fh": 178,
    "frames": 13,
    "anims": {
@@ -585,7 +585,7 @@
   },
   "ai_boss_dragonslayer": {
    "file": "sprites/bosses/ai/ai_boss_dragonslayer.png",
-   "fw": 230,
+   "fw": 231,
    "fh": 178,
    "frames": 13,
    "anims": {

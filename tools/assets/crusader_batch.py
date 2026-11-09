@@ -89,6 +89,9 @@ ASSETS = {
 
 # shadow regrowth per asset (strip_shadow --grow; 0 = unbounded, needed where dark armour touches the shadow)
 GROW = {'b_dragonslayer': 0, 'b_kings': 0}
+# extra strip_shadow args: these two have the near-black ground shadow fused with dark armour
+SHADOW_EXTRA = {k: ['--black-below', '0.72', '--black-v', '14', '--min-piece', '1500'] for k in ('b_dragonslayer', 'b_kings')}
+KEEP_DIST = {'b_dragonslayer': 30, 'b_kings': 30}
 
 
 def find_original(oid):
@@ -124,9 +127,9 @@ def main():
             'model': 'Seedream 4.6',
             'settings': {'ratio': '1:1', 'resolution': '2K', 'images_per_run': 4},
             'reference': 'original Lichdom style reference image (Undead lich army pixel art session)',
-            'postprocess': ('Dreamina canvas Remove BG (2 credits) -> tools/assets/strip_shadow.py --keep-dist %d --grow %d -> '
+            'postprocess': ('Dreamina canvas Remove BG (2 credits) -> tools/assets/strip_shadow.py --keep-dist %d --grow %d%s -> '
                             'tools/assets/import_ai_sprite.py --H %d --res 4 --category %s --override %s%s'
-                            % (kd, GROW.get(key, 10), H, cat, ovr, ' --flying' if fly else '')),
+                            % (KEEP_DIST.get(key, kd), GROW.get(key, 10), ''.join(' ' + x for x in SHADOW_EXTRA.get(key, [])), H, cat, ovr, ' --flying' if fly else '')),
             'credits_spent': {'generation_4_images': 8, 'remove_bg': 2},
             'date': '2026-11-08',
             'prompt': pre + desc + suf,
@@ -135,8 +138,9 @@ def main():
             json.dump(meta, f, indent=1)
         ns = os.path.join(out, 'cutout_noshadow.png')
         grow = GROW.get(key, 10)
+        kd = KEEP_DIST.get(key, kd)
         run([sys.executable, 'tools/assets/strip_shadow.py', os.path.join(out, 'cutout.png'), ns, '--keep-dist', str(kd),
-             '--grow', str(grow)])
+             '--grow', str(grow)] + SHADOW_EXTRA.get(key, []))
         cmd = [sys.executable, 'tools/assets/import_ai_sprite.py', ns, ai_key, '--H', str(H), '--category', cat,
                '--override', ovr, '--name', desc.split(':')[0].replace('The character is ', '').replace('The subject is ', ''),
                '--preview', '/tmp/prev_%s.png' % key]

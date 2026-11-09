@@ -24,6 +24,10 @@ def main():
     ap.add_argument('--ground', type=float, default=0.6, help='shadow regions must be centred below this fraction of the height')
     ap.add_argument('--grow', type=int, default=10, help='px the thick shadow core grows back into dark pixels (0 = unbounded)')
     ap.add_argument('--keep-dist', type=int, default=40, help='keep opaque pieces within this many px of the main body')
+    ap.add_argument('--black-below', type=float, default=0, help='also strip thick near-black regions below this '
+                    'fraction of the image height (the feet line) — for shadows fused with dark armour')
+    ap.add_argument('--black-v', type=int, default=24, help='max channel value counted as near-black for --black-below')
+    ap.add_argument('--min-piece', type=int, default=40, help='drop detached pieces smaller than this (px)')
     a = ap.parse_args()
 
     im = np.array(Image.open(a.src).convert('RGBA'))
@@ -52,8 +56,18 @@ def main():
         cy = np.where(m.any(1))[0].mean() if m.any() else 0
         if cy < top + a.ground * (bot - top):
             shadow &= ~m
+    if a.black_below > 0:
+        # extra pass for shadows fused with dark armour: the painted ground shadow is near-black (max channel
+        # < black-v) while armour shading is brighter; take thick near-black regions below the feet line only
+        nb = opaque & (mx < a.black_v)
+        bcore = ndi.binary_opening(nb, structure=np.ones((3, 3), bool), iterations=6)
+        bsh = ndi.binary_dilation(bcore, iterations=4) & opaque & (mx < a.black_v + 16)
+        bsh[:int(a.black_below * im.shape[0])] = False
+        shadow |= bsh
     keep = opaque & ~shadow
     keep = ndi.binary_opening(keep, structure=st, iterations=1)
+    # restore pixels fully enclosed by the figure (dark cloth inside a robe is not ground shadow)
+    keep |= ndi.binary_fill_holes(keep) & opaque
     lab, n = ndi.label(keep)
     if n:
         sizes = ndi.sum(keep, lab, range(1, n + 1))
@@ -61,7 +75,7 @@ def main():
         near = ndi.binary_dilation(main, iterations=a.keep_dist)
         ok = np.zeros(n + 1, bool)
         for i in range(1, n + 1):
-            if sizes[i - 1] >= 40 and (near & (lab == i)).any():
+            if sizes[i - 1] >= a.min_piece and (near & (lab == i)).any():
                 ok[i] = True
         keep = ok[lab]
     out = im.copy(); out[..., 3] = np.where(keep, alpha, 0)
