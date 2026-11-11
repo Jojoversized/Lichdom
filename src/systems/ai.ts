@@ -37,6 +37,8 @@ const KEEP_TARGET = { kind: 'keep', dead: false, hp: 1, x: KEEP.x1, y: KEEP.y, a
 export function updateEnemy(e: any, dt: number) {
   tickStatus(e, dt);
   if (e.dead) return;
+  // knockbacks and terror must never carry a mortal off the field (unreachable = an endless wave)
+  if (e.x > WW + 14) e.x = WW + 14; if (e.y < 8) e.y = 8; else if (e.y > WH - 8) e.y = WH - 8;
   e.at += dt;
   if (e.hitT > 0) e.hitT -= dt;
   if (e.atkHold > 0) { e.atkHold -= dt; if (e.atkHold <= 0) setAnim(e, 'idle'); }
@@ -245,12 +247,15 @@ function guardPosition(u: any, ctx: any, count: number) {
  *  (ranged crusaders parked just outside used to pepper the host unanswered). `t.z0` / `t.z1`: the
  *  zone tests for ground / flying undead, computed once per threat. */
 function inZone(u: any, t: any) {
-  if (u.summon) return true;
+  if (u.summon || mopUp) return true;
   return (u.flying ? t.z1 : t.z0) || dist2(u.x, u.y, t.e.x, t.e.y) < 60 * 60;
 }
 /** The planner runs in PLAN_SLICES interleaved slices on consecutive ticks, so a 3,000-strong host
  *  never plans all at once (that used to spike a single step to 30–50 ms). */
 const PLAN_SLICES = 3;
+/** Mop-up: once the whole wave is on the field and only stragglers remain (no boss), the host leaves the
+ *  defence zone and hunts them down wherever they stand. */
+let mopUp = false;
 let planSlice = 0, planCrowd = new Map<any, number>();
 
 export function planArmy(dt: number) {
@@ -261,6 +266,7 @@ export function planArmy(dt: number) {
   const slice = planSlice; planSlice = (planSlice + 1) % PLAN_SLICES;
   if (slice === 0) { for (const e of G.enemies) laneHeat[e.lane] = Math.min(20, (laneHeat[e.lane] || 0) + 0.05); planCrowd = new Map(); }
   const crowd = planCrowd;
+  { const W = G.wave; mopUp = !!W && G.phase === 'wave' && W.idx >= W.spawns.length && (W.lateT || 0) > 20 && G.enemies.length <= 15 && !G.enemies.some((e: any) => e.boss); }
   const ground = G.units.filter((u: any) => !isRanged(u) && !u.flying).length;
   // enemies sorted by urgency (closest to keep first)
   const threats = G.enemies.map((e: any) => ({ e, fd: e.flying ? Math.max(0, e.x - KEEP.x1) / CELL : flowDist(e.x, e.y), z0: threatensZone(e, 0), z1: threatensZone(e, 120) }));
@@ -410,7 +416,7 @@ function unitAttack(u: any, t: any) {
     if (d.antiCav && t.def.cav) dmg *= d.antiCav;
     dealDamage(t, dmg, d.dtype, u);
     if (d.drain) healUnit(u, dmg * d.drain);
-    if (u.type === 'wraith' && r.mods.wraith_terror && Math.random() < 0.35 && !t.boss) t.st.fearT = 1.5;
+    if (u.type === 'wraith' && r.mods.wraith_terror && Math.random() < 0.35 && !t.boss && !t.def.siege && G.time > (t.fearImm || 0)) { t.st.fearT = 1.5; t.fearImm = G.time + 8; } // then it steels itself for a while
     if (u.type === 'zombie' && r.mods.zom_plague) { t.st.plagueT = 4; t.st.plagueDps = u.dmg * 0.8; }
     sfx('slash', 0.15);
   }

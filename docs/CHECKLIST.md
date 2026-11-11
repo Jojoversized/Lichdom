@@ -14,6 +14,8 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 - [x] Cards: no unlock cards; deck groups (reinforcements, greater tiers, unit / tower modifiers, unique rites, legendaries) are opened on the web (`CARD_GATES`)
 - [x] Events reworked: materials → fortify (keep / wall / tower durability), soul rewards are haul, soul costs are paid from the haul, squad mod → muster, unlock → squads, hordes scale with the host, story flags persist across sieges
 - [x] Crusade Fervor reduced to zeal (Holy Wars, events); crusade tiers scale souls and Life Essence
+- [x] Fixed: knockbacks / terror could push mortals far off the east edge where nothing reached them (endless wave with large hosts); mortals are now clamped to the field
+- [x] Mop-up: 20 s after the last spawn, with ≤ 15 stragglers and no boss, the host leaves the defence zone and hunts them down; Terror no longer affects siege engines and has an 8 s immunity window (a feared ram at the map edge could stall a wave for many minutes)
 - [x] Anti-stalemate: a wave that drags on 150 s after its last spawn makes the crusade hit 20% harder every 10 s
 - [x] New home screen (purse, keeps, Continue), siege-over screen for defeat / retreat / conquest, HUD shows the siege's haul
 - [x] `tools/test/bot.py` is now a meta-loop bot (siege → bank → spend → repeat); smoke, ui_flow and events_check rewritten; `strategy.py` and `balance.py` retired (they modelled in-run buying)
