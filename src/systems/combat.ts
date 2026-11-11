@@ -417,7 +417,7 @@ function impact(p: any) {
 }
 
 export function keepDistance(x: number, y: number) {
-  const dx = Math.max(KEEP.x0 - x, 0, x - KEEP.x1), dy = Math.max(KEEP.y0 + 40 - y, 0, y - KEEP.y1);
+  const dx = Math.max(KEEP.x0 - x, 0, x - KEEP.x1), dy = Math.max(KEEP.y0 - y, 0, y - KEEP.y1); // the gate cells the flow field leads to (rows cy0..cy1)
   return Math.sqrt(dx * dx + dy * dy);
 }
 export function structuresNear(x: number, y: number, r: number) {

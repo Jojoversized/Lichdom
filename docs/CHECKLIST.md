@@ -16,6 +16,7 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 - [x] Crusade Fervor reduced to zeal (Holy Wars, events); crusade tiers scale souls and Life Essence
 - [x] Fixed: knockbacks / terror could push mortals far off the east edge where nothing reached them (endless wave with large hosts); mortals are now clamped to the field
 - [x] Mop-up: 20 s after the last spawn, with ≤ 15 stragglers and no boss, the host leaves the defence zone and hunts them down; Terror no longer affects siege engines and has an 8 s immunity window (a feared ram at the map edge could stall a wave for many minutes)
+- [x] Fixed: melee mortals never damaged the keep. `keepDistance` still measured to the old keep rectangle (40 px below the gate cells the flow field leads to), so they stopped at the gate ~30–40 px out of reach; only ranged and siege fire hurt the keep
 - [x] Anti-stalemate: a wave that drags on 150 s after its last spawn makes the crusade hit 20% harder every 10 s
 - [x] New home screen (purse, keeps, Continue), siege-over screen for defeat / retreat / conquest, HUD shows the siege's haul
 - [x] `tools/test/bot.py` is now a meta-loop bot (siege → bank → spend → repeat); smoke, ui_flow and events_check rewritten; `strategy.py` and `balance.py` retired (they modelled in-run buying)
