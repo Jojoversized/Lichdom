@@ -1,24 +1,19 @@
 // Ramparts: walls live on preset sites (see mapgen `makeWallSites`: the Curtain and the Bulwark
-// around the gate). A site is built and upgraded as a whole with MATERIALS (Bone Palisade → Stone
-// Wall → Bone Rampart); a built segment can carry a tower (its mount plot). Destroyed sections stay
-// rubble until the site is repaired (souls). Pure simulation: no Phaser, no DOM.
+// around the gate). v0.12: the web's Ramparts node grants a number of segments per siege; between
+// waves you choose which sites are raised (free; level one to move it). They are raised at the tier
+// bought on the web (Bone Palisade → Stone Wall → Bone Rampart) and breaches are mended after every
+// wave. A built segment can carry towers. Pure simulation: no Phaser, no DOM.
 import { G } from '../core/state';
-import { WALL_TIERS, WALL_MAX_TIER } from '../data/towers';
+import { WALL_TIERS } from '../data/towers';
 import { cellIdx, WallSite } from '../world/mapgen';
-import { placeFort } from './combat';
-import { fortMaxHp } from './stats';
+import { placeFort, removeStructure } from './combat';
+import { fortMaxHp, wallSlots, wallTier } from './stats';
 import { msg, sfx } from '../core/events';
 import { anPick } from './analytics';
 
 export function siteById(id: string): WallSite | null { return (G.map && G.map.sites || []).find((s: WallSite) => s.id === id) || null; }
 export function siteTier(site: WallSite): number { return (G.run && G.run.walls && G.run.walls[site.id]) || 0; }
 export function siteWalls(site: WallSite): any[] { return G.forts.filter((f: any) => f.site === site.id && !f.dead); }
-const inflation = () => Math.pow(1.045, Math.max(0, (G.run ? G.run.wave : 0)));
-/** Materials to raise a site to `tier` (flat per segment). */
-export function siteTierCost(_site: WallSite, tier: number): number { return WALL_TIERS[tier].mat; }
-/** Soul value of a built tier, the basis of repair costs. */
-function siteSoulValue(site: WallSite, tier: number): number { return Math.round(site.cells.length * WALL_TIERS[tier].cell * inflation()); }
-export function siteUpgradeCost(site: WallSite): number { const t = siteTier(site); return t >= WALL_MAX_TIER ? 0 : siteTierCost(site, t + 1); }
 /** Missing durability (destroyed sections count as fully missing), 0..1. */
 export function siteDamage(site: WallSite): number {
   if (!siteTier(site)) return 0;
@@ -26,7 +21,6 @@ export function siteDamage(site: WallSite): number {
   for (const [x, y] of site.cells) { const f = G.map.struct[cellIdx(x, y)]; miss += f && f.site === site.id && !f.dead ? 1 - f.hp / f.maxHp : 1; }
   return miss / site.cells.length;
 }
-export function siteRepairCost(site: WallSite): number { const t = siteTier(site); return t ? Math.ceil(siteDamage(site) * siteSoulValue(site, t) * 0.5) : 0; }
 export function siteHp(site: WallSite): [number, number] {
   let hp = 0, max = 0;
   for (const f of siteWalls(site)) { hp += f.hp; max += f.maxHp; }
@@ -34,8 +28,10 @@ export function siteHp(site: WallSite): [number, number] {
   return [hp, per * site.cells.length];
 }
 
+export function sitesBuilt() { return ((G.map && G.map.sites) || []).filter((s: WallSite) => siteTier(s) > 0).length; }
+export function wallSlotsFree() { return Math.max(0, wallSlots() - sitesBuilt()); }
 /** Raises every missing section of a site at its current tier and heals the rest. */
-function restore(site: WallSite) {
+export function restore(site: WallSite) {
   const t = siteTier(site);
   for (const [x, y] of site.cells) {
     const s = G.map.struct[cellIdx(x, y)];
@@ -44,24 +40,31 @@ function restore(site: WallSite) {
   }
   G.map.dirty = true;
 }
-/** Build (tier 0 → 1) or upgrade a site; the new tier comes fully repaired. */
-export function upgradeSite(site: WallSite): boolean {
-  const t = siteTier(site);
-  if (t >= WALL_MAX_TIER) { msg('This rampart cannot be raised any higher.', '#c8b890'); sfx('error'); return false; }
-  const cost = siteUpgradeCost(site);
-  if (G.run.materials < cost) { msg('Not enough materials.', '#ff8080'); sfx('error'); return false; }
-  G.run.materials -= cost;
-  G.run.walls[site.id] = t + 1; anPick('wall', site.id, { tier: t + 1, cost });
+/** Raise a rampart segment (uses one of the web's segment slots). */
+export function buildSite(site: WallSite, quiet = false): boolean {
+  const fail = (m: string) => { if (!quiet) { msg(m, '#c8b890'); sfx('error'); } return false; };
+  if (G.phase !== 'prep') return fail('Defences are placed between waves.');
+  if (siteTier(site) > 0) return fail('This rampart already stands.');
+  if (wallSlotsFree() <= 0) return fail(wallSlots() ? `All ${wallSlots()} rampart segments are raised: level one to move it, or deepen Ramparts on the web.` : 'No ramparts yet: unlock Ramparts on the Phylactery web.');
+  G.run.walls[site.id] = wallTier(); anPick('wall', site.id, { tier: wallTier() });
   restore(site);
-  sfx('build');
+  if (!quiet) sfx('build');
   return true;
 }
-export function repairSite(site: WallSite): boolean {
-  const cost = siteRepairCost(site);
-  if (!cost) return false;
-  if (G.run.souls < cost) { msg('Not enough souls.', '#ff8080'); sfx('error'); return false; }
-  G.run.souls -= cost;
-  restore(site);
-  sfx('build');
+/** Level a segment (and any towers on it) to free its slot. */
+export function razeSite(site: WallSite): boolean {
+  if (G.phase !== 'prep') { msg('Defences are moved between waves.', '#c8b890'); sfx('error'); return false; }
+  if (!siteTier(site)) return false;
+  for (const t of G.towers.slice()) if (t.plot && t.plot.startsWith('m_') && site.cells.some(([x, y]) => t.plot === `m_${x}_${y}`)) removeStructure(t);
+  for (const id in G.run.ruins) if (site.cells.some(([x, y]) => id === `m_${x}_${y}`)) delete G.run.ruins[id];
+  for (const f of siteWalls(site)) removeStructure(f);
+  delete G.run.walls[site.id];
+  G.map.dirty = true; sfx('crumble');
   return true;
+}
+/** After a wave every breach is mended for free. */
+export function mendRamparts(): number {
+  let n = 0;
+  for (const s of (G.map && G.map.sites) || []) if (siteTier(s) > 0) { if (siteDamage(s) > 0.001) n++; restore(s); }
+  return n;
 }

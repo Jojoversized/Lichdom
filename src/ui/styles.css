@@ -246,3 +246,52 @@ img.pixd { image-rendering: auto; vertical-align: middle; }
 .kico i { font-style: normal; font-size: 11px; color: #e8e0cc; margin-left: 1px; }
 .wfallen { margin-top: 10px; font-size: 13px; }
 .wfoot { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 12px; color: #8a8478; }
+
+/* ---------------- v0.12: three currencies, keep select, the Phylactery web ---------------- */
+.cur.souls, .cur.souls b { color: #7dffb0; } .cur.essence, .cur.essence b { color: #c9a0ff; } .cur.divinity, .cur.divinity b { color: #ffd75a; }
+.divico { display: inline-block; width: 9px; height: 9px; margin: 0 4px 1px 3px; background: linear-gradient(135deg, #fff6c8, #ffd75a 45%, #b8860b); transform: rotate(45deg); box-shadow: 0 0 6px #ffd75a, 0 0 0 1px #5a4208; vertical-align: middle; }
+.purse { display: inline-flex; gap: 18px; padding: 6px 14px; background: #121115; border: 2px solid #2e2b33; font-size: 18px; font-family: 'Lich Numerals', Georgia, serif; }
+.purse .cur { display: inline-flex; align-items: center; gap: 4px; }
+.gain.gm { color: #c9a0ff; }
+.bcost.slot { color: #c8b890; } .bcost.slot .full { color: #ff7a6a; }
+.btn.locked { opacity: .45; }
+.title.small .t1 { font-size: 84px; } .title.small .t2 { font-size: 26px; } .title.small { margin-bottom: 10px; }
+#screen.menuscreen { justify-content: flex-start; padding-top: 3vh; }
+.menu.row { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
+.keepsh { margin: 14px 0 0; color: #d8cfb4; font-weight: normal; }
+.keeps { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 10px auto; max-width: 1180px; }
+.keepc { width: 180px; font-family: inherit; text-align: left; color: #ddd6c6; background: rgba(22,20,25,.94); border: 2px solid var(--fc); padding: 9px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.keepc:hover { box-shadow: 0 0 16px var(--fc); } .keepc.locked { opacity: .45; border-color: #333; cursor: default; } .keepc.done { border-style: double; border-width: 4px; padding: 7px; }
+.keepc b { font-size: 15px; color: #f0e8d4; } .keepc .kboss { color: #ffb060; } .keepc .kdesc { color: #a8a294; min-height: 30px; }
+.keepc .fsw { display: flex; height: 8px; } .keepc .fsw i { flex: 1; }
+.keepc .kfoot { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-top: 2px; }
+.gold { color: #ffd75a; }
+.defeat.win h1 { color: #ffd75a; text-shadow: 0 0 24px rgba(255,215,90,.5), 3px 3px 0 #000; }
+.ebox .tot b.cur.souls { color: #7dffb0; } .ebox .tot b.cur.essence { color: #c9a0ff; } .ebox .tot b.cur.divinity { color: #ffd75a; }
+#screen.webscreen { padding: 0; overflow: hidden; display: flex; flex-direction: column; background: rgba(5,5,7,.96); }
+.webhead { display: flex; align-items: center; gap: 18px; padding: 8px 16px; border-bottom: 2px solid #2e2b33; flex-wrap: wrap; }
+.webhead h1 { margin: 0; font-size: 26px; } .webbtns { margin-left: auto; display: flex; gap: 8px; }
+.weblegend { display: flex; gap: 18px; padding: 5px 16px; font-size: 12px; flex-wrap: wrap; border-bottom: 1px solid #1f1d24; }
+.web { position: relative; flex: 1; overflow: hidden; cursor: grab; background: radial-gradient(circle at 50% 50%, #17141d 0, #0a090c 70%); }
+.web:active { cursor: grabbing; }
+.webin { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; }
+#weblines { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+#weblines line { stroke: var(--bc); stroke-width: 2; opacity: .28; stroke-dasharray: 3 5; }
+#weblines line.open { opacity: .6; stroke-dasharray: 6 4; } #weblines line.own { opacity: .95; stroke-width: 3; stroke-dasharray: none; }
+.wnode { position: absolute; width: 58px; height: 58px; margin: -29px 0 0 -29px; padding: 0; font-family: inherit; color: #ddd6c6; background: #1a181d; border: 2px solid #3a3640; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.wnode .wi { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; overflow: hidden; pointer-events: none; }
+.wnode .wl { position: absolute; top: -9px; right: -12px; font-size: 11px; padding: 0 4px; background: #0c0b0e; border: 1px solid #3a3640; color: #d8cfb4; font-family: 'Lich Numerals', Georgia, serif; white-space: nowrap; }
+.wnode .wl:empty { display: none; }
+.wnode .wc { position: absolute; bottom: -11px; left: 50%; transform: translateX(-50%); font-size: 11px; padding: 0 4px; background: #0c0b0e; border: 1px solid #2e2b33; white-space: nowrap; display: flex; align-items: center; gap: 2px; font-family: 'Lich Numerals', Georgia, serif; }
+.wnode .wc:empty { display: none; } .wnode .wc img { width: 12px; height: 12px; } .wnode .wc .divico { width: 7px; height: 7px; }
+.wnode .wn { position: absolute; top: 100%; margin-top: 12px; left: 50%; transform: translateX(-50%); font-size: 10px; line-height: 1.05; width: 84px; text-align: center; color: #a8a294; pointer-events: none; text-shadow: 0 1px 0 #000; }
+.wnode.own { border-color: var(--bc); background: #201d26; } .wnode.own .wn { color: #e8e0cc; }
+.wnode.buy { box-shadow: 0 0 0 2px #0c0b0e, 0 0 12px 2px var(--bc); border-color: var(--bc); animation: webpulse 1.6s ease-in-out infinite; }
+.wnode.poor .wc { opacity: .65; } .wnode.locked { opacity: .42; border-style: dashed; }
+.wnode.maxed { border-color: #c9b458; box-shadow: inset 0 0 10px rgba(201,180,88,.35); }
+.wnode.c-essence { border-radius: 14px; } .wnode.c-divinity { border-radius: 4px; transform: rotate(45deg); border-color: #ffd75a; box-shadow: 0 0 14px rgba(255,215,90,.45); }
+.wnode.c-divinity > * { transform: rotate(-45deg); } .wnode.c-divinity .wc { transform: rotate(-45deg) translate(-8px, 26px); left: auto; bottom: auto; } .wnode.c-divinity .wn { transform: rotate(-45deg) translate(-30px, 34px); left: auto; top: auto; margin: 0; } .wnode.c-divinity .wl { transform: rotate(-45deg); }
+.wnode.core { width: 84px; height: 84px; margin: -42px 0 0 -42px; border-color: #5dff7a; box-shadow: 0 0 30px rgba(93,255,122,.45); cursor: default; }
+.wnode.core .wn { font-size: 12px; color: #5dff7a; width: 120px; }
+.wnode:hover { z-index: 5; filter: brightness(1.25); }
+@keyframes webpulse { 50% { box-shadow: 0 0 0 2px #0c0b0e, 0 0 18px 5px var(--bc); } }

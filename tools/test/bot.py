@@ -1,84 +1,83 @@
-"""Automated balance/regression bot: plays campaigns at simulation speed
-(towers near roads, recruits, Soul Well purchases, spells, card picks).
-Usage: python3 tools/test/bot.py [maxWave] [runs] [metaMax(0/1)]
-LICH_AN_OUT=file.json also saves every run's analytics record (for tools/analytics/report.py)."""
+"""Meta-loop bot (v0.12): plays the incremental game the way a player would. Starting from an empty
+Phylactery it besieges the furthest unlocked keep, carries the haul home, spends it on the web
+(cheapest affordable node first, unlocks preferred), and repeats.
+Usage: python3 tools/test/bot.py [sieges=30] [stopAfterKeeps=1] [tier=1] [repeat=1]
+Prints one line per siege and how many sieges each keep took; also asserts that level-up offers never
+show two tiers of one family. LICH_AN_OUT=file.json saves the analytics records
+(tools/analytics/report.py). LICH_PORT picks the server port (default 8765)."""
 import json
 import os
 import sys
 from playwright.sync_api import sync_playwright
-maxw = int(sys.argv[1]) if len(sys.argv) > 1 else 25
-runs = int(sys.argv[2]) if len(sys.argv) > 2 else 1
-metamax = len(sys.argv) > 3 and sys.argv[3] == '1'
-BOT = r"""
-([maxWave, metamax]) => {
-  const L = window.__LICH, G = L.G;
-  if (metamax) for (const m of Object.values(L.META_BY_ID || {})) G.meta.lv[m.id] = m.max;
-  L.newCampaign('haunted');
-  const log = []; const t0 = performance.now(); let guard = 0, dupes = 0; const evlog = [];
-  function build() {
-    const r = G.run;
-    let tries = 0;
-    // ramparts (materials): the Curtain around the gate first, then the Bulwark; repair breaches (souls)
-    const WALL_ORDER = ['keep_g', 'keep_n', 'keep_s', 'wall_2', 'wall_1', 'wall_3', 'wall_0', 'wall_4'];
-    for (const s of G.map.sites || []) { const rep = L.siteRepairCost(s); if (rep && r.souls > rep * 2) L.repairSite(s); }
-    // materials: walls, towers on built wall segments, keep buildings behind the walls
-    for (let guardM = 0; guardM < 20; guardM++) {
-      const free = G.map.plots.filter(p => L.plotFree(p));
-      const opts = [];
-      const nextWall = WALL_ORDER.map(id => L.siteById(id)).find(s => s && L.siteTier(s) === 0);
-      if (nextWall && r.materials >= L.siteUpgradeCost(nextWall) && G.towers.length >= WALL_ORDER.indexOf(nextWall.id) / 2) opts.push(() => L.upgradeSite(nextWall));
-      const weak = r.wave >= 6 ? (G.map.sites || []).find(s => L.siteTier(s) === 1) : null;
-      if (weak && r.materials >= L.siteUpgradeCost(weak) + 2) opts.push(() => L.upgradeSite(weak));
-      const tt = r.unlockedTowers[Math.floor(Math.random() * r.unlockedTowers.length)];
-      const mc = L.mountCells(), fp = mc[Math.floor(Math.random() * mc.length)];
-      if (fp && r.materials >= L.towerMatCost(tt)) opts.push(() => L.constructTower(tt, fp));
-      const bp = free[0];
-      for (const k of ['forge', 'vault', 'quarry', 'barracks', 'bell', 'embalm', 'cistern', 'sanctum']) {
-        const lv = L.bld(k), ent = G.buildings.find(b => b.type === k);
-        if (lv === 0 && bp && r.materials >= 8) { opts.push(() => L.constructBuilding(k, bp)); break; }
-        if (ent && lv < 3 && r.materials >= L.buildingUpgradeCost(ent)) { opts.push(() => L.upgradeBuilding(ent)); break; }
-      }
-      for (const t of G.towers) if (t.def.tiers[t.tier + 1] && (t.tier < 1 || L.metaLv('f_evo')) && r.materials >= L.towerUpgradeCost(t)) { opts.push(() => L.upgradeTowerMat(t)); break; }
-      if (!opts.length) break;
-      opts[Math.floor(Math.random() * opts.length)]();
-    }
-    // souls: squads (no army cap any more)
-    while (r.souls > 140 && tries++ < 200) {
-      const u = r.unlockedUnits[Math.floor(Math.random() * r.unlockedUnits.length)];
-      if (r.souls >= L.recruitCost(u)) L.recruit(u); else if (r.unlockedUnits.every(x => r.souls < L.recruitCost(x))) break;
-    }
-    // incremental sinks
-    for (let i = 0; i < 4; i++) { if (r.souls > 600) L.buyWell(['asc_dmg', 'asc_hp', 'asc_souls', 'legion'][i]); }
-    { const lk = L.lockedUnitTypes(); if (lk.length) { const k = lk[Math.floor(Math.random() * lk.length)]; if (r.souls > L.unearthCost(r, k) * 1.5) L.unearthUnit(k); } }
+sieges = int(sys.argv[1]) if len(sys.argv) > 1 else 30
+stop = int(sys.argv[2]) if len(sys.argv) > 2 else 1
+tier = int(sys.argv[3]) if len(sys.argv) > 3 else 1
+repeat = int(sys.argv[4]) if len(sys.argv) > 4 else 1
+PORT = os.environ.get('LICH_PORT', '8765')
+SPEND = r"""
+() => {
+  const L = window.__LICH, G = L.G; const bought = {};
+  for (let guard = 0; guard < 5000; guard++) {
+    const can = L.META.filter(m => L.canBuyMeta(m.id));
+    if (!can.length) break;
+    // a sensible player: one-off unlocks first, then whatever is cheapest relative to the purse
+    const rel = m => L.metaCost(m, L.metaLv(m.id)) / Math.max(1, G.meta[m.cur]);
+    can.sort((a, b) => (a.max === 1 ? 0 : 1) - (b.max === 1 ? 0 : 1) || rel(a) - rel(b));
+    const m = can[0]; L.buyMeta(m.id); bought[m.id] = (bought[m.id] || 0) + 1;
   }
-  while (G.phase !== 'over' && G.run.wave < maxWave && guard++ < 400000) {
+  return bought;
+}
+"""
+SIEGE = r"""
+([keep, tier]) => {
+  const L = window.__LICH, G = L.G;
+  L.newCampaign(keep);
+  const t0 = performance.now(); let guard = 0, dupes = 0; const ev = [];
+  const WALL_ORDER = ['keep_g', 'keep_n', 'keep_s', 'wall_2', 'wall_1', 'wall_3', 'wall_0', 'wall_4'];
+  function place() {
+    for (const id of WALL_ORDER) { const s = L.siteById(id); if (s && !L.siteTier(s) && L.wallSlotsFree() > 0) L.buildSite(s, true); }
+    for (let i = 0; i < 40 && L.towerSlotsFree() > 0; i++) { const mc = L.mountCells(); if (!mc.length) break; const tt = G.run.unlockedTowers[Math.floor(Math.random() * G.run.unlockedTowers.length)]; L.constructTower(tt, mc[Math.floor(Math.random() * mc.length)], true); }
+    for (let i = 0; i < 200 && L.trapSlotsFree() > 0; i++) { const cx = 26 + Math.floor(Math.random() * 14), cy = 10 + Math.floor(Math.random() * 20); if (L.canBuildAt(cx, cy, 1, 1)) L.placeTrap('spikes', cx, cy, true); }
+  }
+  const host0 = G.units.length;
+  while (G.phase !== 'over' && guard++ < 600000) {
     if (G.run.pendingLevels > 0) { const c = L.rollCards(3); if (!L.offerIsClean(c)) dupes++; if (c.length) L.applyCard(c[Math.floor(Math.random() * c.length)]); G.run.pendingLevels--; continue; }
-    if (G.phase === 'prep' && L.pendingEvent()) { const ev = L.pendingEvent(); evlog.push(ev.id); const ok = ev.choices.map((c, i) => i).filter(i => L.canChoose(ev.choices[i])); L.resolveEvent(ok[Math.floor(Math.random() * ok.length)]); continue; }
-    if (G.phase === 'prep') {
-      build();
-      log.push({ w: G.run.wave, keep: Math.round(G.keep.hp), souls: Math.round(G.run.souls), lvl: G.run.level, towers: G.towers.length, mat: G.run.materials, blds: G.buildings.map(b => b.type + (b.tier + 1)).join(','), units: G.units.length, kinds: G.run.unlockedUnits.length, kills: G.run.kills, fervor: +(G.run.fervor || 1).toFixed(2), ms: Math.round(performance.now() - t0) });
-      L.startWave();
-    }
-    for (const s of G.run.spells) if (L.canCast(s) && G.enemies.length > 8) { const e = G.enemies[0]; L.castSpell(s, e.x, e.y); }
+    if (G.phase === 'prep' && L.pendingEvent()) { const e = L.pendingEvent(); ev.push(e.id); const ok = e.choices.map((c, i) => i).filter(i => L.canChoose(e.choices[i])); L.resolveEvent(ok[Math.floor(Math.random() * ok.length)]); continue; }
+    if (G.phase === 'prep') { place(); L.startWave(tier); }
+    for (const s of G.run.spells) if (L.canCast(s) && G.enemies.length > 6) { const e = G.enemies[0]; L.castSpell(s, e.x, e.y); }
     L.step(1 / 30); L.stepVisual(1 / 30, 186, 416);
   }
-  return { log, dupes, events: evlog.join(','), phase: G.phase, wave: G.run.wave, keep: Math.round(G.keep.hp), ms: Math.round(performance.now() - t0) };
+  const r = G.run;
+  return { keep, wave: r.wave, out: r.anOutcome || 'STUCK', souls: Math.round(r.souls), ess: Math.round(r.essence * 10) / 10, div: r.divinity || 0, lvl: r.level, host: host0, towers: G.towers.length, dupes, events: ev.length, sec: Math.round(G.time), ms: Math.round(performance.now() - t0) };
 }
 """
 errs = []
 an_out = os.environ.get('LICH_AN_OUT'); an_runs = []
+took_all = []
 with sync_playwright() as p:
     b = p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox', '--use-gl=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist'])
-    for i in range(runs):
+    for rep in range(repeat):
         pg = b.new_page(viewport={'width': 1280, 'height': 720})
         pg.on('pageerror', lambda e: errs.append(str(e) + '\n' + (e.stack or '')[:600]))
-        pg.goto('http://127.0.0.1:8765/play.html'); pg.wait_for_function('window.__LICH && window.__LICH.G && window.__LICH.G.stats', timeout=60000); pg.wait_for_timeout(500)
-        res = pg.evaluate(BOT, [maxw, metamax])
-        for l in res['log'][-6:] if runs > 1 else res['log']: print(l)
-        print({k: v for k, v in res.items() if k != 'log'})
+        pg.goto(f'http://127.0.0.1:{PORT}/play.html'); pg.wait_for_function('window.__LICH && window.__LICH.G && window.__LICH.G.stats', timeout=60000); pg.wait_for_timeout(500)
+        pg.evaluate("() => { localStorage.clear(); }"); pg.reload(); pg.wait_for_function('window.__LICH && window.__LICH.G && window.__LICH.G.stats', timeout=60000); pg.wait_for_timeout(500)
+        took = {}; n0 = 0; dupes = 0
+        for i in range(sieges):
+            keep = pg.evaluate("() => Math.min(window.__LICH.KEEPS.length - 1, window.__LICH.G.meta.keepsCleared || 0)")
+            res = pg.evaluate(SIEGE, [keep, tier]); dupes += res['dupes']
+            pg.wait_for_timeout(50)
+            bought = pg.evaluate(SPEND)
+            purse = pg.evaluate("() => { const m = window.__LICH.G.meta; return [Math.round(m.souls), Math.round(m.essence), m.divinity, Object.keys(m.lv).length] }")
+            print(f"#{i + 1:3d} keep {keep + 1} wave {res['wave']:2d} {res['out']:8s} host {res['host']:4d} tw {res['towers']:2d} lvl {res['lvl']:2d} +{res['souls']} souls +{res['ess']} ess{' +DIVINITY' if res['div'] else ''} | bought {sum(bought.values())} ({len(bought)} nodes) purse {purse} | {res['sec']}s sim {res['ms']}ms", flush=True)
+            if res['out'] == 'victory' and keep not in took:
+                took[keep] = i + 1 - n0; n0 = i + 1
+                if len(took) >= stop: break
+        print('SIEGES PER KEEP', {k + 1: v for k, v in took.items()}, 'dupes', dupes)
+        took_all.append(took)
         if an_out: an_runs += pg.evaluate('window.__LICH.analytics.anExport().runs')
         pg.close()
-    if an_out:
-        with open(an_out, 'w') as f: json.dump({'runs': an_runs, 'source': 'bot'}, f)
-    print('ERRORS', len(errs)); print('\n'.join(errs[:5]))
     b.close()
+if an_out:
+    json.dump({'runs': an_runs}, open(an_out, 'w'))
+print('ERRORS', len(errs)); print('\n'.join(errs[:6]))
+sys.exit(1 if errs else 0)

@@ -1,37 +1,43 @@
 // DOM user interface: HUD, build drawer, spells, info panel, modals
-// (level-up, Soul Well, pause) and full screens (menu, Phylactery, codex...).
+// (level-up, crusade, events, pause) and full screens (the Phylactery web and keep select, codex...).
 import * as Phaser from 'phaser';
 import { G } from '../core/state';
 import { hooks } from '../core/events';
 import { clamp, fmt, makeCanvas, rnd } from '../core/util';
 import { PAL, KEEP } from '../config/constants';
 import { SHEETS } from '../config/manifest';
-import { TOWERS, TOWER_ORDER, FORTS, FORT_ORDER, WALL_TIERS, WALL_MAX_TIER } from '../data/towers';
-import { siteById, siteTier, siteUpgradeCost, siteRepairCost, siteHp, upgradeSite, repairSite } from '../systems/ramparts';
-import { BUILDINGS, BUILDING_ORDER, TOWER_MAT } from '../data/buildings';
-import { bld, towerMatCost, towerUpgradeCost, upgradeTowerMat, demolishTower, buildingUpgradeCost, upgradeBuilding, materialsIncome } from '../systems/keep';
+import { TOWERS, TOWER_ORDER, FORTS, FORT_ORDER, WALL_TIERS } from '../data/towers';
+import { siteById, siteTier, siteHp, buildSite, razeSite, sitesBuilt } from '../systems/ramparts';
+import { BUILDINGS } from '../data/buildings';
+import { demolishTower, removeTrap, towersPlaced, trapsPlaced } from '../systems/keep';
 import { UNITS, UNIT_ORDER, SUMMONS } from '../data/units';
-import { unearthCost, SPELLS, SPELL_ORDER, WELL } from '../data/spells';
+import { SPELLS, SPELL_ORDER, BASE_SPELLS } from '../data/spells';
 import { CRUSADE_TIERS } from '../data/events';
 import { rogue, pendingEvent, resolveEvent, canChoose, choiceCost } from '../systems/events';
 import { EVENT_ART } from '../data/event_art';
 import { ENEMIES, BOSSES } from '../data/enemies';
-import { META, META_BRANCHES, META_BY_ID, metaCost, ACHIEVEMENTS, CONTENT_GATES } from '../data/meta';
-import { FORTRESSES } from '../data/world';
+import { META, META_BRANCHES, META_BY_ID, metaCost, ACHIEVEMENTS, CUR_NAME, CUR_COLOR, CHILDREN, WebNode } from '../data/meta';
+import { FORTRESSES, KEEPS, WAVES_PER_KEEP } from '../data/world';
 import { RARITY, rollCards, applyCard } from '../systems/cards';
-import { evolveCost, fervorParts, metaLv, contentAvailable, towerStats, recruitCost, fortCost, squadSize, applyUnitStats, towerMaxHp } from '../systems/stats';
-import { spawnUnit, removeStructure, addRing, explosion } from '../systems/combat';
-import { spawnSquad, unearthUnit, lockedUnitTypes, startWave, crusadeOffer, previewWave, castSpell, canCast, spellCd, buyWell, wellCost, wellAvailable, newCampaign, loadRun } from '../systems/campaign';
-import { essenceBreakdown, buyMeta, endCampaign, checkAchievements, codexSee } from '../systems/progression';
+import { fervorParts, metaLv, towerStats, squadSize, applyUnitStats, bld, wallSlots, wallTier, towerSlots, towerTier, trapSlots, towerKnown, fortKnown, unitOwned, musterCount, keepUnlocked, waveEssence, essenceMult, waveHpMult } from '../systems/stats';
+import { startWave, crusadeOffer, previewWave, castSpell, canCast, spellCd, newCampaign, loadRun, retreat } from '../systems/campaign';
+import { haul, buyMeta, buyMetaMax, canBuyMeta, nodeVisible, nodeOpen, codexSee } from '../systems/progression';
 import { saveRun, saveRunSoon, saveMeta, saveMetaSoon, hasRunSave, clearRunSave, loadMeta, store, SAVE_META, SAVE_RUN } from '../systems/save';
 import { startMusic, applyMusicVolume } from '../audio/audio';
 import { anPick, anExport, anCount, anClear, persist } from '../systems/analytics';
 
 const $ = (s: string, el: ParentNode = document) => el.querySelector(s) as HTMLElement;
 const h = (tag: string, cls?: string, html?: string) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
-const icon = (name: string, scale = 1, cls = 'pix ico') => `<img class="${cls}" src="ui/icons/${name}.png" width="${16 * scale}" height="${16 * scale}">`;
+const icon = (name: string, scale = 1, cls = 'pix ico') => `<img class="${cls}" src="ui/icons/${name}.png" width="${16 * scale}" height="${16 * scale}" alt="">`;
 const SOUL = () => icon('soul');
 const ESS = () => icon('essence');
+/** Stolen Divinity has no sheet icon: a gold lozenge drawn in CSS. */
+const DIV = () => '<i class="divico"></i>';
+const CUR_ICON: Record<string, () => string> = { souls: SOUL, essence: ESS, divinity: DIV };
+/** Compact numbers for the three currencies (1.2k, 3.4M …). */
+const big = (v: number) => { v = Math.floor(v); if (v < 10000) return v.toLocaleString('en-US'); const u = ['k', 'M', 'B', 'T', 'Qa', 'Qi']; let i = -1; while (v >= 1000 && i < u.length - 1) { v /= 1000; i++; } return (v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2)) + u[i]; };
+const fmtE = (v: number) => v >= 1000 ? big(v) : v >= 20 ? v.toFixed(0) : (Math.round(v * 10) / 10) + '';
+const purse = () => `<span class="purse"><span class="cur souls" title="Souls">${SOUL()} ${big(G.meta.souls)}</span><span class="cur essence" title="Life Essence">${ESS()} ${big(G.meta.essence)}</span><span class="cur divinity" title="Stolen Divinity">${DIV()} ${big(G.meta.divinity)}</span></span>`;
 const sfx = (n: string, v = 1) => hooks.sfx(n, v);
 const msgFn = (t: string, c?: string) => hooks.msg(t, c);
 
@@ -64,10 +70,9 @@ function spriteIcon(key: string, frame = 0, box = 32) {
 const unitIcon = (type: string, box = 34) => { const t = G.run ? G.run.unitTier[type] || 0 : 0; return spriteIcon(UNITS[type].tiers[t].spr, 0, box); };
 const towerIcon = (type: string, tier = 0, box = 34) => spriteIcon('tower_' + type, tier * 4, box);
 const buildingIcon = (type: string, tier = 0, box = 34) => spriteIcon('building_' + type, tier * 4, box);
-const MAT = () => icon('materials');
 
 export const UI: any = {
-  tab: 'towers', collapsed: false, last: 0, lichT: 0, typing: null as any, infoKey: '', cards: null as any[], banishMode: false, gains: null as any,
+  tab: 'fort', collapsed: false, last: 0, lichT: 0, typing: null as any, infoKey: '', cards: null as any[], banishMode: false, gains: null as any,
 
   init(g: Phaser.Game) {
     game = g;
@@ -76,9 +81,8 @@ export const UI: any = {
       <div id="topbar" class="panel hud hud-el">
         <div class="stat" id="s-wave" data-tip="wave"></div>
         <div class="stat lvl" data-tip="level"><span id="s-level"></span><div class="bar"><i id="s-xp"></i></div></div>
-        <div class="stat" id="s-souls" data-tip="souls"></div>
-        <div class="stat" id="s-mat" data-tip="materials"></div>
-        <div class="stat" id="s-ess" data-tip="essence"></div>
+        <div class="stat cur souls" id="s-souls" data-tip="souls"></div>
+        <div class="stat cur essence" id="s-ess" data-tip="essence"></div>
         <div class="stat keep" data-tip="keep">${icon('keep')}<div class="bar big"><i id="s-keep"></i><b id="s-keeptxt"></b></div></div>
         <div class="stat" id="s-enemies" data-tip="enemies"></div>
         <div class="stat" id="s-units" data-tip="units"></div>
@@ -91,14 +95,13 @@ export const UI: any = {
       <div id="rightbar" class="hud-el">
         <div id="infopanel" class="panel hidden"></div>
         <button class="btn big green" id="b-wave"></button>
-        <button class="btn" id="b-well">${icon('soul', 2, 'pix')} Soul Well <small>[E]</small></button>
         <div class="speed"><button class="btn sm" data-speed="0" title="Pause (Space)">❚❚</button><button class="btn sm" data-speed="1" title="Normal speed">▶</button><button class="btn sm" data-speed="2" title="Fast (F)">▶▶</button><button class="btn sm" data-speed="4" title="Very fast (F)">▶▶▶</button></div>
         <button class="btn sm" id="b-menu" title="Menu (Esc)">☰ Menu</button>
       </div>
       <div id="toasts" class="hud-el"></div>
       <div id="spellbar" class="panel hud-el"></div>
       <div id="buildbar" class="panel hud-el">
-        <div class="tabs"><button data-tab="towers" title="Towers on top of the ramparts (materials)">Towers</button><button data-tab="buildings" title="Keep buildings: permanent bonuses (materials)">Buildings</button><button data-tab="fort">Fortify</button><button data-tab="army">Army</button><span class="spacer"></span><button class="close" id="b-collapse" title="Show/hide (B)">▼ Hide</button></div>
+        <div class="tabs"><button data-tab="fort" title="Ramparts, traps and barricades (slots from the Phylactery web)">Ramparts & Traps</button><button data-tab="towers" title="Towers on top of built ramparts (slots from the Phylactery web)">Towers</button><button data-tab="army" title="The host the web has mustered">Host</button><span class="spacer"></span><button class="close" id="b-collapse" title="Show/hide (B)">▼ Hide</button></div>
         <div id="buildlist"></div>
       </div>
       <div id="speech" class="hidden"></div>
@@ -114,7 +117,6 @@ export const UI: any = {
     $('#b-collapse').onclick = () => { this.collapsed = !this.collapsed; sfx('click'); this.renderBuild(); };
     ui.querySelectorAll('.speed button').forEach((b: HTMLElement) => b.onclick = () => { const s = +b.dataset.speed; if (s === 0) G.paused = !G.paused; else { G.speed = s; G.paused = false; } sfx('click'); this.updateSpeed(); });
     $('#b-wave').onclick = () => { if (G.phase === 'prep') this.showCrusade(); };
-    $('#b-well').onclick = () => this.showWell();
     $('#b-menu').onclick = () => this.showPause();
     ui.addEventListener('mouseover', (e: any) => { const t = e.target.closest('[data-tip]'); if (t && t.dataset.tip !== 'x') this.showTip(t, this.tipFor(t)); });
     ui.addEventListener('mouseout', (e: any) => { const t = e.target.closest('[data-tip]'); if (t) this.hideTip(); });
@@ -130,15 +132,14 @@ export const UI: any = {
     const k = el.dataset.tip, r = G.run;
     if (!r) return '';
     switch (k) {
-      case 'wave': return `<b>Wave ${r.wave}</b><br>${G.phase === 'prep' ? 'Preparing. Build, recruit, then begin the next wave.' : G.wave ? G.wave.theme.name : ''}`;
-      case 'level': return `<b>Level ${r.level}</b><br>XP ${Math.floor(r.xp)} / ${r.xpNext}<br>Each level grants a choice of 3 dark upgrades.`;
-      case 'souls': return `<b>Souls</b><br>Harvested from slain mortals. Spend them on your undead host, ramparts, fortifications, spells and the Soul Well.`;
-      case 'materials': return `<b>Materials</b><br>Stone and bone for the keep's builders. Earned slowly after every repelled wave (next: +${materialsIncome(G.run.wave + 1, !!previewWave(G.run.wave + 1).boss)}), more for bosses and with a Bone Quarry.<br>Spend them on <b>towers</b> and <b>keep buildings</b> on the foundations around the keep (Keep tab).`;
-      case 'essence': return `<b>Life Essence</b><br>Permanent currency for the Phylactery.<br>Projected from this campaign: ${essenceBreakdown().total}`;
-      case 'keep': return `<b>The Keep</b><br>${fmt(G.keep.hp)} / ${fmt(G.keep.maxHp)}<br>If it falls, the campaign ends.`;
+      case 'wave': return `<b>${KEEPS[r.keep].name} — wave ${r.wave} of ${WAVES_PER_KEEP}</b><br>${G.phase === 'prep' ? 'Preparing. Place your defences, then begin the next wave.' : G.wave ? G.wave.theme.name : ''}<br><span class="dim">Wave ${WAVES_PER_KEEP} is the keep's boss.</span>`;
+      case 'level': return `<b>Level ${r.level}</b><br>XP ${Math.floor(r.xp)} / ${r.xpNext}<br>Each level grants a choice of 3 dark upgrades for this siege.`;
+      case 'souls': return `<b>Souls gathered this siege</b><br>Harvested from every slain mortal. Nothing is bought during a siege: when it ends — won or lost — they are carried to the <b>Phylactery web</b>, where souls buy more undead and the small, repeatable upgrades.<br><span class="dim">In the Phylactery now: ${big(G.meta.souls)}</span>`;
+      case 'essence': return `<b>Life Essence gathered this siege</b><br>Earned for every wave repelled (wave ${Math.min(WAVES_PER_KEEP, r.wave + 1)}: +${fmtE(waveEssence(Math.min(WAVES_PER_KEEP, r.wave + 1)) * essenceMult())}), far more for the boss. Spent on the web for unlocks, buildings and stronger passives.<br><span class="dim">In the Phylactery now: ${big(G.meta.essence)} · Stolen Divinity ${G.meta.divinity}</span>`;
+      case 'keep': return `<b>The Keep</b><br>${fmt(G.keep.hp)} / ${fmt(G.keep.maxHp)}<br>If it falls the siege ends — and everything you gathered still reaches the Phylactery.`;
       case 'enemies': return `<b>Mortals on the field</b>`;
-      case 'units': return `<b>Your undead host</b><br>There is no army limit: every recruit raises a whole squad. The crusade's Fervor rises once your host outgrows what the wave expects.<br>Total host: ${G.units.length}`;
-      case 'fervor': { const p = fervorParts(Math.max(1, r.wave)); return `<b>Crusade Fervor ×${(r.fervor || 1).toFixed(2)}</b> <span class="dim">(enemy health; damage by its square root)</span><br>Waves: ×${p.sched.toFixed(2)} — +3% every wave.<br>Zeal: ×${p.zeal.toFixed(2)} — +3.5% for each Holy War fought (${p.zealN}), for the rest of the campaign.<br>Your host: ×${p.host.toFixed(2)} — the crusade musters to match a host worth more than ${fmt(p.allowance)} souls for this wave (yours: ${fmt(p.value)}).`; }
+      case 'units': return `<b>Your undead host</b><br>Raised by the Phylactery web at the start of the siege. Every undead slain during a wave rises again when the wave is repelled.<br>Total host: ${G.units.length}`;
+      case 'fervor': { const p = fervorParts(); return `<b>Crusade Fervor ×${(r.fervor || 1).toFixed(2)}</b> <span class="dim">(enemy health; damage by its square root)</span><br>Zeal: +3.5% for each Holy War fought this siege (${p.zealN}).`; }
       default: return '';
     }
   },
@@ -170,14 +171,13 @@ export const UI: any = {
     if (now - this.last < 100 || !G.run || G.phase === 'menu') return;
     this.last = now;
     const r = G.run;
-    $('#s-wave').innerHTML = `<span class="lbl">Wave</span> ${r.wave}${G.phase === 'prep' ? '<em> prep</em>' : ''}`;
+    $('#s-wave').innerHTML = `<span class="lbl">Wave</span> ${r.wave}<em>/${WAVES_PER_KEEP}</em>${G.phase === 'prep' ? '<em> prep</em>' : ''}`;
     $('#s-level').innerHTML = `<span class="lbl">Lv</span> ${r.level}`;
     ($('#s-xp') as HTMLElement).style.width = (r.xp / r.xpNext) * 100 + '%';
-    this.setStat('#s-souls', `${SOUL()} ${fmt(r.souls)}`);
-    this.setStat('#s-mat', `${MAT()} ${fmt(r.materials)}`);
+    this.setStat('#s-souls', `${SOUL()} ${big(r.souls)}`);
+    this.setStat('#s-ess', `${ESS()} ${fmtE(r.essence)}`);
     this.trackGains();
     this.renderMods();
-    $('#s-ess').innerHTML = `${ESS()} ${fmt(G.meta.essence)}`;
     const kp = $('#s-keep'); kp.style.width = clamp((G.keep.hp / G.keep.maxHp) * 100, 0, 100) + '%'; kp.className = G.keep.hp / G.keep.maxHp < 0.3 ? 'low' : '';
     $('#s-keeptxt').textContent = fmt(Math.max(0, Math.ceil(G.keep.hp)));
     $('#s-enemies').innerHTML = `${icon('skull')} ${G.enemies.length}${G.phase === 'wave' && G.wave ? `<em>/${G.wave.total - G.wave.idx + G.enemies.length}</em>` : ''}`;
@@ -187,17 +187,16 @@ export const UI: any = {
     if (G.phase === 'prep') {
       const pv = previewWave(r.wave + 1);
       wb.disabled = false;
-      wb.innerHTML = `Begin Wave ${r.wave + 1}${pv.boss ? `<small class="bossw">BOSS: ${pv.boss}</small>` : (r.wave + 1) % 5 === 0 ? '<small>Champion wave</small>' : ''}${G.settings.autoWave ? `<small>auto in ${Math.max(0, Math.ceil(6 - G.autoT))}s</small>` : ''}`;
+      wb.innerHTML = `Begin Wave ${r.wave + 1}<em>/${WAVES_PER_KEEP}</em>${pv.boss ? `<small class="bossw">BOSS: ${pv.boss}</small>` : (r.wave + 1) % 5 === 0 ? '<small>Champion wave</small>' : ''}${G.settings.autoWave ? `<small>auto in ${Math.max(0, Math.ceil(6 - G.autoT))}s</small>` : ''}`;
       wb.classList.add('pulse');
-    } else { wb.disabled = true; wb.classList.remove('pulse'); wb.innerHTML = G.phase === 'over' ? 'The keep has fallen' : `Wave ${r.wave} in progress`; }
+    } else { wb.disabled = true; wb.classList.remove('pulse'); wb.innerHTML = G.phase === 'over' ? 'The siege is over' : `Wave ${r.wave} in progress`; }
     const bb = G.bossBar;
     if (bb && !bb.dead) { $('#bossbar').classList.remove('hidden'); $('#b-name').textContent = bb.name; $('#b-title').textContent = bb.title || ''; $('#b-hp').style.width = (bb.hp / bb.maxHp) * 100 + '%'; }
     else $('#bossbar').classList.add('hidden');
     let obj = '';
-    if (G.phase === 'prep') { const pv = previewWave(r.wave + 1); obj = r.wave === 0 ? 'The crusade marches from the <b>east</b>. Raise your host (Army tab), spend materials on the keep\'s foundations (Keep tab), then <b>Begin Wave 1</b>.' : `Prepare for wave ${r.wave + 1}.` + (pv.boss ? ` <b class="bad">Boss: ${pv.boss}</b>` : '') + (pv.newLane ? ` <b class="bad">New road: ${pv.newLane.name}!</b>` : ''); }
+    if (G.phase === 'prep') { const pv = previewWave(r.wave + 1); obj = r.wave === 0 ? `The crusade marches from the <b>east</b>. Your host has risen; place the defences the web allows (bottom drawer), then <b>Begin Wave 1</b>.` : `Prepare for wave ${r.wave + 1}.` + (pv.boss ? ` <b class="bad">Boss: ${pv.boss}</b>` : '') + (pv.newLane ? ` <b class="bad">New road: ${pv.newLane.name}!</b>` : ''); }
     else if (G.phase === 'wave') obj = G.wave.boss ? `Destroy <b>${G.wave.boss.name}</b>.` : `Repel the ${G.wave.theme.name}.`;
-    const nb = BOSSES.find(b => b.wave > r.wave);
-    if (nb) obj += `<br><span class="dim">Next boss: ${nb.name} — wave ${nb.wave}</span>`;
+    if (r.wave < WAVES_PER_KEEP - 1 || G.phase === 'prep' && r.wave < WAVES_PER_KEEP) obj += `<br><span class="dim">${KEEPS[r.keep].name} · boss on wave ${WAVES_PER_KEEP}: ${BOSSES.find(b => b.id === KEEPS[r.keep].boss).name}${G.meta.keepsCleared <= r.keep ? ' — ' + DIV() + ' 1 Stolen Divinity' : ''}</span>`;
     $('#objective').innerHTML = obj;
     this.updateSpells();
     this.refreshAffordability();
@@ -216,10 +215,10 @@ export const UI: any = {
     const bar = $('#spellbar'); bar.innerHTML = '';
     G.run.spells.forEach((id: string, i: number) => {
       const s = SPELLS[id];
-      const b = h('button', 'spell', `${icon(s.icon, 2, 'pix')}<span class="key">${i + 1}</span><span class="cd"></span><span class="cdt"></span>`);
+      const b = h('button', 'spell', `${icon(s.icon, 2, 'pix')}<span class="key">${i < 9 ? i + 1 : ''}</span><span class="cd"></span><span class="cdt"></span>`);
       b.dataset.spell = id;
       b.onclick = () => this.trySpell(id);
-      b.onmouseenter = () => this.showTip(b, `<b>${s.name}</b> <span class="dim">[${i + 1}]</span><br>${s.desc}<br><span class="dim">Cooldown ${Math.round(spellCd(id))}s${s.cost ? ` · ${s.cost} souls` : ''}${s.target ? ' · click a target area' : ''}</span>`);
+      b.onmouseenter = () => this.showTip(b, `<b>${s.name}</b> <span class="dim">[${i + 1}]</span><br>${s.desc}<br><span class="dim">Cooldown ${Math.round(spellCd(id))}s${s.target ? ' · click a target area' : ''}</span>`);
       b.onmouseleave = () => this.hideTip();
       bar.appendChild(b);
     });
@@ -246,128 +245,105 @@ export const UI: any = {
     if (!G.run) return;
     const bar = $('#buildbar');
     bar.classList.toggle('collapsed', this.collapsed);
-    $('#b-collapse').textContent = this.collapsed ? '▲ Build' : '▼ Hide';
+    $('#b-collapse').textContent = this.collapsed ? '▲ Defences' : '▼ Hide';
     document.querySelectorAll('.tabs button[data-tab]').forEach((b: HTMLElement) => b.classList.toggle('on', b.dataset.tab === this.tab && !this.collapsed));
     const L = $('#buildlist'); L.innerHTML = '';
-    const r = G.run;
-    const card = (iconHtml: string, name: string, cost: number | null, tip: string, onclick: (e: MouseEvent) => void, extra = '', on = false, mat = false) => {
-      const b = h('button', 'bitem' + (on ? ' on' : ''), `<div class="bico">${iconHtml}</div><div class="bname">${name}</div><div class="bcost${mat ? ' mat' : ''}">${cost != null ? (mat ? MAT() : SOUL()) + fmt(cost) : ''}</div>${extra}`);
-      b.dataset.cost = '' + (cost || 0); if (mat) b.dataset.mat = '1';
+    const r = G.run, prep = G.phase === 'prep';
+    const card = (iconHtml: string, name: string, note: string, tip: string, onclick: (e: MouseEvent) => void, extra = '', on = false) => {
+      const b = h('button', 'bitem' + (on ? ' on' : ''), `<div class="bico">${iconHtml}</div><div class="bname">${name}</div><div class="bcost slot">${note}</div>${extra}`);
       b.onclick = onclick as any;
       b.onmouseenter = () => this.showTip(b, tip); b.onmouseleave = () => this.hideTip();
       L.appendChild(b); return b;
     };
-    G.showPlots = this.collapsed ? false : this.tab === 'towers' ? 'mounts' : this.tab === 'buildings' ? 'plots' : false;
+    const arm = (b: any) => { if (!prep) { sfx('error'); msgFn('Defences are placed between waves.', '#c8b890'); return; } G.build = b; G.selected = null; sfx('click'); this.renderBuild(); };
+    const slots = (used: number, max: number) => `<span class="${used >= max ? 'full' : ''}">${used}/${max}</span>`;
+    const webNote = (t: string) => L.appendChild(h('div', 'bnote', t));
+    G.showPlots = this.collapsed ? false : this.tab === 'towers' ? 'mounts' : false;
     if (this.tab === 'towers') {
+      const used = towersPlaced(), max = towerSlots();
       for (const t of TOWER_ORDER) {
-        if (!r.unlockedTowers.includes(t)) continue;
-        const d = TOWERS[t], cost = towerMatCost(t);
-        card(towerIcon(t), d.name, cost, towerTip(t), () => { G.build = { kind: 'tower', type: t, cost }; G.selected = null; sfx('click'); this.renderBuild(); }, '', G.build && G.build.kind === 'tower' && G.build.type === t, true);
+        if (!towerKnown(t)) continue;
+        const d = TOWERS[t];
+        const b = card(towerIcon(t, towerTier()), d.tiers[towerTier()].name, slots(used, max), towerTip(t), () => arm({ kind: 'tower', type: t }), '', G.build && G.build.kind === 'tower' && G.build.type === t);
+        if (used >= max || !prep) b.classList.add('poor');
       }
-      const locked = TOWER_ORDER.filter(t => !r.unlockedTowers.includes(t)).length;
-      if (locked) L.appendChild(h('div', 'bnote', `${locked} more tower${locked > 1 ? 's' : ''} can be unlocked through level-ups${TOWER_ORDER.some(t => !contentAvailable('tower', t)) ? ' and the Phylactery' : ''}. Towers cost ${MAT()} materials, earned after each wave.`));
-      L.appendChild(h('div', 'bnote', `Towers stand on top of the ramparts: build a wall segment first (Fortify tab), then place a tower on any section of it.`));
-    } else if (this.tab === 'buildings') {
-      for (const k of BUILDING_ORDER) {
-        const d = BUILDINGS[k], lv = bld(k), ent = G.buildings.find((o: any) => o.type === k);
-        const cost = lv >= 3 ? null : d.cost[lv];
-        const extra = lv ? `<div class="evo">${['I', 'II', 'III'][lv - 1]}</div>` : '';
-        card(buildingIcon(k, Math.max(0, lv - 1)), lv ? d.tiers[lv - 1] : d.name, cost, buildingTip(k), () => {
-          if (ent) { G.selected = ent; G.build = null; this.infoKey = ''; sfx('click'); this.renderBuild(); return; }
-          G.build = { kind: 'building', type: k, cost: d.cost[0] }; G.selected = null; sfx('click'); this.renderBuild();
-        }, extra, !!(G.build && G.build.kind === 'building' && G.build.type === k), true);
-      }
+      const locked = TOWER_ORDER.filter(t => !towerKnown(t)).length;
+      webNote(max ? `<b>${used}/${max}</b> tower slots used. Towers stand on top of <b>built ramparts</b>, two sections apart; they are free, are rebuilt after a wave if they fall, and can be moved between waves (select one → Demolish).${locked ? ` ${locked} more tower type${locked > 1 ? 's' : ''} can be unlocked on the Phylactery web.` : ''}`
+        : `No tower slots yet. Unlock <b>Ramparts</b>, then <b>Spire Foundations</b>, on the Phylactery web (The Fortress).`);
     } else if (this.tab === 'fort') {
-      const sites = G.map.sites || [], built = sites.filter((s: any) => siteTier(s) > 0).length;
-      card(icon('wall', 2, 'pix'), 'Ramparts', null, `<b>Ramparts</b><br>Walls stand on fixed sites around the gatehouse: the inner <b>Curtain</b> and the outer <b>Bulwark</b>, each closing the gate off from wall to map edge. They cost ${MAT()} materials.<br>Click a site to raise a <b>Bone Palisade</b>, click again for a <b>Stone Wall</b>, then a <b>Bone Rampart</b>. A built segment carries a tower. Close every segment of a wall and the crusade must breach it; leave a gap and they funnel through it.<br><span class="dim">${built}/${sites.length} sites built. Right-click to stop.</span>`,
-        () => { G.build = G.build && G.build.kind === 'site' ? null : { kind: 'site', type: 'site', cost: 0 }; G.selected = null; sfx('click'); this.renderBuild(); }, '', !!(G.build && G.build.kind === 'site'));
+      const wu = sitesBuilt(), wm = wallSlots(), tu = trapsPlaced(), tm = trapSlots();
+      const wb = card(icon('wall', 2, 'pix'), WALL_TIERS[wallTier()].name, slots(wu, wm), `<b>Ramparts</b> — ${WALL_TIERS[wallTier()].name}<br>Walls stand on fixed sites around the gatehouse: the inner <b>Curtain</b> (3 segments) and the outer <b>Bulwark</b> (5). The web's Ramparts node grants <b>${wm}</b> segment${wm === 1 ? '' : 's'}: click a site to raise it, free of charge. A built segment carries towers. Close every segment of a wall and the crusade must breach it; leave a gap and they funnel through it.<br><span class="dim">Breaches are mended after every wave. To move a segment, select it and level it (between waves).</span>`,
+        () => { if (G.build && G.build.kind === 'site') { G.build = null; sfx('click'); this.renderBuild(); } else arm({ kind: 'site', type: 'site' }); }, '', !!(G.build && G.build.kind === 'site'));
+      if (!wm || !prep) wb.classList.add('poor');
       for (const f of FORT_ORDER) {
-        const d = FORTS[f], avail = !d.meta || metaLv(d.meta) > 0;
-        const b = card(icon(d.icon, 2, 'pix'), d.name, fortCost(f), `<b>${d.name}</b><br>${d.desc}${avail ? '<br><span class="dim">Hold the mouse to paint. Right-click to stop.</span>' : `<br><span class="bad">Unlock in the Phylactery: ${META_BY_ID[d.meta].name}</span>`}`,
-          () => { if (!avail) { sfx('error'); return; } G.build = { kind: 'fort', type: f, cost: fortCost(f) }; G.selected = null; sfx('click'); this.renderBuild(); }, '', G.build && G.build.type === f);
-        if (!avail) b.classList.add('locked');
+        const d = FORTS[f], avail = fortKnown(f);
+        const b = card(icon(d.icon, 2, 'pix'), d.name, slots(tu, tm), `<b>${d.name}</b><br>${d.desc}${avail ? '<br><span class="dim">Hold the mouse to paint. Right-click to stop. Destroyed traps are laid again after the wave.</span>' : `<br><span class="bad">Unlock on the Phylactery web: ${META_BY_ID[d.meta].name}</span>`}`,
+          () => { if (!avail) { sfx('error'); return; } arm({ kind: 'fort', type: f }); }, '', G.build && G.build.type === f);
+        if (!avail) b.classList.add('locked'); else if (tu >= tm || !prep) b.classList.add('poor');
       }
+      webNote(wm || tm ? `Ramparts <b>${wu}/${wm}</b> · traps <b>${tu}/${tm}</b>. Everything here is free: the Phylactery web decides how much you may place, you decide where. What stands when a wave begins is remembered for your next siege of this keep.`
+        : `You have no ramparts or traps yet. They are unlocked on the Phylactery web (The Fortress): <b>Ramparts</b> grants wall segments, <b>Trapworks</b> grants trap slots.`);
     } else if (this.tab === 'army') {
       for (const u of UNIT_ORDER) {
-        if (!r.unlockedUnits.includes(u)) continue;
-        const d = UNITS[u], tier = r.unitTier[u] || 0, next = d.tiers[tier + 1];
-        const canEvo = next && (tier < 1 || metaLv('n_evo'));
-        const evoBtn = next ? `<div class="evo ${canEvo ? '' : 'locked'}" data-evo="${u}">⇧ ${fmt(evolveCost(u))}</div>` : '';
-        const b = card(unitIcon(u), `${d.tiers[tier].name} <span class="sq">×${squadSize(u)}</span>`, recruitCost(u), unitTip(u), (ev) => { if ((ev.target as HTMLElement).closest('.evo')) return; recruit(u); }, evoBtn);
+        const n = G.units.filter((x: any) => x.type === u && !x.summon && !x.temp).length;
+        if (!n && !r.unlockedUnits.includes(u)) continue;
+        const d = UNITS[u], tier = r.unitTier[u] || 0;
+        const b = card(unitIcon(u), d.tiers[tier].name, `×${n}`, unitTip(u), () => this.showUnitDetail(u));
         b.oncontextmenu = (ev) => { ev.preventDefault(); this.showUnitDetail(u); };
-        const eb = $('.evo', b);
-        if (eb) {
-          eb.onclick = (ev) => { ev.stopPropagation(); evolveUnit(u); };
-          eb.onmouseenter = (ev) => { ev.stopPropagation(); this.showTip(eb, `<b>Evolve: ${next.name}</b><br>All ${d.name}s (present and future) are transformed.<br>${evoText(next)}${canEvo ? '' : '<br><span class="bad">Requires Rite of Ascension (Phylactery)</span>'}<br>${SOUL()} ${fmt(evolveCost(u))}`); };
-        }
       }
-      L.appendChild(h('div', 'bnote', 'Hover a card for a summary, right-click it for full details. Each purchase raises a whole squad and there is no army limit. Your undead pick their own battles: they hold the gate and rush to wherever the crusade presses hardest.'));
+      webNote('Your host is mustered on the Phylactery web: more bodies with souls, new undead types and evolutions with Life Essence. Nothing is recruited during a siege, but every undead slain in a wave rises again when the wave is repelled. Click a card for details.');
     }
-    this.refreshAffordability();
   },
-  refreshAffordability() {
-    if (!G.run) return;
-    document.querySelectorAll('#buildlist .bitem').forEach((b: HTMLElement) => b.classList.toggle('poor', +b.dataset.cost > (b.dataset.mat ? G.run.materials : G.run.souls)));
-    document.querySelectorAll('#buildlist .evo[data-evo]').forEach((e: HTMLElement) => { const u = e.dataset.evo, t = G.run.unitTier[u] || 0, nx = UNITS[u].tiers[t + 1]; e.classList.toggle('poor', !nx || evolveCost(u) > G.run.souls); });
-  },
+  refreshAffordability() { /* nothing is bought during a siege (v0.12) */ },
 
   // ---------------- selection info ----------------
   renderSiteInfo(s: any, P: HTMLElement) {
     const site = siteById(s.siteId); if (!site) { G.selected = null; P.classList.add('hidden'); return; }
-    const t = siteTier(site), up = siteUpgradeCost(site), rep = siteRepairCost(site), [hp, max] = siteHp(site);
-    const key = s.id + ':' + t + ':' + Math.round(hp) + ':' + Math.floor(G.run.souls / 10) + ':' + G.run.materials;
+    const t = siteTier(site), [hp, max] = siteHp(site);
+    const key = s.id + ':' + t + ':' + Math.round(hp) + ':' + G.phase + ':' + sitesBuilt();
     if (this.infoKey === key && !P.classList.contains('hidden')) return;
     this.infoKey = key; P.classList.remove('hidden');
-    const cur = WALL_TIERS[t], nx = WALL_TIERS[t + 1];
+    const cur = WALL_TIERS[t], free = wallSlots() - sitesBuilt(), prep = G.phase === 'prep';
     P.innerHTML = `<span class="x" id="i-x">✕</span><div class="ihead">${icon('wall', 3, 'pix')}<div><b>${site.name}</b><div class="dim">${t ? cur.name : 'Empty site'} · ${site.cells.length} sections</div></div></div>
-      ${t ? `<div class="istats"><span>Durability</span><b>${fmt(hp)}/${fmt(max)}</b>${cur.thorns ? '<span>Spurs</span><b>wound attackers</b>' : ''}</div><div class="idesc">${cur.desc}</div>` : '<div class="idesc">A surveyed wall site. Build it to block this stretch; a built segment can carry a tower.</div>'}
-      ${nx ? `<div class="idesc"><span class="good">Next: ${nx.name}</span> (${t ? `+${Math.round((nx.hp / cur.hp - 1) * 100)}% health` : 'blocks the crusade'}${nx.thorns ? ', spurs wound attackers' : ''})</div>` : ''}
-      <div class="ibtns">${t < WALL_MAX_TIER ? `<button class="btn sm" id="i-up">${t ? 'Upgrade' : 'Build'} ${MAT()}${fmt(up)}</button>` : ''}${rep ? `<button class="btn sm" id="i-rep">Repair ${SOUL()}${fmt(rep)}</button>` : ''}</div>`;
-    const ub = $('#i-up'); if (ub) ub.onclick = () => { if (upgradeSite(site)) saveRunSoon(); this.infoKey = ''; };
-    const rb = $('#i-rep'); if (rb) rb.onclick = () => { if (repairSite(site)) saveRunSoon(); this.infoKey = ''; };
+      ${t ? `<div class="istats"><span>Durability</span><b>${fmt(hp)}/${fmt(max)}</b>${cur.thorns ? '<span>Spurs</span><b>wound attackers</b>' : ''}</div><div class="idesc">${cur.desc} Breaches are mended after every wave.</div>` : `<div class="idesc">A surveyed wall site. Raise it to block this stretch; a built segment can carry towers. <span class="dim">Rampart segments: ${sitesBuilt()}/${wallSlots()}.</span></div>`}
+      <div class="ibtns">${!t ? `<button class="btn sm ${free > 0 && prep ? '' : 'locked'}" id="i-up">Raise ${WALL_TIERS[wallTier()].name}</button>` : `<button class="btn sm red ${prep ? '' : 'locked'}" id="i-raze">Level it (frees the segment)</button>`}</div>`;
+    const ub = $('#i-up'); if (ub) ub.onclick = () => { if (buildSite(site)) { saveRunSoon(); this.renderBuild(); } this.infoKey = ''; };
+    const rz = $('#i-raze'); if (rz) rz.onclick = () => { if (razeSite(site)) { saveRunSoon(); this.renderBuild(); } this.infoKey = ''; };
     $('#i-x').onclick = () => { G.selected = null; P.classList.add('hidden'); };
   },
   renderInfo() {
     const s = G.selected, P = $('#infopanel');
     if (!s || s.dead) { P.classList.add('hidden'); G.selected = null; return; }
     if (s.kind === 'site') { this.renderSiteInfo(s, P); return; }
-    const key = s.id + ':' + (s.tier || 0) + ':' + Math.round(s.hp) + ':' + (s.mode || '') + ':' + Math.floor(G.run.souls / 10) + ':' + G.run.materials + ':' + (s.kills || 0) + ':' + (s.silT > 0);
+    const key = s.id + ':' + (s.tier || 0) + ':' + Math.round(s.hp) + ':' + (s.mode || '') + ':' + G.phase + ':' + (s.kills || 0) + ':' + (s.silT > 0);
     if (this.infoKey === key && !P.classList.contains('hidden')) return;
     this.infoKey = key;
     P.classList.remove('hidden');
+    const prep = G.phase === 'prep';
     if (s.kind === 'tower') {
-      const st = towerStats(s), d = s.def, next = d.tiers[s.tier + 1];
-      const needEvo = next && s.tier + 1 === 2 && !metaLv('f_evo');
-      const repairCost = Math.ceil(((s.maxHp - s.hp) / s.maxHp) * d.cost * 0.4);
+      const st = towerStats(s), d = s.def;
       P.innerHTML = `<span class="x" id="i-x">✕</span><div class="ihead">${towerIcon(s.type, s.tier, 44)}<div><b>${st.name}</b><div class="dim">${['Tier I', 'Tier II', 'Tier III — Evolved'][s.tier]} · ${s.kills} kills</div></div></div>
         <div class="istats">${d.dmg ? `<span>Damage</span><b>${fmt(st.dmg)}</b>` : ''}<span>Range</span><b>${Math.round(st.range)}</b>${d.dmg ? `<span>Attack every</span><b>${st.cd.toFixed(2)}s</b>` : ''}<span>Durability</span><b>${fmt(s.hp)}/${fmt(s.maxHp)}</b></div>
-        <div class="idesc">${d.desc}${s.tier ? `<br><span class="good">${d.evo.slice(1, s.tier + 1).join(' ')}</span>` : ''}${s.silT > 0 ? '<br><span class="bad">SILENCED</span>' : ''}</div>
+        <div class="idesc">${d.desc}${s.tier ? `<br><span class="good">${d.evo.slice(1, s.tier + 1).join(' ')}</span>` : ''}${s.silT > 0 ? '<br><span class="bad">SILENCED</span>' : ''}${s.tier < 2 ? `<br><span class="dim">Higher tiers: Tower Apotheosis on the Phylactery web.</span>` : ''}</div>
         <div class="ibtns">
-          ${next ? `<button class="btn ${needEvo ? 'locked' : ''}" id="i-up">${s.tier === 1 ? 'Evolve' : 'Upgrade'}: ${next.name}<small>${MAT()} ${fmt(towerUpgradeCost(s))} — ${d.evo[s.tier + 1]}</small></button>` : '<div class="dim">Fully evolved.</div>'}
           ${d.dmg && s.type !== 'abomination' ? `<button class="btn sm" id="i-mode">Target: ${s.mode}</button>` : ''}
-          ${s.hp < s.maxHp ? `<button class="btn sm" id="i-rep">Repair ${SOUL()}${repairCost}</button>` : ''}
-          <button class="btn sm red" id="i-sell">Dismantle +${MAT()}${fmt(Math.floor((s.matInvested || towerMatCost(s.type)) * 0.5))}</button>
+          <button class="btn sm red ${prep ? '' : 'locked'}" id="i-sell">Demolish (frees the slot)</button>
         </div>`;
-      if (next) $('#i-up').onclick = () => { if (needEvo) { msgFn('Evolution requires Tower Apotheosis (Phylactery).', '#ff8080'); sfx('error'); return; } if (upgradeTowerMat(s)) { explosion(s.x, s.y - 20, 30, PAL.necro); if (s.tier === 2) checkAchievements(); saveRunSoon(); } this.infoKey = ''; };
       const m = $('#i-mode'); if (m) m.onclick = () => { s.mode = s.mode === 'first' ? 'strongest' : s.mode === 'strongest' ? 'closest' : 'first'; sfx('click'); this.infoKey = ''; };
-      const rp = $('#i-rep'); if (rp) rp.onclick = () => { if (G.run.souls < repairCost) { sfx('error'); return; } G.run.souls -= repairCost; s.hp = s.maxHp; sfx('build'); this.infoKey = ''; };
-      $('#i-sell').onclick = () => { demolishTower(s); saveRunSoon(); P.classList.add('hidden'); this.renderBuild(); };
+      $('#i-sell').onclick = () => { if (demolishTower(s)) { saveRunSoon(); P.classList.add('hidden'); this.renderBuild(); } };
     } else if (s.kind === 'building') {
-      const d = BUILDINGS[s.type], lv = s.tier + 1, up = buildingUpgradeCost(s);
+      const d = BUILDINGS[s.type], lv = s.tier + 1;
       P.innerHTML = `<span class="x" id="i-x">✕</span><div class="ihead">${buildingIcon(s.type, s.tier, 44)}<div><b>${d.tiers[s.tier]}</b><div class="dim">${d.name} · level ${lv}/3</div></div></div>
-        <div class="idesc">${d.desc}<br><span class="good">Now: ${lv} × (${d.per}).</span></div>
-        <div class="ibtns">${up ? `<button class="btn" id="i-up">Upgrade: ${d.tiers[s.tier + 1]}<small>${MAT()} ${fmt(up)} — another ${d.per}</small></button>` : '<div class="dim">Fully built.</div>'}</div>`;
-      const ub = $('#i-up'); if (ub) ub.onclick = () => { if (upgradeBuilding(s)) { explosion(s.x, s.y - 16, 30, PAL.gold); saveRunSoon(); this.renderBuild(); } this.infoKey = ''; };
+        <div class="idesc">${d.desc}<br><span class="good">Now: ${lv} × (${d.per}).</span><br><span class="dim">${lv < 3 ? 'Raise it higher on the Phylactery web (The Necropolis).' : 'Fully built.'}</span></div>`;
     } else if (s.kind === 'fort') {
-      const d = s.def, repairCost = d.hp ? Math.ceil(((s.maxHp - s.hp) / s.maxHp) * d.cost * 0.6) : 0;
+      const d = s.def;
       P.innerHTML = `<span class="x" id="i-x">✕</span><div class="ihead">${icon(d.icon, 3, 'pix')}<div><b>${d.name}</b></div></div>
         <div class="idesc">${d.desc}</div>${d.hp ? `<div class="istats"><span>Durability</span><b>${fmt(s.hp)}/${fmt(s.maxHp)}</b></div>` : ''}
-        <div class="ibtns">${s.hp < s.maxHp && d.hp ? `<button class="btn sm" id="i-rep">Repair ${SOUL()}${repairCost}</button>` : ''}<button class="btn sm red" id="i-sell">Remove +${Math.floor(fortCost(s.type) * 0.5)}</button></div>`;
-      const rp = $('#i-rep'); if (rp) rp.onclick = () => { if (G.run.souls < repairCost) { sfx('error'); return; } G.run.souls -= repairCost; s.hp = s.maxHp; sfx('build'); this.infoKey = ''; };
-      $('#i-sell').onclick = () => { G.run.souls += Math.floor(fortCost(s.type) * 0.5); removeStructure(s); sfx('crumble'); saveRunSoon(); };
+        <div class="ibtns"><button class="btn sm red ${prep ? '' : 'locked'}" id="i-sell">Remove (frees the slot)</button></div>`;
+      $('#i-sell').onclick = () => { if (removeTrap(s)) { saveRunSoon(); this.renderBuild(); } };
     } else if (s.kind === 'unit') {
       const nm = s.summon ? SUMMONS[s.type].name : UNITS[s.type].tiers[s.tier || 0].name;
-      P.innerHTML = `<span class="x" id="i-x">✕</span><div class="ihead">${spriteIcon(s.spr, 0, 44)}<div><b>${nm}</b><div class="dim">${s.summon ? 'Summoned · permanent' : s.temp ? 'Raised · temporary' : 'Recruited'}</div></div></div>
+      P.innerHTML = `<span class="x" id="i-x">✕</span><div class="ihead">${spriteIcon(s.spr, 0, 44)}<div><b>${nm}</b><div class="dim">${s.temp ? (s.summon ? 'Summoned' : 'Raised') + ` · ${Math.ceil(s.temp)}s left` : s.summon ? 'Summoned · until it falls' : 'Of your host'}</div></div></div>
         <div class="istats"><span>Health</span><b>${fmt(s.hp)}/${fmt(s.maxHp)}</b><span>Damage</span><b>${fmt(s.dmg)}</b><span>Orders</span><b>${s.retreat ? 'mending at keep' : s.plan ? 'engaging' : 'holding its post'}</b></div>${s.summon ? '' : '<button class="btn small" id="i-det">Unit details</button>'}`;
       const db = $('#i-det'); if (db) db.onclick = () => this.showUnitDetail(s.type);
     }
@@ -415,10 +391,10 @@ export const UI: any = {
     const r = G.run, ro = rogue(r), chips: string[] = [];
     const tier = CRUSADE_TIERS[(G.phase === 'wave' && G.wave ? G.wave.tier : ro.lastTier) ?? 1];
     const tcol = ['#8fb4c8', '#d8cfb4', '#ff8a5a'][CRUSADE_TIERS.indexOf(tier)];
-    const tierTip = `${tier.desc}<br>Soldiers ×${tier.count}${tier.hp !== 1 ? ` · health ×${tier.hp}` : ''} · souls ×${tier.reward}${tier.mats ? ` · ${tier.mats > 0 ? '+' : ''}${tier.mats} materials` : ''}`;
+    const tierTip = `${tier.desc}<br>Soldiers ×${tier.count}${tier.hp !== 1 ? ` · health ×${tier.hp}` : ''} · souls and Life Essence ×${tier.reward}`;
     chips.push(`<span class="mchip" style="--mc:${tcol}" data-tipx="${esc(tierTip)}">${icon('rally')} ${G.phase === 'wave' ? tier.name : 'Last: ' + tier.name}</span>`);
     const w = (n: number) => `<em>${n} wave${n > 1 ? 's' : ''}</em>`;
-    for (const t of ro.tithes) chips.push(`<span class="mchip good" data-tipx="Enslaved villagers: souls trickle in during waves.">${SOUL()} +${t.ps}/s ${w(t.waves)}</span>`);
+    for (const t of ro.tithes) chips.push(`<span class="mchip good" data-tipx="Enslaved villagers: souls trickle in during waves.">${SOUL()} tithe ${w(t.waves)}</span>`);
     for (const c of ro.curses) {
       const parts = [c.count < 1 ? `${Math.round((1 - c.count) * 100)}% smaller` : '', c.hp < 1 ? `${Math.round((1 - c.hp) * 100)}% less health` : ''].filter(Boolean).join(', ');
       chips.push(`<span class="mchip good" data-tipx="A curse on the crusade: ${parts}.">${icon('skull')} Crusade ${parts} ${w(c.waves)}</span>`);
@@ -431,21 +407,21 @@ export const UI: any = {
       el.querySelectorAll('[data-tipx]').forEach((c: HTMLElement) => { c.onmouseenter = () => this.showTip(c, c.dataset.tipx); c.onmouseleave = () => this.hideTip(); });
     }
   },
-  /** Floating "+N" next to the souls / materials counters for every gain (merged over 0.35 s). */
+  /** Floating "+N" next to the souls / Life Essence counters for every gain (merged over 0.35 s). */
   trackGains() {
-    const r = G.run, g = this.gains || (this.gains = { souls: r.souls, materials: r.materials, accS: 0, accM: 0, t: 0 });
+    const r = G.run, g = this.gains || (this.gains = { souls: r.souls, ess: r.essence, accS: 0, accM: 0, t: 0 });
     if (r.souls > g.souls) g.accS += r.souls - g.souls;
-    if (r.materials > g.materials) g.accM += r.materials - g.materials;
-    g.souls = r.souls; g.materials = r.materials;
+    if (r.essence > g.ess) g.accM += r.essence - g.ess;
+    g.souls = r.souls; g.ess = r.essence;
     const now = performance.now();
     if (now - g.t < 350) return;
     g.t = now;
-    const pop = (sel: string, n: number, cls: string) => {
-      const host = $(sel); const f = h('span', 'gain ' + cls + (n >= 100 ? ' big' : ''), '+' + fmt(n));
+    const pop = (sel: string, txt: string, cls: string, bigger: boolean) => {
+      const host = $(sel); const f = h('span', 'gain ' + cls + (bigger ? ' big' : ''), '+' + txt);
       host.appendChild(f); setTimeout(() => f.remove(), 1300);
     };
-    if (g.accS >= 1) { pop('#s-souls', Math.round(g.accS), 'gs'); g.accS = 0; }
-    if (g.accM >= 1) { pop('#s-mat', Math.round(g.accM), 'gm'); g.accM = 0; }
+    if (g.accS >= 1) { pop('#s-souls', big(Math.round(g.accS)), 'gs', g.accS >= r.souls * 0.1); g.accS = 0; }
+    if (g.accM >= 0.05) { pop('#s-ess', fmtE(g.accM), 'gm', true); g.accM = 0; }
   },
   /** End-of-wave summary: spoils, losses, and damage / kills per unit type, tower and spell. */
   showWaveSummary() {
@@ -465,8 +441,8 @@ export const UI: any = {
     const m = this.openModal(`<h2>${icon('skull', 2, 'pix')} Wave ${S.n} Repelled</h2>
       <div class="center dim">${S.tier} · ${S.theme}${S.boss ? ` · <b class="bad">${S.boss}</b> destroyed` : ''}</div>
       <div class="wsum">
-        <div><b>${SOUL()} +${fmt(S.souls)}</b><small>souls this wave<br>(wave bonus ${fmt(S.bonus)}${S.interest ? `, interest ${fmt(S.interest)}` : ''})</small></div>
-        <div><b>${MAT()} +${S.mats}</b><small>materials</small></div>
+        <div><b>${SOUL()} +${big(S.souls + S.bonus)}</b><small>souls this wave<br>(wave bonus ${big(S.bonus)})</small></div>
+        <div><b>${ESS()} +${fmtE(S.essence)}</b><small>Life Essence</small></div>
         <div><b>${icon('skull')} ${S.kills}</b><small>crusaders slain</small></div>
         <div><b>${icon('rally')} ${fallenN}</b><small>undead fell${S.revived ? `<br>${S.revived} rise again` : ''}</small></div>
         <div><b>${icon('keep')} ${S.keepLost ? '−' + fmt(S.keepLost) : 'unharmed'}</b><small>keep${S.rebuilt ? `<br>${S.rebuilt} tower${S.rebuilt > 1 ? 's' : ''} rebuilt` : ''}</small></div>
@@ -482,6 +458,7 @@ export const UI: any = {
   showCrusade() {
     if (!G.run || G.phase !== 'prep' || G.modal) return;
     const r = G.run, off = crusadeOffer(), ro = rogue();
+    if (off.n >= WAVES_PER_KEEP) { this.pickCrusade(1); return; } // the boss marches at full strength: nothing to choose
     const colors = ['#8fb4c8', '#d8cfb4', '#ff8a5a'];
     const curse = ro.curses.length ? `<div class="center good">The crusade is weakened: ${ro.curses.map((c: any) => [c.count < 1 ? `${Math.round((1 - c.count) * 100)}% smaller` : '', c.hp < 1 ? `${Math.round((1 - c.hp) * 100)}% less health` : ''].filter(Boolean).join(', ') + ` (${c.waves} wave${c.waves > 1 ? 's' : ''})`).join(' · ')}</div>` : '';
     const m = this.openModal(`<h2>${icon('rally', 2, 'pix')} Wave ${off.n}: Which Crusade Marches?</h2>
@@ -490,7 +467,7 @@ export const UI: any = {
         const t = CRUSADE_TIERS[i], counts: Record<string, number> = {};
         for (const s of W.spawns) if (s.type) counts[s.type] = (counts[s.type] || 0) + 1;
         const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 4);
-        const rew = [t.reward !== 1 ? `${SOUL()} souls ×${t.reward}` : `${SOUL()} souls ×1`, t.mats ? `${MAT()} ${t.mats > 0 ? '+' : ''}${t.mats} materials` : `${MAT()} materials as usual`].join('<br>');
+        const rew = `${SOUL()} souls ×${t.reward}<br>${ESS()} +${fmtE(waveEssence(off.n) * essenceMult() * t.reward)} Life Essence`;
         return `<div class="card crusade" data-i="${i}" style="--rc:${colors[i]}"><div class="rar">${i === 1 ? 'Baseline' : i === 0 ? 'Fewer · leaner spoils' : 'More · richer spoils'}</div>
           <div class="cname">${t.name}</div><div class="cdesc">${t.desc}</div>
           <div class="cstat"><b>${W.total}</b> soldiers${t.hp !== 1 ? ` · <b>+${Math.round((t.hp - 1) * 100)}%</b> health` : ''}<br><span class="dim">${W.theme.name}</span>${W.boss ? `<br><b class="bad">Boss: ${W.boss.name}</b>` : ''}</div>
@@ -507,10 +484,10 @@ export const UI: any = {
   /** Every few waves: a story event with three choices; the result is shown before play resumes. */
   showEvent() {
     const ev = pendingEvent(); if (!ev || G.modal) return;
-    const cost = (c: any) => { const k = choiceCost(c); return [k.souls ? `${k.souls} souls` : '', k.mats ? `${k.mats} materials` : ''].filter(Boolean).join(', '); };
+    const cost = (c: any) => { const k = choiceCost(c); return k.souls ? `${big(k.souls)} souls of your haul (you hold ${big(G.run.souls)})` : ''; };
     const m = this.openModal(`${eventArt(ev.id)}<h2>${icon(ev.icon, 2, 'pix')} ${ev.title}</h2><div class="evtext">${ev.text}</div>
       <div class="evchoices">${ev.choices.map((c, i) => { const ok = canChoose(c), k = cost(c);
-        return `<button class="evchoice${ok ? '' : ' locked'}" data-i="${i}"${ok ? '' : ' disabled'}><span class="key">${i + 1}</span><b>${c.label}</b><small>${k ? `<span class="evcost">Costs ${k}.</span> ` : ''}${c.hint}</small></button>`; }).join('')}</div>`, 'eventm', false);
+        return `<button class="evchoice${ok ? '' : ' locked'}" data-i="${i}"${ok ? '' : ' disabled'}><span class="key">${i < 9 ? i + 1 : ''}</span><b>${c.label}</b><small>${k ? `<span class="evcost">Costs ${k}.</span> ` : ''}${c.hint}</small></button>`; }).join('')}</div>`, 'eventm', false);
     m.querySelectorAll('.evchoice').forEach((el: HTMLElement) => el.onclick = () => this.pickEvent(+el.dataset.i));
   },
   pickEvent(i: number) {
@@ -564,47 +541,7 @@ export const UI: any = {
     saveRunSoon();
   },
 
-  showWell() {
-    if (!G.run || G.phase === 'over') return;
-    const r = G.run;
-    const cats = ['Ascension', 'Advancement', 'Reinforcement', 'Summoning', 'Emergency'];
-    const render = () => {
-      const m = this.openModal(`<h2>${icon('soul', 2, 'pix')} The Soul Well</h2><div class="dim center">Souls: ${SOUL()} ${fmt(r.souls)} — spend now, or hoard for something greater. Summons are permanent and uncapped (the crusade's Fervor rises to match).</div>
-        <div class="well">${cats.map(c => `<div class="wcat"><h3>${c}</h3>${WELL.filter(w => w.cat === c).map(w => {
-          const av = wellAvailable(w), cost = wellCost(w);
-          const lv = w.id.startsWith('asc_') ? r.asc[w.id.slice(4)] || 0 : null;
-          const cnt = w.summon ? ` ×${Math.max(1, Math.round(SUMMONS[w.summon].count * (1 + metaLv('m_reinforce') * 0.5)))}` : '';
-          return `<button class="witem ${av ? '' : 'locked'} ${cost > r.souls ? 'poor' : ''}" data-id="${w.id}">${icon(w.icon, 2, 'pix')}<div><b>${w.name}${cnt}${lv != null ? ` <span class="dim">(${lv})</span>` : ''}</b><div class="wdesc">${av ? w.desc : w.id === 'unearth' ? 'Every undead type already answers to you.' : 'Unlock in the Phylactery: ' + META_BY_ID[w.meta].name}</div></div><div class="wcost">${SOUL()} ${fmt(cost)}</div></button>`;
-        }).join('')}</div>`).join('')}</div><div class="center"><button class="btn" id="w-close">Close [E]</button></div>`, 'wellm');
-      m.querySelectorAll('.witem').forEach((b: HTMLElement) => b.onclick = () => {
-        const it = WELL.find(w => w.id === b.dataset.id); if (!wellAvailable(it)) return;
-        if (it.id === 'unearth') { if (wellCost(it) > r.souls) { sfx('error'); return; } this.showUnearth(render); return; }
-        if (buyWell(b.dataset.id)) { if (it.id === 'insight') this.closeModal(); else render(); }
-      });
-      $('#w-close').onclick = () => this.closeModal();
-    };
-    render();
-  },
-
-  /** Soul Well → Unearth a Crypt: choose which locked undead type to unlock (and raise a squad of). */
-  showUnearth(back?: () => void) {
-    const r = G.run, locked = lockedUnitTypes(), price = (k: string) => unearthCost(r, k);
-    const m = this.openModal(`<h2>${icon('raise', 2, 'pix')} Unearth a Crypt</h2>
-      <div class="dim center">Unlock one undead type for recruiting — a full squad rises at once. Stronger undead cost more to unearth; each crypt opened raises every price. You have ${SOUL()} <b>${fmt(r.souls)}</b>.<br>Hover for a summary · right-click for full details.</div>
-      <div class="ugrid">${locked.map(k => { const d = UNITS[k]; return `<button class="ucard ${price(k) > r.souls ? 'poor' : ''}" data-u="${k}">
-        <div class="uart">${spriteIcon(d.tiers[0].spr, 0, 72)}</div><div class="uname">${d.tiers[0].name}</div><div class="ucost">${SOUL()} ${fmt(price(k))}</div><div class="urole">${unitRole(k)}</div>
-        <div class="ustat">${statBars(k, true)}</div><div class="udesc">${d.desc}</div></button>`; }).join('')}</div>
-      <div class="center"><button class="btn" id="u-back">${back ? '← Back to the Soul Well' : 'Close'}</button></div>`, 'unearthm');
-    m.querySelectorAll('.ucard').forEach((b: HTMLElement) => {
-      const k = b.dataset.u;
-      b.onclick = () => { if (unearthUnit(k)) { this.closeModal(); this.renderBuild(); saveRunSoon(); } };
-      b.oncontextmenu = (ev) => { ev.preventDefault(); this.showUnitDetail(k, () => this.showUnearth(back)); };
-      b.onmouseenter = () => this.showTip(b, unitTip(k)); b.onmouseleave = () => this.hideTip();
-    });
-    $('#u-back').onclick = () => { if (back) back(); else this.closeModal(); };
-  },
-
-  /** Full unit sheet: role, squad totals, per-soul value, specials, evolutions, comparison bars. */
+  /** Full unit sheet: role, host totals, specials, evolutions, comparison bars. */
   showUnitDetail(type: string, back?: () => void) {
     const m = this.openModal(unitDetailHtml(type) + `<div class="center"><button class="btn" id="ud-back">${back ? '← Back' : 'Close'}</button></div>`, 'unitdetail');
     $('#ud-back').onclick = () => { if (back) back(); else this.closeModal(); };
@@ -615,14 +552,14 @@ export const UI: any = {
     if (G.phase === 'menu') return;
     this.openModal(`<h2>Paused</h2><div class="col">
       <button class="btn" id="p-res">Resume</button><button class="btn" id="p-codex">Codex</button><button class="btn" id="p-set">Settings</button>
-      <button class="btn" id="p-help">How to play</button><button class="btn" id="p-menu">Save & return to menu</button>
-      <button class="btn red" id="p-abandon">Abandon campaign (keep falls)</button></div>`, 'pause');
+      <button class="btn" id="p-help">How to play</button><button class="btn" id="p-menu">Save & leave (resume later)</button>
+      <button class="btn red" id="p-abandon">End the siege: carry ${SOUL()} ${big(G.run.souls)} and ${ESS()} ${fmtE(G.run.essence)} to the Phylactery</button></div>`, 'pause');
     $('#p-res').onclick = () => this.closeModal();
     $('#p-codex').onclick = () => { this.closeModal(); this.showCodex(true); };
     $('#p-set').onclick = () => { this.closeModal(); this.showSettings(true); };
     $('#p-help').onclick = () => { this.closeModal(); this.showHelp(true); };
     $('#p-menu').onclick = () => { saveRun(); this.closeModal(); toMenu(); };
-    $('#p-abandon').onclick = () => { const b = $('#p-abandon'); if (b.dataset.sure) { this.closeModal(); G.run.phylUsed = true; G.run.anOutcome = 'abandoned'; G.keep.hp = 0; endCampaign(); } else { b.dataset.sure = '1'; b.textContent = 'Click again to confirm'; } };
+    $('#p-abandon').onclick = () => { const b = $('#p-abandon'); if (b.dataset.sure) { this.closeModal(); retreat(); } else { b.dataset.sure = '1'; b.textContent = 'Click again to confirm'; } };
   },
 
   // ---------------- full screens ----------------
@@ -630,78 +567,113 @@ export const UI: any = {
   closeScreen() { $('#screen').className = 'hidden'; $('#screen').innerHTML = ''; if (!G.modal) document.body.classList.remove('modal-open'); },
   screenOpen() { return !$('#screen').classList.contains('hidden'); },
 
+  /** Home: the keeps, the purse and the way into the Phylactery web. */
   showMenu() {
     G.phase = 'menu';
     document.body.classList.add('menu');
-    const has = hasRunSave();
-    this.screen(`<div class="title"><div class="t1">LICH</div><div class="t2">Eternal Dominion</div></div>
+    const has = hasRunSave(), cleared = G.meta.keepsCleared || 0;
+    const s = this.screen(`<div class="title small"><div class="t1">LICH</div><div class="t2">Eternal Dominion</div></div>
+      <div class="center">${purse()}</div>
       <div class="menu col">
-        ${has ? '<button class="btn big green" id="m-cont">Continue Campaign</button>' : ''}
-        <button class="btn big" id="m-new">${has ? 'Abandon & Begin Anew' : 'Begin Campaign'}</button>
-        <button class="btn" id="m-meta">${ESS()} The Phylactery <small>${fmt(G.meta.essence)} Life Essence</small></button>
-        <button class="btn" id="m-codex">Codex & Achievements</button>
-        <button class="btn" id="m-help">How to Play</button>
-        <button class="btn" id="m-set">Settings</button>
+        ${has ? '<button class="btn big green" id="m-cont">Continue the Siege</button>' : ''}
+        <button class="btn big ${has ? '' : 'green'}" id="m-meta">${ESS()} The Phylactery <small>spend what your sieges gathered</small></button>
       </div>
-      <div class="mstats">Best wave ${G.stats.bestWave} · ${fmt(G.stats.totalKills)} mortals slain · ${G.stats.runs} phylacteries spent</div>
-      <div class="lore">Humanity has united at last. Kingdoms, orders and heroes march from the east to find your phylactery and end you forever.<br>Let them come.</div>`, 'menuscreen');
+      <h3 class="center keepsh">Besiege a keep <span class="dim">— ${WAVES_PER_KEEP} waves each; the last is its boss</span></h3>
+      <div class="keeps">${KEEPS.map((k, i) => {
+        const f = FORTRESSES[k.fort], open = keepUnlocked(i), done = i < cleared, best = G.meta.best[k.id] || 0, boss = BOSSES.find(b => b.id === k.boss);
+        return `<button class="keepc ${open ? '' : 'locked'} ${done ? 'done' : ''}" data-k="${i}" style="--fc:${f.accent}"><div class="fsw">${f.ground.map((c: string) => `<i style="background:${c}"></i>`).join('')}<i style="background:${f.accent}"></i></div>
+          <b>${i + 1}. ${k.name}</b><div class="kboss">${open ? boss.name : '???'}</div><div class="kdesc">${open ? f.desc : `Conquer ${KEEPS[i - 1].name} first.`}</div>
+          <div class="kfoot">${done ? '<span class="good">Conquered</span>' : open ? `<span class="gold">${DIV()} 1 Stolen Divinity</span>` : '<span class="dim">Locked</span>'}${open ? `<span class="dim">best: wave ${best}/${WAVES_PER_KEEP}</span>` : ''}</div></button>`;
+      }).join('')}</div>
+      <div class="menu row"><button class="btn" id="m-codex">Codex & Achievements</button><button class="btn" id="m-help">How to Play</button><button class="btn" id="m-set">Settings</button></div>
+      <div class="mstats">${G.stats.runs} sieges fought · ${cleared}/${KEEPS.length} keeps conquered · ${fmt(G.stats.totalKills)} mortals slain</div>`, 'menuscreen');
     if (has) $('#m-cont').onclick = () => { startMusic(); if (loadRun()) this.enterGame(); };
-    $('#m-new').onclick = () => {
+    s.querySelectorAll('.keepc').forEach((b: HTMLElement) => b.onclick = () => {
       startMusic();
-      if (has) { const b = $('#m-new'); if (!b.dataset.sure) { b.dataset.sure = '1'; b.textContent = 'Click again: the current campaign will be lost'; return; } clearRunSave(); }
-      this.showFortressSelect();
-    };
+      if (b.classList.contains('locked')) { sfx('error'); return; }
+      if (has && !b.dataset.sure) { s.querySelectorAll('.keepc').forEach((o: HTMLElement) => delete o.dataset.sure); b.dataset.sure = '1'; $('.kfoot', b).innerHTML = '<span class="bad">Click again: the siege in progress is abandoned (its haul is lost)</span>'; return; }
+      clearRunSave(); newCampaign(+b.dataset.k); this.enterGame();
+    });
     $('#m-meta').onclick = () => { startMusic(); this.showMeta(); };
     $('#m-codex').onclick = () => this.showCodex();
     $('#m-set').onclick = () => this.showSettings();
     $('#m-help').onclick = () => this.showHelp();
   },
-  showFortressSelect() {
-    const s = this.screen(`<h1>Choose Your Stronghold</h1><div class="dim center">Your phylactery seeks a new resting place. Each fortress grants its own dark advantage.</div>
-      <div class="forts">${Object.entries(FORTRESSES).map(([k, f]: [string, any]) => {
-        const ok = !f.meta || metaLv(f.meta) > 0;
-        return `<button class="fortc ${ok ? '' : 'locked'}" data-k="${k}" style="--fc:${f.accent}"><div class="fsw">${f.ground.map((c: string) => `<i style="background:${c}"></i>`).join('')}<i style="background:${f.accent}"></i></div><b>${f.name}</b><div>${f.desc}</div>${ok ? '' : `<div class="bad">Unlock: ${META_BY_ID[f.meta].name}</div>`}</button>`;
-      }).join('')}</div><div class="center"><button class="btn" id="f-back">Back</button></div>`, 'fortscreen');
-    s.querySelectorAll('.fortc').forEach((b: HTMLElement) => b.onclick = () => { if (b.classList.contains('locked')) { sfx('error'); return; } newCampaign(b.dataset.k); this.enterGame(); });
-    $('#f-back').onclick = () => this.showMenu();
-  },
   enterGame() {
     this.closeScreen(); this.closeModal();
     document.body.classList.remove('menu');
-    this.tab = 'towers'; this.collapsed = false;
+    this.tab = wallSlots() || trapSlots() ? 'fort' : 'army'; this.collapsed = false; this.gains = null;
     this.renderBuild(); this.renderSpells();
     if (!G.stats.seenHelp) { G.stats.seenHelp = true; saveMetaSoon(); this.showHelp(true); }
   },
+  /** End of a siege (defeat, retreat or conquest): what was carried to the Phylactery. */
   showDefeat(b: any) {
-    const r = G.run;
     this.closeModal();
-    this.screen(`<div class="defeat"><h1>Your Physical Form Is Destroyed</h1>
-      <p class="lore">The mortal coalition storms the keep and shatters your vessel on wave ${r.wave}. They will sing of this victory for a generation.<br>But far away, in a hidden vault, a second phylactery begins to glow… and your consciousness stirs.</p>
-      <div class="ebox"><div><span>Mortals slain (${fmt(r.kills)})</span><b>${b.kills}</b></div><div><span>Waves endured (${r.wave - 1})</span><b>${b.waves}</b></div><div><span>Champions & bosses</span><b>${b.bosses}</b></div><div><span>Power attained (level ${r.level})</span><b>${b.level}</b></div>${b.mult > 1 ? `<div><span>Eternal Hunger</span><b>×${b.mult.toFixed(1)}</b></div>` : ''}<div class="tot"><span>Life Essence gained</span><b>${ESS()} ${b.total}</b></div></div>
-      <div class="col"><button class="btn big green" id="d-meta">Enter the Phylactery (${fmt(G.meta.essence)})</button><button class="btn big" id="d-again">Rise Again</button><button class="btn" id="d-menu">Main Menu</button></div></div>`, 'defeatscreen');
-    $('#d-meta').onclick = () => this.showMeta('again');
-    $('#d-again').onclick = () => this.showFortressSelect();
+    const win = b.outcome === 'victory', next = win && b.keep + 1 < KEEPS.length ? b.keep + 1 : -1;
+    const head = win ? `${b.name} Is Yours` : b.outcome === 'retreat' ? 'You Withdraw Into the Dark' : 'Your Physical Form Is Destroyed';
+    const lore = win ? `The champion of the crusade lies broken before your gate.${b.first ? ' You tear the spark of the divine from the corpse: <b class="gold">Stolen Divinity</b>, the rarest coin of the Phylactery.' : ' Its divinity was already yours; the souls are welcome all the same.'}${next >= 0 ? `<br>Beyond the horizon, ${KEEPS[next].name} awaits — and the crusade that guards it is far stronger.` : '<br>Heaven itself has fallen silent.'}`
+      : b.outcome === 'retreat' ? `You abandon ${b.name} after ${b.wave} wave${b.wave === 1 ? '' : 's'}. Everything gathered goes with you.`
+      : `The crusade storms ${b.name} on wave ${b.wave} and shatters your vessel. But the souls were already yours — and far away a phylactery begins to glow.`;
+    this.screen(`<div class="defeat ${win ? 'win' : ''}"><h1>${head}</h1>
+      <p class="lore">${lore}</p>
+      <div class="ebox"><div><span>Mortals slain</span><b>${fmt(b.kills)}</b></div><div><span>Waves ${win ? 'repelled' : 'reached'}</span><b>${win ? WAVES_PER_KEEP : b.wave} / ${WAVES_PER_KEEP}</b></div>
+        <div class="tot"><span>Souls</span><b class="cur souls">${SOUL()} +${big(b.souls)}</b></div><div class="tot"><span>Life Essence</span><b class="cur essence">${ESS()} +${big(b.essence)}</b></div>${b.divinity ? `<div class="tot"><span>Stolen Divinity</span><b class="cur divinity">${DIV()} +${b.divinity}</b></div>` : ''}</div>
+      <div class="center">In the Phylactery: ${purse()}</div>
+      <div class="col"><button class="btn big green" id="d-meta">Enter the Phylactery</button>${next >= 0 ? `<button class="btn big" id="d-next">Besiege ${KEEPS[next].name}</button>` : ''}<button class="btn big" id="d-again">Besiege ${b.name} again</button><button class="btn" id="d-menu">All keeps</button></div></div>`, 'defeatscreen');
+    $('#d-meta').onclick = () => this.showMeta(b.keep);
+    $('#d-again').onclick = () => { newCampaign(b.keep); this.enterGame(); };
+    const nx = $('#d-next'); if (nx) nx.onclick = () => { newCampaign(next); this.enterGame(); };
     $('#d-menu').onclick = () => toMenu();
   },
-  showMeta(from?: string) {
-    const render = () => {
-      const s = this.screen(`<h1>${ESS()} The Phylactery</h1><div class="center">Life Essence: <b class="essv">${fmt(G.meta.essence)}</b> <span class="dim">· click a rite to empower it permanently</span></div>
-        <div class="tree">${META_BRANCHES.map((B: any) => `<div class="branch" style="--bc:${B.color}"><h3>${B.name}</h3>${META.filter(m => m.b === B.id).map(m => {
-          const lv = metaLv(m.id), maxed = lv >= m.max, reqOk = !m.req || m.req.every((q: string) => metaLv(q) > 0), cost = metaCost(m, lv);
-          const cls = maxed ? 'maxed' : !reqOk ? 'locked' : cost > G.meta.essence ? 'poor' : 'buy';
-          return `<button class="node ${cls} ${m.req ? 'child' : ''}" data-id="${m.id}"><div class="nn">${m.name}</div><div class="pips">${Array.from({ length: m.max }, (_, i) => `<i class="${i < lv ? 'f' : ''}"></i>`).join('')}</div><div class="nc">${maxed ? 'MASTERED' : `${ESS()} ${cost}`}</div></button>`;
-        }).join('')}</div>`).join('')}</div>
-        <div class="center">${from === 'again' ? '<button class="btn big green" id="mt-go">Rise Again</button> ' : ''}<button class="btn" id="mt-back">${from === 'again' ? 'Main Menu' : 'Back'}</button></div>`, 'metascreen');
-      s.querySelectorAll('.node').forEach((n: HTMLElement) => {
-        const m = META_BY_ID[n.dataset.id];
-        n.onmouseenter = () => { const lv = metaLv(m.id); this.showTip(n, `<b>${m.name}</b> (${lv}/${m.max})<br>${lv ? 'Now: ' + m.desc(lv) + '<br>' : ''}${lv < m.max ? 'Next: ' + m.desc(lv + 1) : ''}${m.req && !m.req.every((q: string) => metaLv(q) > 0) ? `<br><span class="bad">Requires: ${m.req.map((q: string) => META_BY_ID[q].name).join(', ')}</span>` : ''}`); };
-        n.onmouseleave = () => this.hideTip();
-        n.onclick = () => { if (buyMeta(m.id)) render(); else sfx('error'); };
-      });
-      $('#mt-back').onclick = () => this.showMenu();
-      const go = $('#mt-go'); if (go) go.onclick = () => this.showFortressSelect();
+  /** The Phylactery: a web of permanent upgrades. Drag to pan, wheel to zoom, click to buy (shift: as many
+   *  as you can afford). A node appears once its parent is owned and opens at the parent's threshold. */
+  showMeta(againKeep?: number) {
+    if (G.run) { G.run = null; G.selected = null; G.build = null; G.bossBar = null; (window as any).__toMenu?.(); }
+    G.phase = 'menu'; document.body.classList.add('menu');
+    const view = this.webView || (this.webView = { x: 0, y: 0, z: 1 });
+    const s = this.screen(`<div class="webhead"><h1>${ESS()} The Phylactery</h1><div id="web-purse"></div>
+        <div class="webbtns">${againKeep != null ? `<button class="btn green" id="mt-go">Besiege ${KEEPS[Math.min(KEEPS.length - 1, againKeep)].name}</button>` : ''}<button class="btn" id="mt-back">Keeps</button></div></div>
+      <div class="weblegend"><span class="cur souls">${SOUL()} Souls: more undead, small repeatable steps</span><span class="cur essence">${ESS()} Life Essence: unlocks, buildings, strong passives</span><span class="cur divinity">${DIV()} Stolen Divinity: the rarest rites (one per keep's boss)</span><span class="dim">click: buy · shift-click: buy all you can · drag: pan · wheel: zoom</span></div>
+      <div class="web" id="web"><div class="webin" id="webin"><svg id="weblines" xmlns="http://www.w3.org/2000/svg"></svg><div id="webnodes"></div></div></div>`, 'metascreen webscreen');
+    const web = $('#web'), inner = $('#webin'), nodesEl = $('#webnodes'), svg = $('#weblines');
+    const apply = () => { inner.style.transform = `translate(${web.clientWidth / 2 + view.x}px, ${web.clientHeight / 2 + view.y}px) scale(${view.z})`; };
+    const nodeIcon = (m: WebNode) => {
+      if (m.unit) return spriteIcon(UNITS[m.unit].tiers[m.id.startsWith('e_') ? Math.min(2, metaLv(m.id) + (metaLv(m.id) < 2 ? 1 : 0)) : 0].spr, 0, 34);
+      if (m.tower) return towerIcon(m.tower, 0, 34);
+      if (m.building) return buildingIcon(m.building, Math.max(0, Math.min(2, metaLv(m.id) - 1)), 34);
+      return icon(m.icon || 'skull', 2, 'pix');
     };
-    render();
+    const tip = (m: WebNode) => {
+      const lv = metaLv(m.id), open = nodeOpen(m), cost = metaCost(m, lv), par = m.parent && META_BY_ID[m.parent];
+      const kids = (CHILDREN[m.id] || []).filter(k => !nodeVisible(k) || !nodeOpen(k));
+      return `<b>${m.name}</b> <span class="dim">${m.max > 1 ? `${lv}/${m.max}` : lv ? 'owned' : ''}</span><br>${lv ? (m.max > 1 ? 'Now: ' : '') + m.desc(lv) + '<br>' : ''}${lv < m.max ? (m.max > 1 || lv ? 'Next: ' : '') + m.desc(lv + 1) + '<br>' : ''}`
+        + (lv < m.max ? `<span class="cur ${m.cur}">${CUR_ICON[m.cur]()} ${big(cost)} ${CUR_NAME[m.cur]}</span>${m.max > 1 && m.mult ? ` <span class="dim">(×${m.mult} per level)</span>` : ''}` : '<span class="good">Mastered</span>')
+        + (!open && par ? `<br><span class="bad">Requires ${par.name} level ${m.need || 1} (now ${metaLv(par.id)})</span>` : '')
+        + (lv > 0 && kids.length ? `<br><span class="dim">Leads to: ${kids.map(k => `${k.name}${(k.need || 1) > 1 ? ` (at level ${k.need})` : ''}`).join(', ')}</span>` : '');
+    };
+    const render = () => {
+      $('#web-purse').innerHTML = purse();
+      const vis = META.filter(nodeVisible);
+      svg.innerHTML = vis.filter(m => m.parent).map(m => { const p = META_BY_ID[m.parent]; const own = metaLv(m.id) > 0, open = nodeOpen(m); return `<line x1="${p.x}" y1="${p.y}" x2="${m.x}" y2="${m.y}" class="${own ? 'own' : open ? 'open' : 'shut'}" style="--bc:${(META_BRANCHES.find(B => B.id === m.branch) || { color: '#888' }).color}"/>`; }).join('');
+      nodesEl.innerHTML = vis.map(m => {
+        const lv = metaLv(m.id), maxed = lv >= m.max, open = nodeOpen(m), can = canBuyMeta(m.id);
+        const cls = m.id === 'core' ? 'core' : maxed ? 'maxed' : !open ? 'locked' : can ? 'buy' : 'poor';
+        return `<button class="wnode ${cls} c-${m.cur} ${lv ? 'own' : ''}" data-id="${m.id}" style="left:${m.x}px;top:${m.y}px;--bc:${(META_BRANCHES.find(B => B.id === m.branch) || { color: '#5dff7a' }).color}"><div class="wi">${nodeIcon(m)}</div>${m.id === 'core' ? '' : `<div class="wl">${m.max > 1 ? `${lv}/${m.max}` : lv ? '✓' : ''}</div><div class="wc cur ${m.cur}">${maxed ? '' : CUR_ICON[m.cur]() + big(metaCost(m, lv))}</div>`}<div class="wn">${m.name}</div></button>`;
+      }).join('');
+      nodesEl.querySelectorAll('.wnode').forEach((n: HTMLElement) => {
+        const m = META_BY_ID[n.dataset.id];
+        n.onmouseenter = () => this.showTip(n, tip(m)); n.onmouseleave = () => this.hideTip();
+        n.onclick = (ev: MouseEvent) => { if (moved) return; const got = ev.shiftKey ? buyMetaMax(m.id) : buyMeta(m.id) ? 1 : 0; if (got) { render(); const again = nodesEl.querySelector(`[data-id="${m.id}"]`) as HTMLElement; if (again) this.showTip(again, tip(m)); } else sfx('error'); };
+      });
+    };
+    let drag: any = null, moved = false;
+    web.onmousedown = (e: MouseEvent) => { drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y }; moved = false; };
+    web.onmousemove = (e: MouseEvent) => { if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 5) moved = true; if (moved) { view.x = drag.vx + dx; view.y = drag.vy + dy; apply(); this.hideTip(); } };
+    web.onmouseup = web.onmouseleave = () => { drag = null; setTimeout(() => { moved = false; }, 0); };
+    web.onwheel = (e: WheelEvent) => { e.preventDefault(); const z0 = view.z, z = clamp(z0 * (e.deltaY < 0 ? 1.15 : 1 / 1.15), 0.12, 1.8); const r = web.getBoundingClientRect(), cx = e.clientX - r.left - r.width / 2, cy = e.clientY - r.top - r.height / 2; view.x = cx - (cx - view.x) * z / z0; view.y = cy - (cy - view.y) * z / z0; view.z = z; apply(); };
+    $('#mt-back').onclick = () => this.showMenu();
+    const go = $('#mt-go'); if (go) go.onclick = () => { newCampaign(againKeep); this.enterGame(); };
+    render(); apply();
   },
   showCodex(fromGame?: boolean, tab = 'enemy') {
     const C = G.stats.codex;
@@ -711,15 +683,15 @@ export const UI: any = {
     if (tab === 'enemy') {
       body = [...Object.keys(ENEMIES).map(k => [k, ENEMIES[k], false]), ...BOSSES.map(b => [b.id, b, true])].map(([k, d, boss]: any) => {
         const seen = C.enemy[k];
-        return `<div class="centry ${seen ? '' : 'unseen'}">${seen ? spriteIcon(k, 0, 48) : unseen}<div><b>${seen ? d.name : '???'}</b>${boss ? ' <span class="gold">BOSS</span>' : ''}<div class="dim">${seen ? (boss ? d.title + ' · wave ' + d.wave : ({ iron: 'Iron Kingdoms', holy: 'Holy Dominion', arcane: 'Arcane Conclave', free: 'Freeborn Alliance' } as any)[d.fac]) : boss ? 'Appears at wave ' + d.wave : 'Not yet encountered'}</div>${seen ? `<div>${d.desc || d.line}</div>` : ''}</div></div>`;
+        return `<div class="centry ${seen ? '' : 'unseen'}">${seen ? spriteIcon(k, 0, 48) : unseen}<div><b>${seen ? d.name : '???'}</b>${boss ? ' <span class="gold">BOSS</span>' : ''}<div class="dim">${seen ? (boss ? d.title + ' · boss of ' + (KEEPS.find(k => k.boss === d.id) || KEEPS[0]).name : ({ iron: 'Iron Kingdoms', holy: 'Holy Dominion', arcane: 'Arcane Conclave', free: 'Freeborn Alliance' } as any)[d.fac]) : boss ? 'Boss of ' + (KEEPS.find(k => k.boss === d.id) || KEEPS[0]).name : 'Not yet encountered'}</div>${seen ? `<div>${d.desc || d.line}</div>` : ''}</div></div>`;
       }).join('');
     } else if (tab === 'unit') {
-      body = UNIT_ORDER.map(k => { const d = UNITS[k], av = contentAvailable('unit', k); return `<div class="centry ${av ? '' : 'unseen'}">${av ? spriteIcon(d.tiers[0].spr, 0, 48) : unseen}<div><b>${av ? d.name : '???'}</b><div class="dim">${av ? d.tiers.map((t: any) => t.name).join(' → ') : 'Unlock: ' + META_BY_ID[CONTENT_GATES.unit[k]].name}</div>${av ? `<div>${d.desc}</div>` : ''}</div></div>`; }).join('')
-        + Object.values(SUMMONS).map((s: any) => `<div class="centry">${spriteIcon(s.spr, 0, 48)}<div><b>${s.name}</b> <span class="gold">SUMMON ×${s.count}</span><div>${s.desc}</div></div></div>`).join('');
+      body = UNIT_ORDER.map(k => { const d = UNITS[k], av = unitOwned(k); return `<div class="centry ${av ? '' : 'unseen'}">${av ? spriteIcon(d.tiers[0].spr, 0, 48) : unseen}<div><b>${av ? d.name : '???'}</b><div class="dim">${av ? d.tiers.map((t: any) => t.name).join(' → ') : 'Unlock on the Phylactery web'}</div>${av ? `<div>${d.desc}</div>` : ''}</div></div>`; }).join('')
+        + Object.values(SUMMONS).map((s: any) => `<div class="centry">${spriteIcon(s.spr, 0, 48)}<div><b>${s.name}</b> <span class="gold">SUMMONING SPELL ×${s.count}</span><div>${s.desc}</div></div></div>`).join('');
     } else if (tab === 'tower') {
-      body = TOWER_ORDER.map(k => { const d = TOWERS[k], av = contentAvailable('tower', k); return `<div class="centry ${av ? '' : 'unseen'}">${av ? towerIcon(k, 0, 40) + towerIcon(k, 2, 48) : unseen}<div><b>${av ? d.name : '???'}</b><div class="dim">${av ? d.tiers.map((t: any) => t.name).join(' → ') : 'Unlock: ' + META_BY_ID[CONTENT_GATES.tower[k]].name}</div>${av ? `<div>${d.desc}</div>` : ''}</div></div>`; }).join('');
+      body = TOWER_ORDER.map(k => { const d = TOWERS[k], av = towerKnown(k); return `<div class="centry ${av ? '' : 'unseen'}">${av ? towerIcon(k, 0, 40) + towerIcon(k, 2, 48) : unseen}<div><b>${av ? d.name : '???'}</b><div class="dim">${av ? d.tiers.map((t: any) => t.name).join(' → ') : 'Unlock on the Phylactery web'}</div>${av ? `<div>${d.desc}</div>` : ''}</div></div>`; }).join('');
     } else if (tab === 'spell') {
-      body = SPELL_ORDER.map(k => { const s = SPELLS[k]; return `<div class="centry">${icon(s.icon, 3, 'pix')}<div><b>${s.name}</b><div>${s.desc}</div><div class="dim">Cooldown ${s.cd}s${s.cost ? ' · ' + s.cost + ' souls' : ''}${s.meta ? ' · Unlock: ' + META_BY_ID[s.meta].name : ' · Known from the start'}</div></div></div>`; }).join('');
+      body = SPELL_ORDER.map(k => { const s = SPELLS[k]; return `<div class="centry">${icon(s.icon, 3, 'pix')}<div><b>${s.name}</b><div>${s.desc}</div><div class="dim">Cooldown ${s.cd}s${BASE_SPELLS.includes(k) ? ' · Known from the start' : metaLv('sp_' + k) ? ' · Learned' : ' · Learn it on the Phylactery web'}</div></div></div>`; }).join('');
     } else body = ACHIEVEMENTS.map(a => `<div class="centry ${G.stats.ach[a.id] ? '' : 'unseen'}">${icon(G.stats.ach[a.id] ? 'level' : 'skull', 2, 'pix')}<div><b>${a.name}</b> <span class="ess">${ESS()} ${a.ess}</span><div>${a.desc}</div></div></div>`).join('');
     const s = this.screen(`<h1>The Codex</h1><div class="ctabs">${tabs.map(([k, n]) => `<button class="btn sm ${k === tab ? 'on' : ''}" data-t="${k}">${n}</button>`).join('')}</div><div class="codex">${body}</div><div class="center"><button class="btn" id="c-back">Back</button></div>`, 'codexscreen');
     s.querySelectorAll('.ctabs button').forEach((b: HTMLElement) => b.onclick = () => this.showCodex(fromGame, b.dataset.t));
@@ -727,13 +699,14 @@ export const UI: any = {
   },
   showHelp(fromGame?: boolean) {
     this.screen(`<h1>How to Rule Eternally</h1><div class="help">
-      <p><b>Goal.</b> The crusade marches from the <b>east</b> along the roads toward your keep on the far west. If the keep falls the campaign ends — but Life Essence lets your next stronghold rise stronger.</p>
-      <p><b>The keep (materials).</b> After every repelled wave you earn a few <b>materials</b> (more for bosses). Spend them on <b>ramparts</b> (Fortify), <b>towers</b> (placed on top of a built wall segment) and <b>buildings</b> (on the foundations behind the walls). Towers grow stronger every wave and are rebuilt after a wave if they fall. Buildings give permanent bonuses to every undead you have and will have (damage, health, souls, squad size, spells, regeneration, attack speed, more materials). Click a building or tower to upgrade it.</p>
-      <p><b>Fortify.</b> <b>Ramparts</b> (materials) stand on fixed sites around the gatehouse: the inner Curtain and the outer Bulwark. Click a site to build, click again to upgrade; repairs cost souls. Towers stand on top of built segments. A closed wall must be breached; gaps funnel the crusade. Your host defends inside the Bulwark. Barricades, traps and wards are painted freely. The drawer can be hidden with ▼ Hide or the B key.</p>
-      <p><b>Army.</b> Recruit undead in the <b>Army</b> tab — each purchase raises a whole squad (5 or more) and there is no army limit. They fight on their own and can strike anything, flying or not: they hold a line before the gate, rush to wherever mortals press hardest, ranged troops stay behind the melee, and wounded soldiers fall back to the keep to mend. Every undead slain during a wave rises again when the wave is repelled.</p>
-      <p><b>Souls & the Soul Well (E).</b> Kills give souls and experience. Each level offers three upgrades. In the Soul Well, <b>Ascensions</b> multiply your power and can be bought endlessly; <b>Unearth a Crypt</b> lets you choose a new undead type, and <b>summons</b> raise packs of great creatures that stay forever. The crusade's <b>Fervor</b> rises every wave, with every Holy War you fight, and once your host grows larger than the wave expects. Upgrade offers never show two tiers of the same upgrade.</p>
-      <p><b>Spells.</b> Keys 1–8. Some need a target area.</p>
-      <p><b>Controls.</b> Drag with right/middle mouse or use WASD/arrows to pan. Wheel zooms. Space pauses, F cycles speed, Enter begins the wave, Esc closes windows.</p>
+      <p><b>The loop.</b> Besiege a keep, fall, grow, return. Each keep is <b>${WAVES_PER_KEEP} waves</b>; the last is its boss. Nothing is bought during a siege — your host, buildings, spells and defences all come from the <b>Phylactery web</b> between sieges. Whatever a siege gathers reaches the Phylactery whether you win or lose. Expect to fall many times before the first keep is yours.</p>
+      <p><b>Three currencies.</b> ${SOUL()} <b>Souls</b> come from every kill and buy the small, repeatable things: more undead of each type, damage, health, keep and wall strength. ${ESS()} <b>Life Essence</b> comes from waves repelled (much more from bosses) and buys unlocks: new undead, evolutions, towers, spells, Necropolis buildings and strong passives. ${DIV()} <b>Stolen Divinity</b> is taken from a keep's boss the <b>first</b> time it falls — one per keep — and buys the mightiest rites.</p>
+      <p><b>The web.</b> A node appears when its parent is owned and opens when the parent reaches a threshold (hover to see it). Prices grow with every level; so will your income — each keep is many times harder than the last and pays many times more.</p>
+      <p><b>Defences.</b> The web grants <b>slots</b>: rampart segments, towers (on top of built ramparts) and traps. Between waves you place them where you like, for free; towers and walls are restored after every wave, and your layout is remembered for the next siege of that keep.</p>
+      <p><b>The host.</b> Your undead fight on their own: they hold a line before the gate, rush to wherever mortals press hardest, ranged troops stay behind the melee. Every undead slain during a wave rises again when the wave is repelled.</p>
+      <p><b>During a siege.</b> Kills give experience; each level offers three upgrades for this siege (the web adds stronger cards to the deck). Before each wave you choose the crusade — Skirmish, Crusade or Holy War: more soldiers, more souls and Life Essence. Story events between waves offer boons, gambles and bargains.</p>
+      <p><b>Spells.</b> Keys 1–9; they cost only their cooldown. Some need a target area. New spells and summonings are learned on the web.</p>
+      <p><b>Controls.</b> Drag with right/middle mouse or use WASD/arrows to pan. Wheel zooms. Space pauses, F cycles speed, Enter begins the wave, B hides the drawer, Esc closes windows.</p>
     </div><div class="center"><button class="btn big" id="h-ok">${fromGame ? 'To war' : 'Back'}</button></div>`, 'helpscreen');
     $('#h-ok').onclick = () => (fromGame ? this.closeScreen() : this.showMenu());
   },
@@ -788,15 +761,13 @@ export const UI: any = {
         else if (!G.modal) this.showPause();
         return;
       }
-      if (e.key.toLowerCase() === 'e' && G.modal === 'wellm') { this.closeModal(); return; }
       if (G.modal || G.phase === 'over' || this.screenOpen()) return;
       if (e.key === ' ') { e.preventDefault(); G.paused = !G.paused; this.updateSpeed(); }
       const k = e.key.toLowerCase();
       if (k === 'f') { G.speed = G.speed >= 4 ? 1 : G.speed * 2; G.paused = false; this.updateSpeed(); }
       if (k === 'b') { this.collapsed = !this.collapsed; this.renderBuild(); }
       if (e.key === 'Enter' && G.phase === 'prep' && !G.modal) this.showCrusade();
-      if (k === 'e') this.showWell();
-      if (/^[1-8]$/.test(e.key)) { const id = G.run.spells[+e.key - 1]; if (id) this.trySpell(id); }
+      if (/^[1-9]$/.test(e.key)) { const id = G.run.spells[+e.key - 1]; if (id) this.trySpell(id); }
     });
     window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
   },
@@ -807,13 +778,8 @@ const DIALOGUE_REF = DIALOGUE;
 
 function evoText(t: any) { const p: string[] = []; if (t.hp) p.push(`HP ×${t.hp}`); if (t.dmg) p.push(`Damage ×${t.dmg}`); if (t.armor) p.push(`+${Math.round(t.armor * 100)}% armor`); if (t.range) p.push(`Range ×${t.range}`); if (t.spd) p.push(`Speed ×${t.spd}`); return p.join(' · '); }
 function towerTip(type: string) {
-  const d = TOWERS[type];
-  const m = TOWER_MAT[type];
-  return `<b>${d.name}</b><br>${d.desc}<br><span class="dim">${d.dmg ? `Damage ${d.dmg} · ` : ''}Range ${d.range}${d.dmg ? ` · every ${d.cd}s` : ''} · ${d.dtype}</span><br><span class="dim">Evolves: ${d.tiers.slice(1).map((t: any, i: number) => `${t.name} (${m[i + 1]})`).join(' → ')}</span><br><span class="dim">Built on a foundation near the keep for ${m[0]} materials. Grows stronger every wave; if it falls, it is rebuilt after the wave.</span>`;
-}
-function buildingTip(type: string) {
-  const d = BUILDINGS[type], lv = bld(type);
-  return `<b>${lv ? d.tiers[lv - 1] : d.name}</b>${lv ? ` <span class="dim">(level ${lv}/3)</span>` : ''}<br>${d.desc}<br><span class="good">Each level: ${d.per}.</span><br><span class="dim">Applies to every undead you command now and later. Levels: ${d.cost.join(' / ')} materials.${lv ? ' Click to select and upgrade.' : ' Click, then a free foundation.'}</span>`;
+  const d = TOWERS[type], t = towerTier();
+  return `<b>${d.tiers[t].name}</b>${t ? ` <span class="dim">(${d.name}, tier ${['I', 'II', 'III'][t]})</span>` : ''}<br>${d.desc}${t ? `<br><span class="good">${d.evo.slice(1, t + 1).join(' ')}</span>` : ''}<br><span class="dim">${d.dmg ? `Base damage ${d.dmg} · ` : ''}Range ${d.range}${d.dmg ? ` · every ${d.cd}s` : ''} · ${d.dtype}</span><br><span class="dim">Free: uses one tower slot. Stands on a built rampart section; rebuilt after the wave if it falls.</span>`;
 }
 // ---------------- unit information (tooltips, details, comparisons) ----------------
 function unitNow(type: string) {
@@ -866,67 +832,42 @@ function statBars(type: string, compact = false) {
   ];
   return rows.map(([n, v, t]) => `<div class="sbar"><span>${n}</span><i><b style="width:${Math.round(Math.max(0.04, Math.min(1, v)) * 100)}%"></b></i>${compact ? '' : `<em>${t}</em>`}</div>`).join('');
 }
+function hostCount(type: string) { return G.run ? G.units.filter((x: any) => x.type === type && !x.summon && !x.temp).length : musterCount(type); }
 function unitTip(type: string) {
-  const d = UNITS[type], t = G.run.unitTier[type] || 0, u = unitNow(type), n = squadSize(type);
-  const unlocked = G.run.unlockedUnits.includes(type);
+  const d = UNITS[type], t = G.run.unitTier[type] || 0, u = unitNow(type), n = hostCount(type);
   return `<b>${d.tiers[t].name}</b> <span class="dim">${unitRole(type)}</span><br>${d.desc}
     <div class="tipbars">${statBars(type, true)}</div>
-    <span class="dim">Squad of <b>${n}</b> · squad HP ${fmt(u.maxHp * n)} · squad damage ${fmt((u.dmg / u.cd) * n)}/s</span>
+    <span class="dim"><b>${n}</b> in the host · total HP ${fmt(u.maxHp * n)} · total damage ${fmt((u.dmg / u.cd) * n)}/s</span>
     ${unitSpecials(type).length ? `<br><span class="good">${unitSpecials(type).slice(0, 3).join(' · ')}</span>` : ''}
-    <br><span class="dim">${unlocked ? 'Click to raise a squad.' : 'Locked — unearth it in the Soul Well.'} Right-click for full details.</span>`;
+    <br><span class="dim">Click for full details.</span>`;
 }
 function unitDetailHtml(type: string) {
-  const d = UNITS[type], r = G.run, t = r.unitTier[type] || 0, u = unitNow(type), n = squadSize(type);
-  const unlocked = r.unlockedUnits.includes(type);
-  const cost = unlocked ? recruitCost(type) : 0;
+  const d = UNITS[type], r = G.run, t = r.unitTier[type] || 0, u = unitNow(type), n = hostCount(type);
   const dps = u.dmg / u.cd, sDps = dps * n, sHp = u.maxHp * n;
   const spdWord = u.spd >= 55 ? 'very fast' : u.spd >= 40 ? 'fast' : u.spd >= 28 ? 'average' : 'slow';
-  const evo = d.tiers.map((tt: any, i: number) => `<span class="${i === t ? 'good' : i < t ? 'dim' : ''}">${tt.name}${i > 0 ? ` <span class="dim">(${fmt(tt.cost)}: ${evoText(tt)})</span>` : ''}</span>`).join(' → ');
+  const evo = d.tiers.map((tt: any, i: number) => `<span class="${i === t ? 'good' : i < t ? 'dim' : ''}">${tt.name}${i > 0 ? ` <span class="dim">(${evoText(tt)})</span>` : ''}</span>`).join(' → ');
   return `<div class="udetail"><div class="udart">${spriteIcon(d.tiers[t].spr, 0, 128)}</div><div class="udinfo">
-    <h2>${d.tiers[t].name}</h2><div class="urole">${unitRole(type)}${unlocked ? '' : ' · <span class="bad">locked</span>'}</div>
+    <h2>${d.tiers[t].name}</h2><div class="urole">${unitRole(type)}</div>
     <p>${d.desc}</p>
     <div class="ustat">${statBars(type)}</div>
     <div class="istats ud-grid">
-      <span>Squad size</span><b>${n}</b>
+      <span>In the host</span><b>${n}</b>
       <span>Health (each)</span><b>${fmt(u.maxHp)}</b>
       <span>Damage (each)</span><b>${fmt(u.dmg)} every ${u.cd.toFixed(1)}s</b>
       <span>Armor</span><b>${Math.round(u.armor * 100)}%</b>
       <span>Range</span><b>${d.ranged ? Math.round(u.range) + ' px' : 'melee'}</b>
       <span>Speed</span><b>${Math.round(u.spd)} (${spdWord})</b>
-      <span>Squad health</span><b>${fmt(sHp)}</b>
-      <span>Squad damage</span><b>${fmt(sDps)}/s</b>
-      ${unlocked ? `<span>Next squad costs</span><b>${fmt(cost)} souls</b>
-      <span>Value per 100 souls</span><b>${fmt(sHp / cost * 100)} HP · ${(sDps / cost * 100).toFixed(1)} dmg/s</b>` : ''}
+      <span>Host health</span><b>${fmt(sHp)}</b>
+      <span>Host damage</span><b>${fmt(sDps)}/s</b>
+      <span>Reinforcement squad</span><b>${squadSize(type)} <span class="dim">(cards, events)</span></b>
     </div>
     ${unitSpecials(type).length ? `<h3>Abilities</h3><ul>${unitSpecials(type).map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
-    <h3>Evolutions</h3><div class="evopath">${evo}</div>
+    <h3>Evolutions <span class="dim">(Phylactery web)</span></h3><div class="evopath">${evo}</div>
     <div class="dim">Your undead pick their own fights; ${d.ranged ? 'ranged troops stay behind the front line.' : d.hunter ? 'hunters slip past the line toward enemy archers and priests.' : 'melee troops hold the front and rush to wherever the crusade presses hardest.'}</div>
   </div></div>`;
 }
-export function recruit(type: string) {
-  const r = G.run, c = recruitCost(type), d = UNITS[type];
-  if (r.souls < c) { sfx('error'); msgFn('Not enough souls.', '#ff8080'); return false; }
-  r.souls -= c;
-  r.bought[type] = (r.bought[type] || 0) + 1; anPick('recruit', type, { cost: c });
-  spawnSquad(type, KEEP.x1 + 30, KEEP.y + rnd(-30, 30));
-  codexSee('unit', type);
-  sfx('raise', 0.3);
-  UI.renderBuild(); saveRunSoon();
-  return true;
-}
 /** Scene art banner for a story event (assets/ui/events/<id>.png, listed in data/event_art.ts). */
 function eventArt(id: string) { return EVENT_ART.includes(id) ? `<div class="evart"><img src="ui/events/${id}.png" alt=""></div>` : ''; }
-function evolveUnit(type: string) {
-  const r = G.run, d = UNITS[type], t = r.unitTier[type] || 0, next = d.tiers[t + 1];
-  if (!next) return;
-  if (t >= 1 && !metaLv('n_evo')) { sfx('error'); msgFn('Requires Rite of Ascension (Phylactery).', '#ff8080'); return; }
-  const cost = evolveCost(type);
-  if (r.souls < cost) { sfx('error'); return; }
-  r.souls -= cost; r.unitTier[type] = t + 1; anPick('evolve', type, { tier: t + 1, cost });
-  G.units.filter((u: any) => u.type === type && !u.summon).forEach((u: any) => { applyUnitStats(u); addRing(u.x, u.y, 2, 16, PAL.necro, 0.5); });
-  msgFn(`Your ${d.name}s become ${next.name}!`, PAL.necro); sfx('levelup');
-  UI.renderBuild(); saveRunSoon();
-}
 export function toMenu() {
   UI.closeModal();
   G.phase = 'menu'; G.run = null; G.selected = null; G.build = null; G.bossBar = null;

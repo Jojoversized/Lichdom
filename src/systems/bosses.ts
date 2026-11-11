@@ -30,7 +30,7 @@ export function bossAbilities(e: any, dt: number) {
       break;
     case 'summon': {
       const types = e.def.summon || ['footman'];
-      const n = Math.min(6, 2 + Math.floor((e.def.wave || 10) / 10)); // 3 at wave 10 … 6 from wave 40
+      const n = Math.min(7, 3 + (G.run.keep || 0)); // 3 at the first keep … 7
       for (let i = 0; i < n; i++) { const m = spawnEnemy(pick(types), e.lane); m.x = e.x + rnd(-24, 24); m.y = e.y + rnd(-16, 16); }
       addRing(e.x, e.y, 4, 50, PAL.holy, 0.5); addSpeech(e, 'To me, faithful!');
       break;

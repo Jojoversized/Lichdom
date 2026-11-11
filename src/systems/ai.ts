@@ -10,7 +10,7 @@ import {
   raiseCorpse, removeCorpse, spawnUnit, killEntity, addHazard, healUnit, NEUTRAL_SRC,
 } from './combat';
 import { addParticle, addRing, addFlash, addText, lightningBolt, explosion, addSoulParticle } from './fx';
-import { towerStats, globalDmg, dtypeMult, frenzyMult, fb, bld } from './stats';
+import { towerStats, globalDmg, dtypeMult, frenzyMult, fb, bld, metaLv, structPower, arcanePower, waveTech, bountyMult, soulMult } from './stats';
 import { gainXp } from './progression';
 import { bossAbilities } from './bosses';
 import { WALL_TIERS } from '../data/towers';
@@ -93,7 +93,7 @@ export function updateEnemy(e: any, dt: number) {
   const [ccx, ccy] = worldToCell(e.x, e.y);
   if (climber && blockingAt(ccx, ccy)) spd *= 0.4;
   const here = G.map.struct[cellIdx(ccx, ccy)];
-  if (here && here.type === 'lava') { e.st.lavaT = (e.st.lavaT || 0) - dt; if (e.st.lavaT <= 0) { e.st.lavaT = 0.5; dealDamage(e, here.def.dps * 0.5 * Math.pow(1.08, G.run.wave) * dtypeMult('fire') * globalDmg(), 'fire', NEUTRAL_SRC, { aoe: true, noCrit: true }); } }
+  if (here && here.type === 'lava') { e.st.lavaT = (e.st.lavaT || 0) - dt; if (e.st.lavaT <= 0) { e.st.lavaT = 0.5; dealDamage(e, here.def.dps * 0.5 * structPower() * dtypeMult('fire') * globalDmg(), 'fire', NEUTRAL_SRC, { aoe: true, noCrit: true }); } }
   if (here && here.type === 'rune' && here.trapT <= 0) triggerRune(here);
   if (d.charge && !e.charged) spd *= 1.2;
   spd = escortSpeed(e, spd, dt);
@@ -190,7 +190,7 @@ function enemyAttack(e: any, t: any) {
   if (d.siege && t.kind !== 'unit') dmg *= 1.5;
   dealDamage(t, dmg, t.kind === 'unit' ? (d.holy ? 'holy' : 'phys') : 'siege', e);
   const th = t.kind === 'fort' ? (t.type === 'wall' ? WALL_TIERS[t.wtier || 2].thorns : t.def.thorns) : 0;
-  if (th) dealDamage(e, th * Math.pow(1.08, G.run.wave), 'phys', NEUTRAL_SRC, { noCrit: true });
+  if (th) dealDamage(e, th * structPower() * globalDmg(), 'phys', NEUTRAL_SRC, { noCrit: true });
   if (t.kind === 'fort' && t.type === 'wall' && G.run.mods.leg_bulwark) dealDamage(e, e.maxHp * 0.03 + 10, 'phys', NEUTRAL_SRC, { noCrit: true });
   sfx(t.kind === 'unit' ? 'hit' : 'hitstone', 0.2);
 }
@@ -215,7 +215,7 @@ function isRanged(u: any) { return !!u.def.ranged; }
  *  large one — melee in front, ranged mixed into the rear ranks, flyers above the front. */
 /** Formation context shared by every guard post of one planning pass (computed once, not per unit). */
 function formationCtx() {
-  const lanes = LANES.filter(l => l.minWave <= Math.max(1, G.run.wave + 1));
+  const lanes = LANES.filter(l => l.minWave <= waveTech(Math.max(1, G.run.wave + 1)));
   let wy = 0, ws = 0; for (const l of lanes) { const w = 1 + (laneHeat[l.id] || 0); wy += (l.cy * CELL + 8) * w; ws += w; }
   return { fallback: G.enemies.some((e: any) => e.boss), lean: ((ws ? wy / ws : GATE.y) - GATE.y) / 400 };
 }
@@ -307,7 +307,7 @@ export function updateUnit(u: any, dt: number) {
   if (!u.summon && u.hp < u.maxHp * 0.22 && G.phase === 'wave') u.retreat = true;
   if (u.retreat && u.hp > u.maxHp * 0.7) u.retreat = false;
   if (nearKeep && u.hp < u.maxHp) u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.05 * dt);
-  const emb = bld('embalm'); if (emb && u.hp < u.maxHp) u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.008 * emb * dt); // Embalmer's Hall
+  const emb = bld('embalm') * 0.008 + metaLv('m_regen') * 0.005; if (emb && u.hp < u.maxHp) u.hp = Math.min(u.maxHp, u.hp + u.maxHp * emb * dt); // Embalmer's Hall
   if (u.retreat) { if (!nearKeep) { moveToward(u, KEEP.x1 + 14, KEEP.y + 20 + ((u.slot * 50) % 40) - 20, spd * 1.1, dt); setAnim(u, 'walk'); } else setAnim(u, 'idle'); return; }
   if (u.raiser) {
     u.abT = (u.abT ?? u.raiser) - dt;
@@ -466,6 +466,7 @@ export function updateTower(t: any, dt: number) {
   if (t.hitT > 0) t.hitT -= dt;
   if (t.silT > 0) { t.silT -= dt; if (Math.random() < 0.2) addParticle(t.x + rnd(-8, 8), t.y - 30, 0, -10, PAL.arcane, 0.5, 'p', 1); return; }
   if (t.hasteT > 0) t.hasteT -= dt;
+  { const q = bld('quarry'); if (q && t.hp < t.maxHp) t.hp = Math.min(t.maxHp, t.hp + t.maxHp * 0.02 * q * dt); } // Bone Quarry
   const st = towerStats(t), d = t.def, r = G.run;
   t.cdT -= dt;
   if (t.fireT > 0) t.fireT -= dt;
@@ -554,9 +555,9 @@ export function updateTower(t: any, dt: number) {
         t.abT = 3 / (t.tier + 1);
         let best: any = null, bd = st.range ** 2;
         for (const c of G.corpses) { const dd = dist2(c.x, c.y, t.x, t.y); if (dd < bd) { bd = dd; best = c; } }
-        if (best) { removeCorpse(best); const s = Math.round(5 * Math.pow(1.07, r.wave) * (1 + r.m.souls + fb('souls'))); r.souls += s; r.soulsEarned += s; gainXp(1 + r.wave * 0.1); addSoulParticle(best.x, best.y, s); lightningBolt(best.x, best.y - 2, t.x, t.y - 30, '#7dffb0', 0.3, 1, 3); addText(best.x, best.y - 10, '+' + s, PAL.necro); }
+        if (best) { removeCorpse(best); const s = Math.round(5 * bountyMult(r.wave) * soulMult()); r.souls += s; r.soulsEarned += s; gainXp(1 + r.wave * 0.1); addSoulParticle(best.x, best.y, s); lightningBolt(best.x, best.y - 2, t.x, t.y - 30, '#7dffb0', 0.3, 1, 3); addText(best.x, best.y - 10, '+' + s, PAL.necro); }
       }
-      if (t.tier >= 2 && G.phase === 'wave') { t.passT = (t.passT || 0) + dt; if (t.passT >= 1) { t.passT = 0; r.souls += Math.round(3 * Math.pow(1.07, r.wave)); } }
+      if (t.tier >= 2 && G.phase === 'wave') { t.passT = (t.passT || 0) + dt; if (t.passT >= 1) { t.passT = 0; r.souls += Math.round(3 * bountyMult(r.wave) * soulMult()); } }
       if (t.tier >= 1 || r.mods.harv_aura) {
         const hst = (t.tier >= 1 ? 0.1 : 0) + (r.mods.harv_aura ? 0.25 : 0);
         for (const o of G.towers) if (o !== t && dist2(o.x, o.y, t.x, t.y) < st.range ** 2) { o.hasteT = 0.5; o.haste = Math.max(o.haste || 0, hst); }
@@ -622,10 +623,11 @@ export function updateNetArcs(dt: number) {
 // =====================================================================
 export function triggerRune(f: any) {
   f.trapT = f.def.recharge;
-  aoeDamage(f.x, f.y, f.def.radius, f.def.trap * Math.pow(1.09, G.run.wave) * dtypeMult('necro') * globalDmg(), 'necro', NEUTRAL_SRC);
+  aoeDamage(f.x, f.y, f.def.radius, f.def.trap * structPower() * dtypeMult('necro') * globalDmg(), 'necro', NEUTRAL_SRC);
   explosion(f.x, f.y, f.def.radius, PAL.necro); sfx('boom', 0.35);
 }
 export function updateFort(f: any, dt: number) {
+  { const q = bld('quarry'); if (q && f.def.hp && f.hp < f.maxHp) f.hp = Math.min(f.maxHp, f.hp + f.maxHp * 0.02 * q * dt); } // Bone Quarry
   if (f.hitT > 0) f.hitT -= dt;
   if (f.trapT > 0) f.trapT -= dt;
   if (f.type === 'cauldron') {
@@ -633,7 +635,7 @@ export function updateFort(f: any, dt: number) {
     if (f.abT <= 0) {
       f.abT = 2;
       let any = false;
-      G.hashE.query(f.x, f.y, f.def.radius, (e: any) => { { any = true; dealDamage(e, f.def.pour * Math.pow(1.09, G.run.wave) * globalDmg(), 'fire', NEUTRAL_SRC, { aoe: true, noCrit: true }); e.st.shredT = 3; } });
+      G.hashE.query(f.x, f.y, f.def.radius, (e: any) => { { any = true; dealDamage(e, f.def.pour * structPower() * globalDmg(), 'fire', NEUTRAL_SRC, { aoe: true, noCrit: true }); e.st.shredT = 3; } });
       if (any) { for (let i = 0; i < 14; i++) addParticle(f.x + rnd(-f.def.radius, f.def.radius) * 0.7, f.y + rnd(-10, 10), rnd(-10, 10), rnd(-30, 5), pick(['#7fff5a', '#c8ff9a', '#d0a040']), 0.6, 'p', 1); addRing(f.x, f.y, 4, f.def.radius, '#7fff5a', 0.35); sfx('sizzle', 0.25); }
     }
   }
@@ -653,7 +655,7 @@ export function updateLich(dt: number) {
       L.anim = 'cast'; L.at = 0; L.castT = 0.4; L.face = e.x > lx ? 1 : -1;
       for (let i = 0; i < r.m.lichBolts; i++) {
         const tg = i === 0 ? e : (G.hashE.nearest(e.x + rnd(-40, 40), e.y + rnd(-40, 40), 100) || e);
-        fireProjectile({ team: 'u', def: {}, kind: 'lich' }, lx + L.face * 8, ly - 18, tg, 'lichbolt', (18 + r.level * 5) * Math.pow(1.085, r.wave) * (1 + r.m.lichDmg) * globalDmg() * dtypeMult('necro'), 'necro', {});
+        fireProjectile({ team: 'u', def: {}, kind: 'lich' }, lx + L.face * 8, ly - 18, tg, 'lichbolt', (10 + r.level * 2) * arcanePower() * (1 + r.m.lichDmg) * globalDmg() * dtypeMult('necro'), 'necro', {});
       }
       sfx('necro', 0.25);
     } else L.cdT = 0.3;

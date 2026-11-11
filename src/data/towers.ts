@@ -31,8 +31,8 @@ export const TOWER_ORDER = ['brimstone', 'tesla', 'necrotic', 'frost', 'artiller
 export const FORTS: Record<string, any> = {
   wall: { name: 'Stone Wall', cost: 15, hp: 320, block: true, icon: 'wall', desc: 'Blocks enemy movement. Undead pass through hidden sally-gates.' },
   spikes: { name: 'Spiked Barricade', cost: 10, hp: 140, block: true, thorns: 10, icon: 'spikes', desc: 'Weak barrier that wounds enemies who attack it.' },
-  lava: { name: 'Lava Moat', cost: 30, hp: 0, dps: 18, dtype: 'fire', icon: 'lava', meta: 'f_traps', desc: 'Burns enemies walking through it.' },
-  rune: { name: 'Necrotic Rune', cost: 40, hp: 0, trap: 70, radius: 30, recharge: 8, icon: 'rune', meta: 'f_traps', desc: 'Explodes when an enemy steps on it. Recharges.' },
+  lava: { name: 'Lava Moat', cost: 30, hp: 0, dps: 18, dtype: 'fire', icon: 'lava', meta: 'f_traps1', desc: 'Burns enemies walking through it.' },
+  rune: { name: 'Necrotic Rune', cost: 40, hp: 0, trap: 70, radius: 30, recharge: 8, icon: 'rune', meta: 'f_traps1', desc: 'Explodes when an enemy steps on it. Recharges.' },
   cauldron: { name: 'Acid Cauldron', cost: 60, hp: 200, block: true, pour: 28, radius: 44, icon: 'cauldron', meta: 'f_traps2', desc: 'Pours acid (boiling oil) on nearby attackers, shredding armor.' },
   ward: { name: 'Ward Pylon', cost: 50, hp: 220, block: true, slowAura: 0.3, radius: 50, icon: 'ward', meta: 'f_traps2', desc: 'Magical barrier: slows enemies and shields nearby structures from spells.' },
 };

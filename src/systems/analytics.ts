@@ -31,7 +31,7 @@ export function anStart() {
   for (const k in (G.meta && G.meta.lv) || {}) if (G.meta.lv[k]) meta[k] = G.meta.lv[k];
   r.an = {
     id: Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36), version: AN_VERSION,
-    started: new Date().toISOString(), fortress: r.fortress, seed: r.seed, meta, essenceSpent: G.meta ? (G.meta.totalEssence || 0) - (G.meta.essence || 0) : 0,
+    started: new Date().toISOString(), keep: r.keep, fortress: r.fortress, seed: r.seed, meta, purse: G.meta ? { souls: G.meta.souls, essence: G.meta.essence, divinity: G.meta.divinity } : null,
     roster: [...r.unlockedUnits], spells: [...r.spells], waves: [] as any[], picks: [] as any[], end: null as any,
   };
   persist();
@@ -83,8 +83,8 @@ export function anWaveEnd(S: any) {
   for (const k in S.fallen) { const f = S.fallen[k]; fallen[f.type] = (fallen[f.type] || 0) + f.n; }
   a.waves.push({
     n: S.n, tier: S.tier, theme: S.theme, boss: S.boss || null, dur: rnd1(G.time - (cur.t0 ?? G.time)),
-    souls: S.souls, bonus: S.bonus, mats: S.mats, kills: S.kills, keepLost: S.keepLost, keepHp: Math.round(G.keep.hp), keepMax: Math.round(G.keep.maxHp),
-    bank: { souls: Math.round(r.souls), materials: r.materials }, level: r.level, fervor: rnd1((r.fervor || 1) * 100) / 100,
+    souls: S.souls, bonus: S.bonus, essence: S.essence, kills: S.kills, keepLost: S.keepLost, keepHp: Math.round(G.keep.hp), keepMax: Math.round(G.keep.maxHp),
+    bank: { souls: Math.round(r.souls), essence: Math.round(r.essence * 10) / 10 }, level: r.level, fervor: rnd1((r.fervor || 1) * 100) / 100,
     host, summons, tiers, towers, buildings, walls, fallen, revived: S.revived,
     src: S.src.map((s: any) => [s.key, Math.round(s.dmg), s.n, s.kills]), // [source, damage, kills, kills by enemy type]
     roster: cur.roster || {}, recruits: cur.recruits || {}, spent: cur.spent || {}, spells: cur.spells || {},

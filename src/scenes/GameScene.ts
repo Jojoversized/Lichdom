@@ -7,10 +7,9 @@ import { CELL, KEEP, WELL_POS, WW, WH } from '../config/constants';
 import { WorldRenderer } from '../render/WorldRenderer';
 import { step, castSpell, resetWorld } from '../systems/campaign';
 import { stepVisual } from '../systems/fx';
-import { placeFort } from '../systems/combat';
 import { canBuildAt, worldToCell, cellIdx, generateMap, siteAtCell, plotAtCell } from '../world/mapgen';
-import { upgradeSite, siteById } from '../systems/ramparts';
-import { constructTower, constructBuilding, mountAt } from '../systems/keep';
+import { buildSite, siteById, siteTier } from '../systems/ramparts';
+import { constructTower, mountAt, placeTrap } from '../systems/keep';
 import { pendingEvent } from '../systems/events';
 import { loadMeta, saveRun, saveMeta, saveRunSoon } from '../systems/save';
 import { UI } from '../ui/ui';
@@ -118,32 +117,28 @@ export class GameScene extends Phaser.Scene {
     const b = G.build; if (!b) return;
     const [wx, wy] = G.mouse.world, r = G.run;
     if (b.kind === 'spell') { if (castSpell(b.type, wx, wy)) G.build = null; return; }
-    if (b.kind === 'tower' || b.kind === 'building') {
+    if (b.kind === 'tower') {
       if (painting) return;
-      const p = b.kind === 'tower' ? mountAt(...worldToCell(wx, wy)) : plotAtCell(...worldToCell(wx, wy));
-      if (!p) { hooks.sfx('error'); hooks.msg(b.kind === 'tower' ? 'Towers stand on top of built ramparts, at least two sections apart.' : 'Buildings rise on the foundations behind the walls.', '#c8b890'); return; }
-      const made = b.kind === 'tower' ? constructTower(b.type, p) : constructBuilding(b.type, p);
-      if (made) { G.build = null; G.selected = made; UI.infoKey = ''; UI.renderBuild(); saveRunSoon(); }
+      const p = mountAt(...worldToCell(wx, wy));
+      if (!p) { hooks.sfx('error'); hooks.msg('Towers stand on top of built ramparts, at least two sections apart.', '#c8b890'); return; }
+      const made = constructTower(b.type, p);
+      if (made) { UI.infoKey = ''; UI.renderBuild(); saveRunSoon(); } // stays armed: place another while slots remain
       return;
     }
     if (b.kind === 'site') {
       if (painting) return;
       const site = siteAtCell(...worldToCell(wx, wy));
       if (!site) { hooks.sfx('error'); return; }
-      if (upgradeSite(site)) saveRunSoon();
-      G.selected = siteSel(site.id); UI.infoKey = '';
+      if (siteTier(site) > 0) { G.selected = siteSel(site.id); UI.infoKey = ''; return; }
+      if (buildSite(site)) { UI.renderBuild(); saveRunSoon(); }
       return;
     }
-    const size = b.kind === 'tower' ? 2 : 1;
-    const cx = Math.floor(wx / CELL - (size === 2 ? 0.5 : 0)), cy = Math.floor(wy / CELL - (size === 2 ? 0.5 : 0));
+    // traps and barricades: one cell each, painted while the button is held
+    const cx = Math.floor(wx / CELL), cy = Math.floor(wy / CELL);
     if (painting && b.lastCell === cx + ',' + cy) return;
     b.lastCell = cx + ',' + cy;
-    if (r.souls < b.cost) { if (!painting) { hooks.sfx('error'); hooks.msg('Not enough souls.', '#ff8080'); } return; }
-    if (!canBuildAt(cx, cy, size, size)) { if (!painting) hooks.sfx('error'); return; }
-    r.souls -= b.cost;
-    placeFort(b.type, cx, cy);
-    hooks.sfx('build');
-    saveRunSoon();
+    if (!canBuildAt(cx, cy, 1, 1)) { if (!painting) hooks.sfx('error'); return; }
+    if (placeTrap(b.type, cx, cy, painting)) { if (painting) hooks.sfx('build'); UI.renderBuild(); saveRunSoon(); }
   }
 
   selectAt(wx: number, wy: number) {
@@ -159,7 +154,6 @@ export class GameScene extends Phaser.Scene {
     if (bd) { G.selected = bd; UI.infoKey = ''; hooks.sfx('click'); return; }
     const site = siteAtCell(cx, cy);
     if (site) { G.selected = siteSel(site.id); UI.infoKey = ''; hooks.sfx('click'); return; }
-    if (dist2(wx, wy, WELL_POS.x, WELL_POS.y) < 26 * 26) { UI.showWell(); return; }
     const u = G.hashU.nearest(wx, wy + 6, 12);
     if (u) { G.selected = u; UI.infoKey = ''; hooks.sfx('click'); return; }
     G.selected = null;

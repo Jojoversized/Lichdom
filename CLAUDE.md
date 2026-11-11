@@ -1,6 +1,8 @@
 # LICH — Eternal Dominion · Project guide for Claude
 
 Dark-fantasy **incremental roguelite tower defense** built with **Phaser 3 + TypeScript + Vite**.
+Since v0.12 the game is a true incremental: nothing is bought during a siege; everything is bought between sieges
+on the **Phylactery web** with three currencies (Souls, Life Essence, Stolen Divinity).
 You are the Lich; the keep stands on the far **left** of the map and the mortal crusade
 marches in from the **right** along up to five roads.
 
@@ -24,17 +26,15 @@ GitHub Pages: every push to `main` runs `.github/workflows/deploy.yml` (install 
 1. `tsc -p . --outDir build --noEmit false` (needs `node_modules/phaser` with its `types/`)
 2. `python3 tools/test/serve.py 8765` — serves `/play.html` (index.html + import map for Phaser, resolves extension-less imports, maps `/assets` to the site root like Vite)
 3. Playwright scripts (Chrome, `--use-gl=swiftshader`):
-   - `tools/test/smoke.py` — boot, start campaign, run a wave, screenshots
-   - `tools/test/ui_flow.py` — real clicks through build, drawer, level-up, Soul Well, save/reload, codex
-   - `tools/test/bot.py [maxWave] [runs] [metaMax]` — automated campaigns for balance/regression (also asserts no duplicate upgrade tiers in offers)
+   - `tools/test/smoke.py` — boot, open the web, besiege keep 1, run a wave, screenshots
+   - `tools/test/ui_flow.py` — real clicks: web (buy / shift-buy / locked node), siege, slots, crusade, level-up, save/reload, end of siege, remembered layout (slow under swiftshader: allow ~3 min)
+   - `tools/test/bot.py [sieges] [stopAfterKeeps] [tier] [repeat]` — **meta-loop bot**: siege → bank → spend on the web → repeat from an empty Phylactery; prints sieges per keep (balance) and asserts clean card offers
    - `tools/test/closeup.py [outdir] [zoom] [w] [h]` — staged skirmish screenshot for art/render review
    - `tools/test/events_check.py [reps]` — resolves every story-event choice (gambles both ways), checks errors/placeholders/state
    - `tools/test/showcase.py [out.png] [zoom] [w] [h] [marchMs]` — every crusader type + boss in rows, paused (enemy art review)
-   - `tools/test/strategy.py '<json configs>' [runs] [maxWave]` — player-model bot (tier, focus unit, card policy, econ-first, walls) for testing strategies seen in real-run analytics
    - `LICH_AN_OUT=runs.json tools/test/bot.py …` also saves analytics records → `python3 tools/analytics/report.py runs.json`
-   - `tools/test/balance.py '<json configs>' [runs] [maxWave]` — unit balance: campaigns restricted to fixed undead types (solo/combo), same spending policy, no towers/walls (`LICH_PORT=8766` to run against a frozen copy of the build while you keep editing)
 
-`window.__LICH` exposes the state `G` and every system function for tests.
+`window.__LICH` exposes the state `G`, `META`/`KEEPS` and every system function for tests.
 
 ## Pixel-art standards (do not drift)
 
@@ -142,18 +142,18 @@ src/
   main.ts                 Phaser game config, debug handle
   config/                 constants (map, keep, lanes, palette), zoom, manifest registry
   core/                   util (rng, math, SpatialHash, MinHeap, Pool), state (G), events (hooks)
-  data/                   pure game data: units/summons, enemies/bosses, towers/forts, spells/Soul Well, meta tree/achievements/dialogue, fortresses
+  data/                   pure game data: units/summons, enemies/bosses, towers/forts, spells, the Phylactery web/achievements/dialogue, fortress themes and keeps
   world/mapgen.ts         seeded map gen (roads right→left), runtime terrain painting, flow fields, build checks
   systems/                SIMULATION (no Phaser/DOM):
     stats.ts              derived stats, incremental cost & wave curves, Crusade Fervor, building levels (bld)
-    keep.ts               materials, foundations, tower/building construction & upgrades, ruins
-    ramparts.ts           preset wall sites (build/upgrade/repair)
+    keep.ts               tower / trap slots, buildings raised from the web, ruins, remembered layouts
+    ramparts.ts           preset wall sites (raise / level within the web's segment slots, mending)
     combat.ts             spawning, damage, deaths, corpses, projectiles, hazards, status effects
     ai.ts                 mortal AI, autonomous undead army planner, towers, forts, the Lich
-    campaign.ts           new/load campaign, wave generation, wave-end revival, spells, Soul Well, step()
+    campaign.ts           begin/load a siege, the 10 waves of a keep, wave-end revival, spells, step()
     cards.ts              level-up card pool
     events.ts             roguelite layer: crusade tiers, story events, tithes/curses/war buffs
-    progression.ts        XP, codex, achievements, bosses slain, defeat/essence, meta purchases
+    progression.ts        XP, codex, achievements, end of siege and banking the haul, web purchases
     bosses.ts             boss abilities/intros
     fx.ts                 particle/ring/bolt/text data (+ visual step)
     analytics.ts          run analytics (per-wave records + decisions, localStorage, JSON export)
@@ -179,11 +179,29 @@ Key rules:
 - TypeScript, ES2022 modules, 2-space indent, single quotes, semicolons.
 - `strict` is currently off (ported code); new code should be typed — tightening is on the checklist.
 - Data tables stay in `src/data`; balance curves live in `systems/stats.ts`.
-- Name things after the game fiction (souls, Life Essence, Fervor, keep, crusade).
+- Name things after the game fiction (souls, Life Essence, Stolen Divinity, Fervor, keep, siege, crusade).
 - Never break save compatibility silently: bump `SAVE_*` keys in `systems/save.ts` if the format changes.
-- After any change: typecheck, run smoke + ui_flow, run the bot for balance changes, update `docs/CHECKLIST.md`.
+- After any change: typecheck, run smoke + ui_flow + events_check, run the meta-loop bot for balance changes, update `docs/CHECKLIST.md`.
 
 ## Current status
+
+v0.12 — **incremental rework**. Loop: besiege a keep → fall or conquer → the haul (souls, Life Essence, Stolen
+Divinity) goes to the Phylactery → buy nodes on the web → besiege again.
+- **Keeps** (`KEEPS` in `data/world.ts`): 6 in a chain, **10 waves each, boss on wave 10**; the first kill of a keep's
+  boss yields 1 Stolen Divinity and unlocks the next keep. Difficulty and pay are exponential per keep
+  (`KEEP_HP 13`, `KEEP_DMG 6.5`, `KEEP_SOULS 5`, `KEEP_ESS 4`) and per wave (`WAVE_*`); `BASE_*` set keep 1.
+  Curves: `waveHpMult/waveDmgMult/bountyMult/waveEssence/waveTech` in `systems/stats.ts`.
+- **Web** (`data/meta.ts`): `WebNode { cur, max, cost, mult, parent, need }`; visible when the parent is owned, buyable
+  when `metaLv(parent) >= need`. Ids: `n_<unit>` muster, `u_<unit>` unlock, `e_<unit>` evolution, `t_<tower>`,
+  `b_<building>`, `sp_<spell>`, `c_*` card groups, `d_*` divinity rites, `f_walls/f_towers/f_traps` slots,
+  `f_walltier/f_ttier` tiers. Effects are read with `metaLv(id)` (mostly in `systems/stats.ts`). Balance target
+  (meta-loop bot, random play): ~10–13 sieges per keep.
+- **Run state**: `r.keep`, `r.souls/essence/divinity` are the siege's haul (banked by `endCampaign(outcome)` in
+  `progression.ts`: defeat / retreat / victory). `G.meta = { souls, essence, divinity, lv, keepsCleared, best, flags, layout }`.
+- **Defences**: slots from the web, free placement in prep only (`constructTower`, `buildSite`/`razeSite`, `placeTrap`);
+  `rememberLayout()` at every wave start, `applyLayout()` at siege start and (traps) after each wave.
+- **Removed**: recruiting, evolving in-run, materials, in-run building construction, Soul Well, soul costs, host-pressure
+  and schedule Fervor, unlock cards, `strategy.py`, `balance.py`. Save keys: `lichdom_meta_v3`, `lichdom_run_v7`.
 
 v0.11 — **42 story events** (from 6) in three acts with costs, gambles, sacrifices, permanent boons/banes, a weakened
 next boss, zeal ± and three multi-event story chains (flags); extra events between the 3-wave beats (20%); **Dreamina

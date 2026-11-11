@@ -2,6 +2,28 @@
 
 Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at the end of every session.
 
+## Incremental rework (v0.12)
+- [x] **Nothing is bought during a siege.** Recruiting, evolving, materials, in-run buildings, the Soul Well and soul costs for spells/repairs are gone; the host, buildings, spells and defence slots all come from the Phylactery
+- [x] **The Phylactery is a web** (`data/meta.ts`, ~110 nodes, six branches around a core): a node appears when its parent is owned and opens at the parent's threshold (`need`); costs grow by `mult` per level; radial auto-layout without overlaps; pan / zoom / shift-click screen (`UI.showMeta`)
+- [x] **Three currencies**: Souls (kills; musters and small compounding steps), Life Essence (waves repelled, bosses; unlocks, evolutions, buildings, spells, strong passives), **Stolen Divinity** (gold; 1 per keep the first time its boss falls; 7 rites). The haul is banked on defeat, retreat and victory alike
+- [x] **Keeps**: 6 keeps in a chain (5 themes + new Gates of Dawn), exactly 10 bigger waves each, the keep's boss on wave 10 (always full strength); exponential curve per keep (`KEEP_HP/DMG/SOULS/ESS` in `data/world.ts`) and per wave; enemy roster and roads by tech level (wave + 5 × keep)
+- [x] Host from the web: per-type unlock (essence) → muster levels (souls, +bodies) → evolutions (essence); Endless Host / Eternal Night divinity rites
+- [x] Buildings moved to the web (3 levels, essence); each stands on its own fixed foundation at the start of every siege. Barracks = +10% bodies, Quarry = durability + mending
+- [x] Towers / ramparts / traps: the web grants slots and tiers; free placement between waves, demolish to move; breaches mended and traps relaid after each wave; the layout is remembered per keep and raised again next siege
+- [x] Soul Well content moved: summons (now timed) and Bloodfrenzy / Ward / Necrotic Storm are spells learned on the web; ascensions are web passives
+- [x] Cards: no unlock cards; deck groups (reinforcements, greater tiers, unit / tower modifiers, unique rites, legendaries) are opened on the web (`CARD_GATES`)
+- [x] Events reworked: materials → fortify (keep / wall / tower durability), soul rewards are haul, soul costs are paid from the haul, squad mod → muster, unlock → squads, hordes scale with the host, story flags persist across sieges
+- [x] Crusade Fervor reduced to zeal (Holy Wars, events); crusade tiers scale souls and Life Essence
+- [x] Anti-stalemate: a wave that drags on 150 s after its last spawn makes the crusade hit 20% harder every 10 s
+- [x] New home screen (purse, keeps, Continue), siege-over screen for defeat / retreat / conquest, HUD shows the siege's haul
+- [x] `tools/test/bot.py` is now a meta-loop bot (siege → bank → spend → repeat); smoke, ui_flow and events_check rewritten; `strategy.py` and `balance.py` retired (they modelled in-run buying)
+- [x] Save keys bumped (`lichdom_meta_v3`, `lichdom_run_v7`): earlier progress does not carry over
+- [ ] Balance beyond keep 4 is only bot-tested lightly (late sieges simulate slowly); watch real runs
+- [ ] The Legion branch is a long chain (13 rings): consider a more compact layout or a minimap
+- [ ] Dedicated art: Stolen Divinity icon (CSS lozenge for now), Gates of Dawn theme tiles, web node icons for passives
+- [ ] Achievements for web milestones; endless / ascension mode after keep 6
+- [ ] `tools/analytics/report.py` still prints the old recruit / materials columns
+
 ## Foundation
 - [x] Phaser 3.80 + TypeScript + Vite project, GitHub Pages workflow
 - [x] Pixel-perfect rendering at 2× texel density (even screen zoom, camera zoom × canvas zoom), pixelArt/roundPixels

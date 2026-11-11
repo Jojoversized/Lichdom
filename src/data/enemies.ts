@@ -23,18 +23,20 @@ export const ENEMIES: Record<string, any> = {
   griffon: { name: 'Griffon Knight', fac: 'free', hp: 230, dmg: 20, cd: 1.2, range: 16, spd: 50, armor: 0.25, bounty: 26, xp: 14, melee: true, flying: true, minWave: 15, w: 0.5, desc: 'Airborne lancer. Strikes from above.' },
 };
 
+// v0.12: one boss per keep (data/world.ts KEEPS), always on wave 10. hp0/dmg0 are multiplied by the keep's
+// exponential curve (stats.waveHpMult / waveDmgMult at wave 10).
 export const BOSSES: any[] = [
-  { id: 'b_inquisitor', name: 'The Grand Inquisitor', wave: 10, hp: 3600, dmg: 30, cd: 1.6, range: 130, spd: 16, armor: 0.3, ranged: 'holyfire', holy: true, bounty: 300, xp: 120, abilities: ['purge', 'summon'], summon: ['priest', 'paladin'],
+  { id: 'b_inquisitor', name: 'The Grand Inquisitor', hp: 600, hp0: 600, dmg: 13, dmg0: 13, cd: 1.6, range: 130, spd: 16, armor: 0.3, ranged: 'holyfire', holy: true, bounty: 100, xp: 120, abilities: ['purge', 'summon'], summon: ['priest', 'paladin'],
     title: 'Hand of the Holy Dominion', line: 'Your heresy ends today, abomination.' },
-  { id: 'b_archmage', name: 'Archmage of the Last Covenant', wave: 20, hp: 7800, dmg: 40, cd: 1.4, range: 150, spd: 15, armor: 0.2, mres: 0.5, ranged: 'arcanebolt', bounty: 600, xp: 220, abilities: ['silence', 'meteor', 'blink'],
+  { id: 'b_archmage', name: 'Archmage of the Last Covenant', hp: 650, hp0: 650, dmg: 15, dmg0: 15, cd: 1.4, range: 150, spd: 15, armor: 0.2, mres: 0.5, ranged: 'arcanebolt', bounty: 110, xp: 220, abilities: ['silence', 'meteor', 'blink'],
     title: 'Keeper of the Arcane Conclave', line: 'I have studied your kind for forty years, Lich.' },
-  { id: 'b_dragonslayer', name: 'The Dragon-Slayer', wave: 30, hp: 15000, dmg: 120, cd: 1.5, range: 18, spd: 24, armor: 0.5, melee: true, bigSlayer: 3, bounty: 1000, xp: 360, abilities: ['cleave', 'leap', 'warcry'],
+  { id: 'b_dragonslayer', name: 'The Dragon-Slayer', hp: 900, hp0: 900, dmg: 30, dmg0: 30, cd: 1.5, range: 18, spd: 24, armor: 0.5, melee: true, bigSlayer: 3, bounty: 120, xp: 360, abilities: ['cleave', 'leap', 'warcry'],
     title: 'Freeborn Legend', line: 'I have slain greater beasts than you, bone-king.' },
-  { id: 'b_saint', name: 'The Saint of Eternal Dawn', wave: 40, hp: 26000, dmg: 60, cd: 1.2, range: 120, spd: 20, armor: 0.3, flying: true, holy: true, ranged: 'holybeam', bounty: 1600, xp: 520, abilities: ['heal', 'sunburst', 'summon'], summon: ['angel'],
+  { id: 'b_saint', name: 'The Saint of Eternal Dawn', hp: 760, hp0: 760, dmg: 17, dmg0: 17, cd: 1.2, range: 120, spd: 20, armor: 0.3, flying: true, holy: true, ranged: 'holybeam', bounty: 130, xp: 520, abilities: ['heal', 'sunburst', 'summon'], summon: ['angel'],
     title: 'Beloved of the Light', line: 'Let the dawn burn away your night forever.' },
-  { id: 'b_kings', name: 'The United Kings', wave: 50, hp: 42000, dmg: 90, cd: 1.3, range: 18, spd: 26, armor: 0.5, melee: true, bounty: 2400, xp: 700, abilities: ['summon', 'warcry', 'siege'], summon: ['knight', 'cavalry', 'ram'],
+  { id: 'b_kings', name: 'The United Kings', hp: 950, hp0: 950, dmg: 24, dmg0: 24, cd: 1.3, range: 18, spd: 26, armor: 0.5, melee: true, bounty: 140, xp: 700, abilities: ['summon', 'warcry', 'siege'], summon: ['knight', 'cavalry', 'ram'],
     title: 'Crowned Heads of Every Realm', line: 'All the crowns of the world march against you.' },
-  { id: 'b_champion', name: 'The Divine Champion', wave: 60, hp: 70000, dmg: 160, cd: 1.1, range: 20, spd: 28, armor: 0.5, mres: 0.3, holy: true, melee: true, bounty: 4000, xp: 1000, abilities: ['sunburst', 'leap', 'purge', 'heal'],
+  { id: 'b_champion', name: 'The Divine Champion', hp: 1150, hp0: 1150, dmg: 30, dmg0: 30, cd: 1.1, range: 20, spd: 28, armor: 0.5, mres: 0.3, holy: true, melee: true, bounty: 160, xp: 1000, abilities: ['sunburst', 'leap', 'purge', 'heal'],
     title: 'Chosen of the Gods', line: 'The gods themselves have sent me. Kneel.' },
 ];
 

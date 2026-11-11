@@ -8,10 +8,10 @@ import { SHEETS, IMAGES } from '../config/manifest';
 import { FORT_ART, FORT_LIGHTS, LICH_POS } from '../data/fortress';
 import { hexNum, clamp, rnd, rndi, pick, dist, lerp, makeCanvas, TAU } from '../core/util';
 import { TOWERS, FORTS, WALL_TIERS, WALL_MAX_TIER } from '../data/towers';
-import { siteTier, siteUpgradeCost } from '../systems/ramparts';
-import { towerStats, metaLv } from '../systems/stats';
+import { siteTier, wallSlotsFree } from '../systems/ramparts';
+import { towerStats } from '../systems/stats';
 import { cellIdx, canBuildAt, siteAtCell, plotAtCell, worldToCell } from '../world/mapgen';
-import { plotContent, mountAt, mountCells } from '../systems/keep';
+import { mountAt, mountCells, towerSlotsFree, trapSlotsFree } from '../systems/keep';
 import { SPELLS } from '../data/spells';
 import { animFrameIndex, makeLightTextures, makeShadowTextures, PX_FONT, PX_DIGITS } from './textures';
 import { TEXEL_RES, VIEW } from '../config/zoom';
@@ -257,16 +257,16 @@ export class WorldRenderer {
   /** Construction spots: building foundations (Buildings tab / placing a building) and tower mounts —
    *  every section of a built rampart that can take a tower (Towers tab / placing a tower). */
   drawPlots(g: Phaser.GameObjects.Graphics) {
-    const b = G.build, placing = b && (b.kind === 'tower' || b.kind === 'building');
+    const b = G.build, placing = b && b.kind === 'tower';
     if (!placing && !G.showPlots) return;
-    const towers = placing ? b.kind === 'tower' : G.showPlots === 'mounts';
+    const towers = placing || G.showPlots === 'mounts';
     const [hx, hy] = worldToCell(G.mouse.world[0], G.mouse.world[1]);
     const corners = (X: number, Y: number, S: number, col: number, a: number) => {
       g.fillStyle(col, a);
       for (const [dx, dy, w, h] of [[0, 0, 4, SC], [0, 0, SC, 4], [S - 4, 0, 4, SC], [S - SC, 0, SC, 4], [0, S - SC, 4, SC], [0, S - 4, SC, 4], [S - 4, S - SC, 4, SC], [S - SC, S - 4, SC, 4]]) g.fillRect(X + dx, Y + dy, w, h);
     };
     if (towers) {
-      const ok = !placing || G.run.materials >= b.cost;
+      const ok = !placing || towerSlotsFree() > 0;
       const col = !placing ? 0xc8b890 : ok ? 0x5dff7a : 0xff5050;
       const hov = placing && G.mouse.onCanvas ? mountAt(hx, hy) : null;
       for (const p of mountCells()) {
@@ -277,17 +277,6 @@ export class WorldRenderer {
       if (hov) { const range = TOWERS[b.type].range * (1 + G.run.m.range); this.ellipse(g, hov.x, hov.y, range, range * 0.75, ok ? '#c8ffd0' : '#ff8080', 0.7, 2); }
       return;
     }
-    const hov = G.mouse.onCanvas ? plotAtCell(hx, hy) : null;
-    for (const p of G.map.plots || []) {
-      const c = plotContent(p), free = !c.tower && !c.building && !c.ruin;
-      if (!placing && !free) continue;
-      const ok = free && placing && G.run.materials >= b.cost;
-      const col = !placing ? 0xc8b890 : !free ? 0x6a645c : ok ? 0x5dff7a : 0xff5050;
-      const on = hov === p;
-      const X = p.cx * CELL, Y = p.cy * CELL, S = 2 * CELL;
-      g.fillStyle(col, on ? 0.3 : free ? 0.14 : 0.06); g.fillRect(X + 1, Y + 1, S - 2, S - 2);
-      corners(X, Y, S, col, on ? 1 : 0.75);
-    }
   }
 
   syncFort(f: any, animF: number) {
@@ -295,7 +284,7 @@ export class WorldRenderer {
     if (f.type === 'wall') {
       const k = f.hp / f.maxHp;
       const wt = WALL_TIERS[f.wtier || 2];
-      const spr = this.ensureSprite(f, wt.spr === 'fort_wall' && metaLv('f_wall') >= 3 && f.wtier === 2 ? 'fort_wall2' : wt.spr);
+      const spr = this.ensureSprite(f, wt.spr);
       spr.setPosition(x, y + 8).setFrame(k > 0.66 ? 0 : k > 0.33 ? 1 : 2).setDepth(f.y + 8).setTint(wt.tint);
     } else if (f.type === 'spikes') this.ensureSprite(f, 'fort_spikes').setPosition(x, y + 2).setDepth(f.y + 8);
     else if (f.type === 'cauldron') this.ensureSprite(f, 'fort_cauldron').setPosition(x, y + 2).setFrame(animF % 4).setDepth(f.y + 8);
@@ -371,8 +360,8 @@ export class WorldRenderer {
     for (const site of G.map.sites || []) {
       const t = siteTier(site), on = hov === site || sel === site.id;
       if (!mode && !on) continue;
-      const cost = siteUpgradeCost(site), ok = t < WALL_MAX_TIER && G.run.materials >= cost;
-      const c = on ? (t >= WALL_MAX_TIER ? 0xe8e0c0 : ok ? 0x5dff7a : 0xff5050) : t ? 0xc8b890 : 0x8a8478;
+      const ok = !t && wallSlotsFree() > 0;
+      const c = on ? (t ? 0xe8e0c0 : ok ? 0x5dff7a : 0xff5050) : t ? 0xc8b890 : 0x8a8478;
       g.fillStyle(c, on ? 0.32 : t ? 0.12 : 0.26);
       for (const [x, y] of site.cells) g.fillRect(x * CELL + 1, y * CELL + 1, CELL - 2, CELL - 2);
       g.fillStyle(c, on ? 0.95 : 0.8);
@@ -381,7 +370,7 @@ export class WorldRenderer {
         g.fillRect(X, Y, 3, SC); g.fillRect(X, Y, SC, 3); g.fillRect(X + CELL - 3, Y + CELL - SC, 3, SC); g.fillRect(X + CELL - SC, Y + CELL - 3, SC, 3);
       }
       if (on) {
-        const label = t >= WALL_MAX_TIER ? 'max' : (t ? 'up ' : '') + cost;
+        const label = t ? WALL_TIERS[t].name : ok ? 'raise' : 'no slots';
         const top = site.cells.reduce((m: number, c: number[]) => Math.min(m, c[1]), 99), xs = site.cells.map((c: number[]) => c[0]);
         const lx = (Math.min(...xs) + Math.max(...xs) + 1) / 2 * CELL;
         this.text(g, label, lx, Math.max(2, top * CELL - 9), c, 1);
@@ -404,7 +393,7 @@ export class WorldRenderer {
       g.fillRect(x * CELL, y * CELL, SC, SC);
     }
     if (b.kind === 'spell') { const r = SPELLS[b.type].radius || 40; this.ellipse(g, wx, wy, r, r * 0.7, PAL.necro, 0.9); this.ellipse(g, wx, wy, r - 2, (r - 2) * 0.7, PAL.necroD, 0.8, 2); return; }
-    const ok = canBuildAt(cx, cy, size, size) && G.run.souls >= b.cost;
+    const ok = canBuildAt(cx, cy, size, size) && trapSlotsFree() > 0;
     b.cx = cx; b.cy = cy; b.ok = ok;
     g.fillStyle(ok ? 0x5dff7a : 0xff4040, 0.35);
     g.fillRect(cx * CELL, cy * CELL, size * CELL, size * CELL);

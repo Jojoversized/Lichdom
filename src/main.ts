@@ -6,7 +6,7 @@ import * as ramparts from './systems/ramparts';
 import * as keep from './systems/keep';
 import * as events from './systems/events';
 import * as analytics from './systems/analytics';
-import { unearthCost } from './data/spells';
+import * as save from './systems/save';
 import * as Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
@@ -17,10 +17,11 @@ import * as combat from './systems/combat';
 import * as cards from './systems/cards';
 import * as stats from './systems/stats';
 import * as progression from './systems/progression';
-import { META_BY_ID } from './data/meta';
+import { META, META_BY_ID, metaCost } from './data/meta';
+import { KEEPS } from './data/world';
 import { stepVisual } from './systems/fx';
 import { canBuildAt } from './world/mapgen';
-import { UI, recruit } from './ui/ui';
+import { UI } from './ui/ui';
 
 const z0 = computeZoom().pz;
 const game = new Phaser.Game({
@@ -40,4 +41,4 @@ const game = new Phaser.Game({
 });
 window.addEventListener('resize', () => applyZoom(game));
 // Debug/test handle (used by tools/test/*.py; harmless in production).
-(window as any).__LICH = { G, game, UI, recruit, unearthCost, UNITS, canBuildAt, stepVisual, META_BY_ID, ...campaign, ...combat, ...cards, ...stats, ...progression, ...ramparts, ...keep, ...events, analytics };
+(window as any).__LICH = { G, game, UI, UNITS, canBuildAt, stepVisual, META, META_BY_ID, metaCost, KEEPS, ...campaign, ...combat, ...cards, ...stats, ...progression, ...ramparts, ...keep, ...events, ...save, analytics };

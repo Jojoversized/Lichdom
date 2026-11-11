@@ -8,7 +8,7 @@ import { ENEMIES } from '../data/enemies';
 import { TOWERS, FORTS } from '../data/towers';
 import { msg, lichSay, sfx } from '../core/events';
 import { addParticle, spawnBurst, addRing, addFlash, addText, addSoulParticle, explosion, lightningBolt, stampDecal } from './fx';
-import { applyUnitStats, towerMaxHp, fortMaxHp, metaLv, fb, globalDmg, dtypeMult, towerStats, waveHpMult, waveDmgMult, bountyMult, ascSouls } from './stats';
+import { applyUnitStats, towerMaxHp, fortMaxHp, metaLv, fb, globalDmg, dtypeMult, towerStats, waveHpMult, waveDmgMult, bountyMult, soulMult, waveEssence, essenceMult, ascHp, metaHp, structPower, keepIdx } from './stats';
 import { waveMods } from './events';
 import { SHEETS } from '../config/manifest';
 import { cellIdx } from '../world/mapgen';
@@ -37,20 +37,22 @@ export function spawnUnit(type: string, x: number, y: number, opts: any = {}): E
 
 export function summonCount(key: string) { return Math.max(1, Math.round(SUMMONS[key].count * (1 + metaLv('m_reinforce') * 0.5))); }
 
-export function spawnSummon(key: string, x?: number, y?: number, value?: number): Ent[] {
+/** Summoning spells: creatures that fight for `dur` seconds (0 = until they fall). They share the host's
+ *  web multipliers (Grave Strength, Bone Hardening, Empowerment, Fortitude, Eternal Night). */
+export function spawnSummon(key: string, x?: number, y?: number, dur = 0): Ent[] {
   const s = SUMMONS[key];
   const n = summonCount(key);
   const out: Ent[] = [];
   const cx = x ?? KEEP.x1 + 50, cy = y ?? KEEP.y + 20;
+  const night = metaLv('d_night') ? 2 : 1;
   for (let i = 0; i < n; i++) {
     const a = (i / n) * TAU, rr = n > 2 ? 18 + n : 10;
     const u = Object.assign(baseEnt('unit', cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.6), { type: key, def: s, team: 'u' as const, summon: true, flying: !!s.flying });
-    const w = G.run.wave;
-    u.maxHp = u.hp = Math.round(s.hp * Math.pow(1.07, w) * (1 + metaLv('n_hp') * 0.1));
-    u.dmg = s.dmg * Math.pow(1.07, w) * globalDmg() * dtypeMult(s.dtype);
+    u.maxHp = u.hp = Math.round(s.hp * Math.pow(1.06, metaLv('n_hp')) * ascHp() * metaHp() * night);
+    u.dmg = s.dmg * Math.pow(1.06, metaLv('n_dmg')) * night * globalDmg() * dtypeMult(s.dtype);
     u.armor = s.armor; u.range = s.range; u.spd = s.spd; u.cd = s.cd; u.splash = s.splash || 0;
     u.spr = s.spr; u.rad = sheetH(s.spr) > 30 ? 14 : 6; u.alt = u.flying ? (sheetH(s.spr) > 30 ? 20 : 14) : 0;
-    u.summonValue = value != null ? value / n : s.cost / n;
+    if (dur > 0) u.temp = dur * (1 + metaLv('s_sumdur') * 0.25) * (1 + fb('summonDur'));
     u.slot = Math.random();
     G.units.push(u); out.push(u);
   }
@@ -77,9 +79,9 @@ export function spawnEnemy(type: string | null, lane: string, opts: any = {}): E
   const hpM = waveHpMult(n) * fervor * (opts.champion ? 5 : 1) * waveMods().hp;
   const dmgM = waveDmgMult(n) * Math.sqrt(fervor) * (opts.champion ? 1.6 : 1);
   if (isBoss) {
-    const extra = Math.max(0, n - d.wave);
-    e.maxHp = e.hp = Math.round(d.hp * waveHpMult(n) / waveHpMult(d.wave) * (1 + extra * 0.05) * Math.sqrt(fervor) * 1.6 * waveMods().hp);
-    e.dmg = d.dmg * waveDmgMult(n) / waveDmgMult(d.wave) * 1.3;
+    // a keep's boss: base stats (hp0/dmg0) on the keep's exponential curve; always fought at full strength
+    e.maxHp = e.hp = Math.round(d.hp0 * waveHpMult(n) * Math.sqrt(fervor));
+    e.dmg = d.dmg0 * waveDmgMult(n);
     // story events can weaken the next boss (systems/events.ts 'bossHp'); consumed here
     const ro = G.run.rogue; if (ro && ro.bossHp && ro.bossHp !== 1) { e.maxHp = e.hp = Math.round(e.maxHp * ro.bossHp); ro.bossHp = 1; }
   } else {
@@ -87,8 +89,8 @@ export function spawnEnemy(type: string | null, lane: string, opts: any = {}): E
     e.dmg = d.dmg * dmgM;
   }
   e.armor = d.armor || 0; e.range = d.range; e.spd = d.spd * (1 - fb('enemySlow')); e.cd = d.cd;
-  e.bounty = Math.round(d.bounty * bountyMult(n) * (opts.champion ? 6 : 1) * (isBoss ? 2 : 1));
-  e.xp = d.xp * (opts.champion ? 6 : 1) * (1 + n * 0.03);
+  e.bounty = d.bounty * bountyMult(n) * (opts.champion ? 6 : 1);
+  e.xp = d.xp * (opts.champion ? 6 : 1) * (1 + n * 0.03) * (1 + keepIdx() * 0.5);
   e.spr = isBoss ? d.id : type!;
   e.boss = isBoss; e.champion = !!opts.champion;
   e.rad = isBoss ? 14 : sheetH(e.spr) > 28 ? 10 : 5;
@@ -229,7 +231,7 @@ export function damageKeep(amount: number, src: any) {
   G.shake = Math.max(G.shake, 2);
   if (G.run.mods.keep_spikes && src && !src.dead && src.team === 'm' && G.time - (src.spikeT || 0) > 1) {
     src.spikeT = G.time;
-    dealDamage(src, (30 + G.run.wave * 6) * globalDmg(), 'phys', NEUTRAL_SRC, { noCrit: true }); spawnBurst(src.x, src.y - 4, PAL.bone, 5);
+    dealDamage(src, 40 * waveHpMult(G.run.wave) * 0.5 * globalDmg(), 'phys', NEUTRAL_SRC, { noCrit: true }); spawnBurst(src.x, src.y - 4, PAL.bone, 5);
   }
   if (G.keep.hp <= 0) keepFallen();
 }
@@ -241,7 +243,7 @@ export function killEntity(t: any, src: any, dtype?: string) {
   else if (t.kind === 'unit') onUnitDeath(t);
   else if (t.kind === 'tower' || t.kind === 'fort') {
     // a fallen tower leaves a ruin on its plot; it rises again when the wave is repelled
-    if (t.kind === 'tower' && t.plot && G.run) G.run.ruins[t.plot] = { type: t.type, tier: t.tier, mat: t.matInvested || 0, mode: t.mode, kills: t.kills };
+    if (t.kind === 'tower' && t.plot && G.run) G.run.ruins[t.plot] = { type: t.type, tier: t.tier, mode: t.mode, kills: t.kills };
     t.dead = false; removeStructure(t);
     for (let i = 0; i < 24; i++) addParticle(t.x + rnd(-10, 10), t.y - rnd(0, 20), rnd(-40, 40), rnd(-60, -10), pick([PAL.stone, PAL.stoneL, PAL.stoneD]), 1.2, 'p', 2, 140);
     addRing(t.x, t.y, 4, 30, '#888888', 0.4); sfx('crumble');
@@ -256,15 +258,15 @@ function onEnemyDeath(e: any, src: any, dtype?: string) {
   e.dieT = 0; G.dying.push(e);
   r.kills++; G.stats.totalKills++;
   { const rec = reportSrc(src); if (rec) { const k = e.spr || e.type; rec.kills[k] = (rec.kills[k] || 0) + 1; rec.n++; const rep = waveReport(); (rep.names || (rep.names = {}))[k] = e.name || k; } }
-  let souls = e.bounty * (1 + r.m.souls + metaLv('s_gain') * 0.1 + fb('souls')) * ascSouls() * waveMods().reward;
+  let souls = e.bounty * soulMult() * waveMods().reward;
   let hb = 0;
   for (const t of G.towers) if (t.type === 'harvester' && dist2(t.x, t.y, e.x, e.y) < towerStats(t).range ** 2) hb = Math.max(hb, [0.5, 1, 1.5][t.tier]);
   souls *= 1 + hb;
   if (e.st.bloodT > 0) souls *= 2;
-  souls = Math.round(souls);
+  souls = Math.max(1, Math.round(souls));
   r.souls += souls; r.soulsEarned += souls;
   addSoulParticle(e.x, e.y - 8, souls);
-  gainXp(e.xp * (1 + r.m.xp + fb('xp')));
+  gainXp(e.xp * (1 + r.m.xp + fb('xp') + metaLv('x_xp') * 0.08));
   if (!e.flying || e.boss) addCorpse(e);
   const bloodless = e.def.bloodless;
   for (let k = 0; k < (e.boss ? 40 : 8); k++) addParticle(e.x + rnd(-4, 4), e.y - rnd(2, 12) - e.alt, rnd(-50, 50), rnd(-70, -10), bloodless ? pick(['#888888', '#aaaaaa', PAL.wood]) : pick([PAL.blood, PAL.bloodD, '#a02020']), 0.8, 'p', 1 + (Math.random() < 0.3 ? 1 : 0), 160);
@@ -283,7 +285,7 @@ function onEnemyDeath(e: any, src: any, dtype?: string) {
   const legionChance = (r.mods.leg_legion ? 0.2 : 0) + metaLv('n_raise') * 0.04;
   if (e.corpse && legionChance > 0 && Math.random() < legionChance) raiseCorpse(e.corpse, r.mods.leg_legion ? 40 : 25);
   if (e.boss) bossKilled(e);
-  if (e.champion) { msg(`${e.name} has fallen!`, PAL.gold); r.essenceBonus += 5; }
+  if (e.champion) { msg(`${e.name} has fallen!`, PAL.gold); r.essence += waveEssence(1) * essenceMult(); }
   sfx(e.boss ? 'bossdie' : 'die', 0.6);
 }
 
@@ -292,7 +294,7 @@ function onUnitDeath(u: any) {
   u.dieT = 0; G.dying.push(u);
   { const rep = waveReport(); if (rep && !u.temp) { const k = u.spr; const f = rep.fallen[k] || (rep.fallen[k] = { n: 0, type: u.type }); f.n++; } }
   // every non-temporary undead returns when the wave is repelled
-  if (!u.temp && G.wave) G.wave.fallen.push({ type: u.type, summon: !!u.summon, free: !!u.free, spr: u.fixedSpr ? u.spr : null, value: u.summonValue || 0, mult: u.raisedMult || 1 });
+  if (!u.temp && !u.summon && G.wave) G.wave.fallen.push({ type: u.type, free: !!u.free, spr: u.fixedSpr ? u.spr : null, mult: u.raisedMult || 1 });
   if (G.run.mods.pyre && !u.temp && !u.summon) { aoeDamage(u.x, u.y, 28, u.maxHp * 0.4, 'necro', u); if (Math.random() < 0.3) explosion(u.x, u.y, 24, PAL.necro); } // Martyr's Pyre
   if (u.type === 'zombie' && G.run.mods.zom_explode) { aoeDamage(u.x, u.y, 34, 40 + u.maxHp * 0.4, 'necro', u); explosion(u.x, u.y, 34, PAL.necro); }
   if (!u.summon && !u.temp && G.run.mods.unit_rise && !u.rose && Math.random() < 0.3) {

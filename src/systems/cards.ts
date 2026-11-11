@@ -3,15 +3,19 @@ import { G } from '../core/state';
 import { lichSay } from '../core/events';
 import { TOWERS, TOWER_ORDER } from '../data/towers';
 import { UNITS, UNIT_ORDER } from '../data/units';
-import { SPELLS, SPELL_ORDER } from '../data/spells';
 import { KEEP } from '../config/constants';
 import { pick, rnd } from '../core/util';
-import { spawnSquad, randomUnitType } from './campaign';
-import { contentAvailable, metaLv, recalcKeep, recalcAllStats, fortMaxHp, towerMaxHp } from './stats';
+import { spawnSquad, musterMore } from './campaign';
+import { metaLv, recalcKeep, recalcAllStats, fortMaxHp, towerMaxHp } from './stats';
+import { CARD_GATES } from '../data/meta';
 import { anPick } from './analytics';
 
 // ============================================================
 // Level-up card pool (three-choice roguelite upgrades)
+// v0.12: cards no longer unlock towers, undead or spells (the Phylactery web does). The base deck is the
+// first tier of every Power card plus Drills and Masteries for what you field; the stronger groups are
+// opened on the web (`gate`, see CARD_GATES in data/meta.ts): reinforcements, greater tiers, unit and
+// tower modifiers, unique rites and legendaries.
 // ============================================================
 export const RARITY = [
   { name: 'Common', color: '#b8b8b0', w: 50 },
@@ -21,8 +25,6 @@ export const RARITY = [
   { name: 'Legendary', color: '#ffb02e', w: 2 },
 ];
 
-function hasTower(r: any, t: string) { return r.unlockedTowers.includes(t); }
-function hasUnit(r: any, u: string) { return r.unlockedUnits.includes(u); }
 export function ownsTower(t: string) { return G.towers.some(x => x.type === t && !x.dead); }
 export function ownsUnit(u: string) { return G.units.some(x => x.type === u && !x.dead && !x.summon); }
 function modN(r: any, id: string) { return r.mods[id] || 0; }
@@ -33,7 +35,8 @@ export function buildCardPool(): any[] {
   // ---- generic stat cards
   // `fam` groups tiers of the same upgrade: a single offer never shows two tiers of one
   // family — the better tier is kept and the weaker one is rerolled (see rollCards).
-  const stat = (id: string, name: string, rar: number, desc: string, apply: (r: any) => void, max = 99, icon = 'skull', fam = '') => add({ id, name, rar, cat: 'Power', desc, apply, max, icon, fam: fam || id, req: () => true });
+  const GREATER = ['dmg2', 'tas2', 'uhp2', 'udm2', 'crit2', 'soul2'];
+  const stat = (id: string, name: string, rar: number, desc: string, apply: (r: any) => void, max = 99, icon = 'skull', fam = '') => add({ id, name, rar, cat: 'Power', desc, apply, max, icon, fam: fam || id, req: () => true, gate: GREATER.includes(id) ? 'greater' : undefined });
   stat('dmg1', 'Malevolence', 0, '+10% damage for everything you command.', (r: any) => r.m.dmg += 0.10, 99, 'skull', 'dmg');
   stat('dmg2', 'Profound Malevolence', 1, '+20% damage for everything you command.', (r: any) => r.m.dmg += 0.20, 99, 'skull', 'dmg');
   stat('tas1', 'Quickened Rituals', 0, '+10% tower attack speed.', (r: any) => r.m.towerAs += 0.10, 99, 'time', 'tas');
@@ -46,15 +49,13 @@ export function buildCardPool(): any[] {
   stat('uas1', 'Rattling Haste', 1, '+15% unit attack and move speed.', (r: any) => { r.m.unitAs += 0.15; r.m.unitSpd += 0.1; }, 99, 'frenzy');
   stat('crit1', 'Cruel Precision', 1, '+6% critical strike chance (x2 damage).', (r: any) => r.m.crit += 0.06, 6, 'bomb', 'crit');
   stat('crit2', 'Executioner', 3, 'Critical strikes deal x3 damage instead of x2. +5% crit chance.', (r: any) => { r.m.critMult = 3; r.m.crit += 0.05; }, 1, 'bomb', 'crit');
-  stat('soul1', 'Soul Greed', 0, '+15% souls from kills.', (r: any) => r.m.souls += 0.15, 99, 'soul', 'soul');
-  stat('soul2', 'Soul Gluttony', 2, '+35% souls from kills.', (r: any) => r.m.souls += 0.35, 99, 'soul', 'soul');
-  stat('cap1', 'Mass Graves', 0, 'Every squad you recruit raises +1 more undead.', (r: any) => r.m.squad += 1, 99, 'rally', 'squad');
-  stat('cap2', 'Necropolis', 2, 'Every squad you recruit raises +3 more undead.', (r: any) => r.m.squad += 3, 99, 'rally', 'squad');
-  // random reinforcements
-  add({ id: 'army_free', name: 'Unbidden Dead', rar: 0, cat: 'Army', icon: 'raise', fam: 'army_free', desc: 'A free squad of a random undead type you command claws out of the earth.', max: 99, req: () => true,
-    apply: (r: any) => { const pool = r.unlockedUnits.filter((u: string) => UNITS[u]); spawnSquad(pick(pool), KEEP.x1 + 40, KEEP.y + rnd(-40, 40)); } });
-  add({ id: 'army_new', name: 'Forgotten Crypt', rar: 1, cat: 'Army', icon: 'raise', fam: 'army_new', desc: 'Unlock a random new undead type and receive a free squad of it.', max: 99,
-    req: (r: any) => !!randomUnitType(true), apply: (r: any) => { const t = randomUnitType(true); r.unlockedUnits.push(t); spawnSquad(t, KEEP.x1 + 40, KEEP.y + rnd(-40, 40)); } });
+  stat('soul1', 'Soul Greed', 0, '+15% souls from kills (more haul for the Phylactery).', (r: any) => r.m.souls += 0.15, 99, 'soul', 'soul');
+  stat('soul2', 'Soul Gluttony', 2, '+35% souls from kills (more haul for the Phylactery).', (r: any) => r.m.souls += 0.35, 99, 'soul', 'soul');
+  // reinforcements (web: Unbidden Dead)
+  add({ id: 'cap1', name: 'Mass Graves', rar: 0, cat: 'Army', icon: 'rally', fam: 'squad', gate: 'reinforce', desc: '10% more of every undead type in your host rises at once (at least one of each).', max: 99, req: () => true, apply: () => { musterMore(0.1); } });
+  add({ id: 'cap2', name: 'Necropolis', rar: 2, cat: 'Army', icon: 'rally', fam: 'squad', gate: 'reinforce', desc: '25% more of every undead type in your host rises at once.', max: 99, req: () => true, apply: () => { musterMore(0.25); } });
+  add({ id: 'army_free', name: 'Unbidden Dead', rar: 0, cat: 'Army', icon: 'raise', fam: 'army_free', gate: 'reinforce', desc: 'A squad of a random undead type you command claws out of the earth.', max: 99, req: () => true,
+    apply: (r: any) => { const pool = r.unlockedUnits.filter((u: string) => UNITS[u]); spawnSquad(pick(pool.length ? pool : ['skeleton']), KEEP.x1 + 40, KEEP.y + rnd(-40, 40)); } });
   stat('keep1', 'Fortified Phylactery', 0, '+20% keep max health and heal 25%.', (r: any) => { r.m.keep += 0.2; recalcKeep(); G.keep.hp = Math.min(G.keep.maxHp, G.keep.hp + G.keep.maxHp * 0.25); }, 99, 'keep');
   stat('wall1', 'Bone Mortar', 0, '+30% wall and barricade health.', (r: any) => { r.m.wallHp += 0.3; G.forts.forEach((f: any) => { if (f.def.hp) { const nm = fortMaxHp(f); f.hp += nm - f.maxHp; f.maxHp = nm; } }); }, 99, 'wall');
   stat('cd1', 'Swift Incantations', 1, '-10% spell cooldowns.', (r: any) => r.m.spellCd *= 0.9, 5, 'time');
@@ -65,34 +66,21 @@ export function buildCardPool(): any[] {
   add({ id: 'keepbolt', name: 'Lich\'s Wrath', rar: 1, cat: 'Power', icon: 'deathwave', desc: 'The Lich\'s own bolts deal +40% damage and fire 20% faster.', max: 99, req: () => true, apply: (r: any) => { r.m.lichDmg += 0.4; r.m.lichAs += 0.2; } });
   add({ id: 'lichchain', name: 'Grasping Malice', rar: 2, cat: 'Power', icon: 'storm', desc: 'The Lich hurls an extra bolt each attack.', max: 3, req: () => true, apply: (r: any) => r.m.lichBolts += 1 });
 
-  // ---- tower unlocks
-  for (const t of TOWER_ORDER) {
-    add({ id: 'unlock_t_' + t, name: TOWERS[t].name, rar: t === 'abomination' || t === 'arcane' ? 3 : 2, cat: 'New Tower', tower: t, desc: 'Unlock: ' + TOWERS[t].desc, max: 1,
-      req: (r: any) => !hasTower(r, t) && contentAvailable('tower', t), apply: (r: any) => r.unlockedTowers.push(t) });
-    add({ id: 'tdmg_' + t, name: `${TOWERS[t].name} Mastery`, rar: 0, cat: 'Tower', tower: t, desc: `+30% ${TOWERS[t].name} damage.`, max: 99,
-      req: (r: any) => hasTower(r, t) && ownsTower(t) && TOWERS[t].dmg > 0, apply: (r: any) => r.towerDmg[t] = (r.towerDmg[t] || 0) + 0.3 });
-  }
-  // ---- unit unlocks
-  for (const u of UNIT_ORDER) {
-    add({ id: 'unlock_u_' + u, name: UNITS[u].name, rar: UNITS[u].size >= 3 ? 3 : 2, cat: 'New Unit', unit: u, desc: 'Unlock and raise a free squad: ' + UNITS[u].desc, max: 1,
-      req: (r: any) => !hasUnit(r, u) && contentAvailable('unit', u), apply: (r: any) => { r.unlockedUnits.push(u); spawnSquad(u, KEEP.x1 + 40, KEEP.y + rnd(-40, 40)); } });
-    add({ id: 'udmg_' + u, name: `${UNITS[u].name} Drill`, rar: 0, cat: 'Unit', unit: u, desc: `+30% ${UNITS[u].name} damage and health.`, max: 99,
-      req: (r: any) => hasUnit(r, u) && ownsUnit(u), apply: (r: any) => { r.unitBuff[u] = (r.unitBuff[u] || 0) + 0.3; } });
-  }
-  // ---- spell unlocks
-  for (const s of SPELL_ORDER) {
-    add({ id: 'spell_' + s, name: SPELLS[s].name, rar: s === 'apocalypse' ? 4 : 3, cat: 'New Spell', icon: SPELLS[s].icon, desc: 'Learn spell: ' + SPELLS[s].desc, max: 1,
-      req: (r: any) => !r.spells.includes(s) && (!SPELLS[s].meta || metaLv(SPELLS[s].meta) > 0), apply: (r: any) => r.spells.push(s) });
-  }
+  // ---- masteries and drills for what stands on the field
+  for (const t of TOWER_ORDER) add({ id: 'tdmg_' + t, name: `${TOWERS[t].name} Mastery`, rar: 0, cat: 'Tower', tower: t, desc: `+30% ${TOWERS[t].name} damage.`, max: 99,
+    req: () => ownsTower(t) && TOWERS[t].dmg > 0, apply: (r: any) => r.towerDmg[t] = (r.towerDmg[t] || 0) + 0.3 });
+  for (const u of UNIT_ORDER) add({ id: 'udmg_' + u, name: `${UNITS[u].name} Drill`, rar: 0, cat: 'Unit', unit: u, desc: `+30% ${UNITS[u].name} damage and health.`, max: 99,
+    req: () => ownsUnit(u), apply: (r: any) => { r.unitBuff[u] = (r.unitBuff[u] || 0) + 0.3; } });
   // ---- special modifiers
-  const mod = (id: string, name: string, rar: number, desc: string, req: (r: any) => boolean, max = 1, extra: any = {}) => add(Object.assign({ id, name, rar, cat: 'Modifier', desc, max, req, apply: (r: any) => r.mods[id] = (r.mods[id] || 0) + 1 }, extra));
-  const T = (t: string) => (r: any) => hasTower(r, t) && ownsTower(t);
-  const U = (u: string) => (r: any) => hasUnit(r, u) && ownsUnit(u);
+  const mod = (id: string, name: string, rar: number, desc: string, req: (r: any) => boolean, max = 1, extra: any = {}) => add(Object.assign({ id, name, rar, cat: 'Modifier', desc, max, req, apply: (r: any) => r.mods[id] = (r.mods[id] || 0) + 1,
+    gate: rar === 4 ? 'legend' : extra.tower ? 'towermod' : extra.unit ? 'unitmod' : 'unique' }, extra));
+  const T = (t: string) => () => ownsTower(t);
+  const U = (u: string) => () => ownsUnit(u);
   mod('brim_split', 'Splitting Hellfire', 2, 'Brimstone fireballs burst into 3 smaller fireballs on impact.', T('brimstone'), 1, { tower: 'brimstone' });
   mod('brim_inferno', 'Everburning Pitch', 1, 'Brimstone burning ground deals double damage and lasts twice as long.', T('brimstone'), 1, { tower: 'brimstone' });
   mod('tesla_chain', 'Conductive Souls', 2, 'Tesla lightning chains through twice as many enemies.', T('tesla'), 1, { tower: 'tesla' });
   mod('tesla_stun', 'Overload', 1, 'Tesla lightning has a 20% chance to stun for 0.7s.', T('tesla'), 1, { tower: 'tesla' });
-  mod('tesla_net', 'Storm Network', 3, 'Tesla Obelisks within 170px link with permanent arcs that burn enemies crossing them.', (r: any) => T('tesla')(r) && G.towers.filter((t: any) => t.type === 'tesla').length >= 1, 1, { tower: 'tesla' });
+  mod('tesla_net', 'Storm Network', 3, 'Tesla Obelisks within 170px link with permanent arcs that burn enemies crossing them.', T('tesla'), 1, { tower: 'tesla' });
   mod('necro_raise', 'Grave Calling', 2, 'Enemies slain by Necrotic Spires have a 50% chance to rise as skeletons for 25s.', T('necrotic'), 1, { tower: 'necrotic' });
   mod('necro_spread', 'Contagion', 1, 'Necrotic Spire damage spreads 40% to 2 nearby enemies.', T('necrotic'), 1, { tower: 'necrotic' });
   mod('frost_shatter', 'Shatter', 2, 'Frozen enemies that die explode in ice shards (30% of their max health).', T('frost'), 1, { tower: 'frost' });
@@ -119,8 +107,7 @@ export function buildCardPool(): any[] {
   mod('volatile', 'Volatile Remains', 2, '25% of slain mortals explode in necrotic fire.', () => true, 1);
   mod('keep_spikes', 'Bone Spires', 1, 'The keep impales attackers for heavy damage every second.', () => true, 1);
   // ---- unique picks (v0.9.1): one-time effects that reward variety instead of stacking one unit
-  mod('covenant', 'Unholy Covenant', 2, '+5% undead damage and health for every undead type you have raised.', (r: any) => r.unlockedUnits.length >= 3, 1, { icon: 'raise' });
-  mod('rites', 'Ossuary Rites', 1, 'Evolving an undead type costs 40% fewer souls.', (r: any) => r.unlockedUnits.some((u: string) => UNITS[u].tiers[(r.unitTier[u] || 0) + 1]), 1, { icon: 'level' });
+  mod('covenant', 'Unholy Covenant', 2, '+5% undead damage and health for every undead type in your host.', (r: any) => r.unlockedUnits.length >= 3, 1, { icon: 'raise' });
   mod('pyre', "Martyr's Pyre", 2, 'Fallen undead burst in necrotic fire for 40% of their max health.', (r: any) => G.units.length >= 10, 1, { icon: 'bomb' });
   mod('bond', 'Phylactery Bond', 2, 'The keep regenerates 1.5% of its max health per second during waves.', () => true, 1, { icon: 'keep' });
   mod('reaper', "Reaper's Mark", 2, 'The first blow against each mortal deals double damage.', () => true, 1, { icon: 'skull' });
@@ -137,6 +124,8 @@ export function buildCardPool(): any[] {
   return C;
 }
 
+/** A card group is in the deck once its web node is owned. */
+export function cardOpen(c: any) { return !c.gate || metaLv(CARD_GATES[c.gate]) > 0; }
 let CARD_POOL: any[] = null;
 /** Weight factor per earlier pick of the same card family (v0.9.1). */
 export const REPEAT_FALLOFF = 0.55;
@@ -144,7 +133,7 @@ export const REPEAT_FALLOFF = 0.55;
 export function rollCards(n = 3): any[] {
   const r = G.run;
   if (!CARD_POOL) CARD_POOL = buildCardPool();
-  const eligible = CARD_POOL.filter((c: any) => (r.picks[c.id] || 0) < c.max && !r.banished.includes(c.id) && c.req(r));
+  const eligible = CARD_POOL.filter((c: any) => (r.picks[c.id] || 0) < c.max && !r.banished.includes(c.id) && cardOpen(c) && c.req(r));
   const out: any[] = [];
   const banned = new Set<string>(); // families whose weaker tier was rerolled away
   const lvBonus = Math.min(1, r.level / 30);
