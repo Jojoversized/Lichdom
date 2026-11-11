@@ -195,7 +195,8 @@ Divinity) goes to the Phylactery → buy nodes on the web → besiege again.
   when `metaLv(parent) >= need`. Ids: `n_<unit>` muster, `u_<unit>` unlock, `e_<unit>` evolution, `t_<tower>`,
   `b_<building>`, `sp_<spell>`, `c_*` card groups, `d_*` divinity rites, `f_walls/f_towers/f_traps` slots,
   `f_walltier/f_ttier` tiers. Effects are read with `metaLv(id)` (mostly in `systems/stats.ts`). Balance target
-  (meta-loop bot, random play): ~10–13 sieges per keep.
+  (meta-loop bot, random play): ~13–18 sieges for keep 1 (v0.12.1: undead fight to the death, melee mortals hit the keep,
+  `BASE_DMG 1.3`, gains +10% via `BASE_SOULS 0.44` / `BASE_ESS 1.1`).
 - **Run state**: `r.keep`, `r.souls/essence/divinity` are the siege's haul (banked by `endCampaign(outcome)` in
   `progression.ts`: defeat / retreat / victory). `G.meta = { souls, essence, divinity, lv, keepsCleared, best, flags, layout }`.
 - **Defences**: slots from the web, free placement in prep only (`constructTower`, `buildSite`/`razeSite`, `placeTrap`);

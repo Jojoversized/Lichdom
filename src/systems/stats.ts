@@ -4,7 +4,7 @@ import { G } from '../core/state';
 import { TOWERS, FORTS, WALL_TIERS } from '../data/towers';
 import { UNITS } from '../data/units';
 import { legionBodies } from '../data/meta';
-import { KEEPS, KEEP_HP, KEEP_DMG, KEEP_SOULS, KEEP_ESS, WAVE_HP, WAVE_DMG, WAVE_SOULS, WAVES_PER_KEEP, BASE_HP, BASE_DMG, BASE_SOULS, KEEP_BASE_HP } from '../data/world';
+import { KEEPS, KEEP_HP, KEEP_DMG, KEEP_SOULS, KEEP_ESS, WAVE_HP, WAVE_DMG, WAVE_SOULS, WAVES_PER_KEEP, BASE_HP, BASE_DMG, BASE_SOULS, BASE_ESS, KEEP_BASE_HP } from '../data/world';
 
 export function metaLv(id: string): number { return (G.meta && G.meta.lv[id]) || 0; }
 /** Fortress (stronghold) bonus lookup. */
@@ -44,7 +44,7 @@ export function waveHpMult(n: number, k = keepIdx()) { return BASE_HP * Math.pow
 export function waveDmgMult(n: number, k = keepIdx()) { return BASE_DMG * Math.pow(KEEP_DMG, k) * Math.pow(WAVE_DMG, n - 1); }
 export function bountyMult(n: number, k = keepIdx()) { return BASE_SOULS * Math.pow(KEEP_SOULS, k) * Math.pow(WAVE_SOULS, n - 1); }
 /** Life Essence for repelling wave `n` of keep `k` (before Eternal Hunger and the crusade tier). */
-export function waveEssence(n: number, k = keepIdx()) { return Math.pow(KEEP_ESS, k) * (n >= WAVES_PER_KEEP ? 12 : 0.6 + 0.35 * n); }
+export function waveEssence(n: number, k = keepIdx()) { return BASE_ESS * Math.pow(KEEP_ESS, k) * (n >= WAVES_PER_KEEP ? 12 : 0.6 + 0.35 * n); }
 export function keepUnlocked(k: number) { return k <= ((G.meta && G.meta.keepsCleared) || 0) && k < KEEPS.length; }
 
 export function towerStats(t: any) {

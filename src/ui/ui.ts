@@ -344,7 +344,7 @@ export const UI: any = {
     } else if (s.kind === 'unit') {
       const nm = s.summon ? SUMMONS[s.type].name : UNITS[s.type].tiers[s.tier || 0].name;
       P.innerHTML = `<span class="x" id="i-x">✕</span><div class="ihead">${spriteIcon(s.spr, 0, 44)}<div><b>${nm}</b><div class="dim">${s.temp ? (s.summon ? 'Summoned' : 'Raised') + ` · ${Math.ceil(s.temp)}s left` : s.summon ? 'Summoned · until it falls' : 'Of your host'}</div></div></div>
-        <div class="istats"><span>Health</span><b>${fmt(s.hp)}/${fmt(s.maxHp)}</b><span>Damage</span><b>${fmt(s.dmg)}</b><span>Orders</span><b>${s.retreat ? 'mending at keep' : s.plan ? 'engaging' : 'holding its post'}</b></div>${s.summon ? '' : '<button class="btn small" id="i-det">Unit details</button>'}`;
+        <div class="istats"><span>Health</span><b>${fmt(s.hp)}/${fmt(s.maxHp)}</b><span>Damage</span><b>${fmt(s.dmg)}</b><span>Orders</span><b>${s.plan ? 'engaging' : 'holding its post'}</b></div>${s.summon ? '' : '<button class="btn small" id="i-det">Unit details</button>'}`;
       const db = $('#i-det'); if (db) db.onclick = () => this.showUnitDetail(s.type);
     }
     const x = $('#i-x'); if (x) x.onclick = () => { G.selected = null; P.classList.add('hidden'); };

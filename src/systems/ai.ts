@@ -278,7 +278,6 @@ export function planArmy(dt: number) {
   for (let i = slice; i < G.units.length; i += PLAN_SLICES) {
     const u = G.units[i];
     u.guard = isRanged(u) ? guardPosition(u, ctx, nRanged) : guardPosition(u, ctx, Math.max(1, ground));
-    if (u.retreat) { u.plan = null; continue; }
     let best: any = null, bc = Infinity;
     for (const t of threats) {
       const e = t.e;
@@ -308,13 +307,10 @@ export function updateUnit(u: any, dt: number) {
   u.cdT -= dt * frenzyMult();
   const d = u.def;
   const spd = u.spd * (u.st.slowT > 0 ? 1 - u.st.slow : 1);
-  // wounded undead fall back to the keep to mend (summons fight to the end)
+  // undead fight to the death (v0.12.1: no falling back to mend); those fighting at the gate still mend there
   const nearKeep = keepDistance(u.x, u.y) < 40;
-  if (!u.summon && u.hp < u.maxHp * 0.22 && G.phase === 'wave') u.retreat = true;
-  if (u.retreat && u.hp > u.maxHp * 0.7) u.retreat = false;
   if (nearKeep && u.hp < u.maxHp) u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.05 * dt);
   const emb = bld('embalm') * 0.008 + metaLv('m_regen') * 0.005; if (emb && u.hp < u.maxHp) u.hp = Math.min(u.maxHp, u.hp + u.maxHp * emb * dt); // Embalmer's Hall
-  if (u.retreat) { if (!nearKeep) { moveToward(u, KEEP.x1 + 14, KEEP.y + 20 + ((u.slot * 50) % 40) - 20, spd * 1.1, dt); setAnim(u, 'walk'); } else setAnim(u, 'idle'); return; }
   if (u.raiser) {
     u.abT = (u.abT ?? u.raiser) - dt;
     if (u.abT <= 0) {

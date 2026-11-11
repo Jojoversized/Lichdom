@@ -34,6 +34,6 @@ export const WAVES_PER_KEEP = 10;
 export const KEEP_HP = 13, KEEP_DMG = 6.5, KEEP_SOULS = 5, KEEP_ESS = 4;
 export const WAVE_HP = 1.25, WAVE_DMG = 1.12, WAVE_SOULS = 1.13;
 /** Mortals of the first keep, first wave, relative to the tables in data/enemies.ts. */
-export const BASE_HP = 2.2, BASE_DMG = 1.6, BASE_SOULS = 0.4;
+export const BASE_HP = 2.2, BASE_DMG = 1.3, BASE_SOULS = 0.44, BASE_ESS = 1.1;
 /** The keep's own health before the web (Foundations of Dread ×1.08 per level). */
 export const KEEP_BASE_HP = 700;

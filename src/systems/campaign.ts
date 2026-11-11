@@ -304,7 +304,7 @@ function waveCleared() {
   G.bossBar = null;
   if (last) { G.waveSummary = null; endCampaign('victory'); return; } // the keep is yours
   G.keep.hp = Math.min(G.keep.maxHp, G.keep.hp + G.keep.maxHp * 0.1);
-  G.units.forEach((u: any) => { u.hp = u.maxHp; u.retreat = false; });
+  G.units.forEach((u: any) => { u.hp = u.maxHp; });
   afterWave();
   if (Math.random() < 0.5) lichSay('waveClear');
   checkAchievements();
