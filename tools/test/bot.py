@@ -32,7 +32,7 @@ SIEGE = r"""
 ([keep, tier]) => {
   const L = window.__LICH, G = L.G;
   L.newCampaign(keep);
-  const t0 = performance.now(); let guard = 0, dupes = 0; const ev = [];
+  const t0 = performance.now(); let guard = 0, dupes = 0, stuck = null; const ev = [];
   const WALL_ORDER = ['keep_g', 'keep_n', 'keep_s', 'wall_2', 'wall_1', 'wall_3', 'wall_0', 'wall_4'];
   function place() {
     for (const id of WALL_ORDER) { const s = L.siteById(id); if (s && !L.siteTier(s) && L.wallSlotsFree() > 0) L.buildSite(s, true); }
@@ -46,9 +46,10 @@ SIEGE = r"""
     if (G.phase === 'prep') { place(); L.startWave(tier); }
     for (const s of G.run.spells) if (L.canCast(s) && G.enemies.length > 6) { const e = G.enemies[0]; L.castSpell(s, e.x, e.y); }
     L.step(1 / 30); L.stepVisual(1 / 30, 186, 416);
+    if (G.phase === 'wave' && G.wave.t > 1500) { stuck = { t: Math.round(G.wave.t), left: G.enemies.length, idx: G.wave.idx + '/' + G.wave.spawns.length, rage: G.wave.rage, foes: G.enemies.slice(0, 5).map(e => [e.type, Math.round(e.x), Math.round(e.y), Math.round(e.hp), e.flying ? 'fly' : '']), units: G.units.length, keep: Math.round(G.keep.hp) }; break; }
   }
   const r = G.run;
-  return { keep, wave: r.wave, out: r.anOutcome || 'STUCK', souls: Math.round(r.souls), ess: Math.round(r.essence * 10) / 10, div: r.divinity || 0, lvl: r.level, host: host0, towers: G.towers.length, dupes, events: ev.length, sec: Math.round(G.time), ms: Math.round(performance.now() - t0) };
+  return { keep, wave: r.wave, out: r.anOutcome || 'STUCK', stuck, souls: Math.round(r.souls), ess: Math.round(r.essence * 10) / 10, div: r.divinity || 0, lvl: r.level, host: host0, towers: G.towers.length, dupes, events: ev.length, sec: Math.round(G.time), ms: Math.round(performance.now() - t0) };
 }
 """
 errs = []
@@ -66,6 +67,7 @@ with sync_playwright() as p:
             keep = pg.evaluate("() => Math.min(window.__LICH.KEEPS.length - 1, window.__LICH.G.meta.keepsCleared || 0)")
             res = pg.evaluate(SIEGE, [keep, tier]); dupes += res['dupes']
             pg.wait_for_timeout(50)
+            if res.get('stuck'): print('STUCK', res['stuck']); errs.append('stuck wave'); pg.evaluate("() => window.__LICH.retreat()")
             bought = pg.evaluate(SPEND)
             purse = pg.evaluate("() => { const m = window.__LICH.G.meta; return [Math.round(m.souls), Math.round(m.essence), m.divinity, Object.keys(m.lv).length] }")
             print(f"#{i + 1:3d} keep {keep + 1} wave {res['wave']:2d} {res['out']:8s} host {res['host']:4d} tw {res['towers']:2d} lvl {res['lvl']:2d} +{res['souls']} souls +{res['ess']} ess{' +DIVINITY' if res['div'] else ''} | bought {sum(bought.values())} ({len(bought)} nodes) purse {purse} | {res['sec']}s sim {res['ms']}ms", flush=True)
