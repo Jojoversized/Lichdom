@@ -2,6 +2,7 @@
 import { G } from '../core/state';
 import { dist, dist2, rnd, rndi, pick, clamp, TAU } from '../core/util';
 import { CELL, KEEP, GUARD_LINE_X, LANES, PAL, WW, WH } from '../config/constants';
+import { SHEETS } from '../config/manifest';
 import { fortWallX, LICH_POS, GATE, R_CURTAIN, R_BULWARK, threatensZone, gateDist, DEFENSE_R } from '../data/fortress';
 import { sfx } from '../core/events';
 import { flowStep, worldToCell, cellIdx, flowDist } from '../world/mapgen';
@@ -18,6 +19,12 @@ import { WALL_TIERS } from '../data/towers';
 /** An attack always restarts its clip (fast attackers would otherwise sit on its last frame). */
 export function setAnim(e: any, a: string) { if (e.anim !== a || a === 'atk') { e.anim = a; e.at = 0; } }
 function startAttack(e: any) { setAnim(e, 'atk'); e.atkHold = 0.3; }
+/** Rigged attack clips are pose-to-pose with their own timing: `lead` s of wind-up before the blow lands, `total` s in all. */
+function swingOf(e: any): { lead: number; total: number } | null {
+  const m: any = SHEETS[e.spr]; if (!m || !m.durs || !m.durs.atk) return null;
+  if (!m._swing) { let t = 0; for (const d of m.durs.atk) t += d; m._swing = { lead: ((m.lead && m.lead.atk) || 0) / 1000, total: t / 1000 }; }
+  return m._swing;
+}
 function moveToward(e: any, tx: number, ty: number, spd: number, dt: number) {
   const dx = tx - e.x, dy = ty - e.y, d = Math.sqrt(dx * dx + dy * dy);
   if (d < 0.5) return true;
@@ -356,7 +363,11 @@ export function updateUnit(u: any, dt: number) {
     if (isRanged(u) && td < 16 && t.def.melee && !u.flying) { moveToward(u, u.x - 20, u.y + (u.slot > 0.5 ? 8 : -8), spd, dt); setAnim(u, 'walk'); }
     if (td <= u.range) {
       u.face = t.x > u.x ? 1 : -1;
-      if (u.cdT <= 0) { unitAttack(u, t); u.cdT = u.cd; }
+      // a rigged unit starts its swing early so that the blow lands exactly when the cooldown ends (same damage rate:
+      // the wind-up is the tail of the cooldown, only the very first blow after closing in waits for it)
+      const sw = swingOf(u);
+      if (sw && u.cdT <= sw.lead && !(u.windT > G.time)) { u.cdT = sw.lead * frenzyMult(); u.windT = G.time + sw.lead + 0.25; setAnim(u, 'atk'); u.atkHold = sw.total; }
+      if (u.cdT <= 0) { unitAttack(u, t, !!sw && u.windT > G.time); u.windT = 0; u.cdT = u.cd; }
       else if (u.anim === 'walk') setAnim(u, 'idle');
       return;
     }
@@ -387,10 +398,10 @@ export function updateUnit(u: any, dt: number) {
   }
 }
 
-function unitAttack(u: any, t: any) {
+function unitAttack(u: any, t: any, swung = false) {
   const d = u.def, r = G.run;
   if (d.ranged) {
-    setAnim(u, d.ranged === 'arrow' ? 'atk' : 'cast'); u.atkHold = 0.35;
+    if (!swung) { setAnim(u, d.ranged === 'arrow' ? 'atk' : 'cast'); u.atkHold = 0.35; }
     if (d.ranged === 'scream') {
       addRing(t.x, t.y, 2, u.splash, '#cfe8ff', 0.4); sfx('wail', 0.3);
       aoeDamage(t.x, t.y, u.splash, u.dmg, 'necro', u, { onHit: (e: any) => applySlow(e, d.slow, 2) });
@@ -407,7 +418,7 @@ function unitAttack(u: any, t: any) {
     sfx(d.ranged === 'arrow' ? 'bow' : d.ranged === 'firebreath' ? 'fireball' : 'necro', 0.2);
     return;
   }
-  startAttack(u);
+  if (!swung) startAttack(u);
   if (d.cleave || u.splash) {
     const cr = d.cleave || u.splash;
     aoeDamage(t.x, t.y, cr, u.dmg, d.dtype, u);

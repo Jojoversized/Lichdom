@@ -19,6 +19,43 @@ def merge(*ds):
     return out
 
 
+def _n(v):
+    if not isinstance(v, (tuple, list)):
+        return (float(v), 0.0, 0.0, 1.0, 1.0)
+    v = tuple(float(x) for x in v)
+    return v + (0.0, 0.0, 1.0, 1.0)[len(v) - 1:] if len(v) < 5 else v
+
+
+def lerp(a, b, u):
+    """Blend two poses (missing bones are at rest); u may overshoot past 1."""
+    out = {}
+    for k in set(a) | set(b):
+        va, vb = _n(a.get(k, 0)), _n(b.get(k, 0))
+        out[k] = tuple(x + (y - x) * u for x, y in zip(va, vb))
+    return out
+
+
+def swing(W, S, ms=(50, 110, 40, 110, 60, 80, 60), smear=None, over=1.1, F=None, A=None, R=None):
+    """A blow, pose to pose (xprite handbook, 'attacks and impacts'): anticipation the opposite way and HELD →
+    one fast smear frame → the hit at full extension, overshot and HELD → settle → a slower recovery.
+    W = wind-up pose, S = strike pose; F / A / R override the settle, first anticipation and recovery frames
+    (secondary parts that lag). `ms` are the seven frame durations; the hit lands at ms[0] + ms[1] + ms[2].
+    The slow-in / fast-out shape comes from the durations, never from evenly spaced in-betweens."""
+    pre = lerp(W, S, 0.8)
+    fr = [
+        dict(pose=merge(lerp({}, W, 0.6), A), ms=ms[0]),
+        dict(pose=W, ms=ms[1]),
+        dict(pose=pre, ms=ms[2]),
+        dict(pose=lerp(W, S, over), ms=ms[3], hit=True),
+        dict(pose=merge(S, F), ms=ms[4]),
+        dict(pose=merge(lerp(S, {}, 0.6), R), ms=ms[5]),
+        dict(pose=lerp(S, {}, 0.92), ms=ms[6]),
+    ]
+    if smear:
+        fr[2]['smear'] = merge({'from': lerp(W, S, 0.12), 'to': pre}, smear)
+    return (fr, 'frames')
+
+
 def biped(rig):
     """Walker on two legs with a weapon arm (`arm`), an off arm (`off`) and optional shield / cape / weapon bones."""
     g = lambda k, d: rig.get(k, d)
@@ -61,12 +98,19 @@ ARCH = {'biped': biped}
 def clips_for(rig):
     clips = ARCH[rig.get('arch', 'biped')](rig)
     clips.update(rig.get('clips', {}))
+    if 'swing' in rig:
+        clips['atk'] = swing(**rig['swing'])
     return clips
 
 
 # ------------------------------------------------------------------ the allied host
 RIGS['ai_skeleton_warrior'] = dict(
-    arch='biped', arm='armF', off='shield', wind=12, strike=-28, wpn=(-42, 16),
+    arch='biped', arm='armF', off='shield', wind=12, strike=-28, wpn=(-42, 16), margin=(20, 30),
+    # an overhead chop: the blade goes up behind the helm, then comes down on the foe with the whole body behind it
+    swing=dict(
+        W={'hips': (0, -3, 0), 'torso': -8, 'head': 4, 'armF': -183, 'weapon': 41, 'shield': (-4, 2, -1), 'legL': 5, 'legR': -3},
+        S={'hips': (0, 6, 1), 'torso': 12, 'head': -4, 'armF': -75, 'weapon': 33, 'shield': (5, -11, 3), 'legL': 12, 'shinL': 3, 'legR': -12, 'shinR': 10},
+        smear=dict(bone='weapon', tipR=0.5)),
     bones={
         'hips':   dict(p=(47, 63), t=(47, 69), z=5),
         'torso':  dict(parent='hips', p=(47, 62), t=(46, 38), z=6, r=1.5),
@@ -85,6 +129,10 @@ RIGS['ai_skeleton_warrior'] = dict(
 RIGS['ai_zombie_rotting'] = dict(
     arch='biped', arm='armF', off='armB', wind=18, strike=-42, fore=(14, -26), stride=0.85, armswing=7,
     idle_add={'head': (2, 0, 0), 'armF': 4, 'foreF': 3},
+    # a lurching double-armed maul
+    swing=dict(W={'hips': (0, -3, 0), 'torso': -10, 'head': 5, 'armF': 40, 'foreF': 20, 'armB': -70, 'legL': 4},
+               S={'hips': (0, 7, 1), 'torso': 16, 'head': -8, 'armF': -62, 'foreF': -38, 'armB': -55, 'legL': 12, 'legR': -10, 'shinR': 8},
+               ms=(70, 150, 50, 130, 70, 100, 70), smear={'bone': 'foreF', 'tipR': 0.7}),
     bones={
         'hips':  dict(p=(42, 57), t=(42, 65), z=5, r=1.6),
         'torso': dict(parent='hips', p=(42, 53), t=(46, 27), z=6, r=1.6),
@@ -100,6 +148,10 @@ RIGS['ai_zombie_rotting'] = dict(
 
 RIGS['ai_skeleton_cleric'] = dict(
     arch='biped', arm='weapon', off='armF', wind=-7, strike=12, stride=0, armswing=3, cast_arm=-10, cast_off=-16, lean=0.7,
+    # the staff is drawn back, then thrust at the foe as the bolt leaves it
+    swing=dict(W={'torso': -6, 'head': 3, 'weapon': (-14, -3, -2), 'armF': 6},
+               S={'hips': (0, 3, 0), 'torso': 8, 'head': -4, 'weapon': (16, 6, -2), 'armF': -10},
+               ms=(60, 130, 40, 120, 60, 90, 60)),
     bones={
         'hips':   dict(p=(45, 74), t=(45, 106), z=4, r=1.7),
         'torso':  dict(parent='hips', p=(45, 72), t=(45, 46), z=6, r=1.5),
@@ -110,7 +162,11 @@ RIGS['ai_skeleton_cleric'] = dict(
     })
 
 RIGS['ai_haunted_armor'] = dict(
-    arch='biped', arm='armF', off='armB', wind=20, strike=-36, fore=(12, -22), stride=0.8, armswing=7,
+    arch='biped', arm='armF', off='armB', wind=20, strike=-36, fore=(12, -22), stride=0.8, armswing=7, margin=(36, 10),
+    # a gauntlet haymaker
+    swing=dict(W={'hips': (0, -4, 0), 'torso': -9, 'head': 3, 'armB': 42, 'foreB': 34, 'armF': -18},
+               S={'hips': (0, 7, 1), 'torso': 14, 'head': -5, 'armB': -84, 'foreB': -22, 'armF': 26, 'foreF': 12, 'legL': 12, 'legR': -12, 'shinR': 10},
+               ms=(60, 140, 40, 130, 70, 100, 70), smear={'bone': 'foreB', 'tipR': 0.8}),
     bones={
         'hips':  dict(p=(53, 74), t=(53, 82), z=5, r=1.4),
         'torso': dict(parent='hips', p=(53, 72), t=(53, 46), z=6, r=2.0),
@@ -126,8 +182,12 @@ RIGS['ai_haunted_armor'] = dict(
     })
 
 RIGS['wendigo'] = dict(
-    arch='biped', arm='armB', off='armF', wind=14, strike=-30, stride=0.7, armswing=8, lean=0.6, margin=(16, 10),
-    strike_add={'head': -6, 'foreF': -8}, wind_add={'head': 4},
+    arch='biped', arm='armB', off='armF', wind=14, strike=-30, stride=0.7, armswing=8, lean=0.6,
+    strike_add={'head': -6, 'foreF': -8}, wind_add={'head': 4}, margin=(20, 26),
+    # rears up and rakes down with the long arm
+    swing=dict(W={'hips': (0, -3, -2), 'torso': -10, 'head': -8, 'armB': -85, 'armF': 8},
+               S={'hips': (0, 9, 1), 'torso': 12, 'head': 10, 'armB': 8, 'armF': -10, 'foreF': -8},
+               ms=(40, 90, 40, 100, 50, 70, 50), smear={'bone': 'armB', 'tipR': 0.55}),
     bones={
         'hips':  dict(p=(42, 40), t=(40, 47), z=5, r=1.2),
         'torso': dict(parent='hips', p=(42, 38), t=(70, 22), z=6, r=1.4),
@@ -148,6 +208,10 @@ RIGS['ai_skeleton_archer'] = dict(
         (0.75, {'torso': 1, 'weapon': -2, 'armF': (-2, 1, 0)}),
         (1.00, {}),
     ], False)},
+    # draw, hold, loose: the string hand snaps forward and the bow kicks
+    swing=dict(W={'hips': (0, -2, 0), 'torso': -4, 'head': -2, 'armF': (0, -7, 0), 'weapon': (-3, -1, 0), 'armB': (0, -1, 0)},
+               S={'hips': (0, 2, 0), 'torso': 3, 'head': 1, 'armF': (-6, 4, 1), 'weapon': (6, 2, 0)},
+               ms=(60, 140, 30, 90, 60, 80, 60)),
     bones={
         'hips':   dict(p=(43, 63), t=(43, 74), z=5, r=1.6),
         'torso':  dict(parent='hips', p=(43, 61), t=(42, 37), z=6, r=1.6, poly=[[(11, 17), (29, 15), (31, 37), (17, 41)]]),
@@ -163,11 +227,15 @@ RIGS['ai_skeleton_archer'] = dict(
     })
 
 RIGS['ai_skeleton_pikeman'] = dict(
-    arch='biped', arm='weapon', off='armB', wind=0, strike=0, stride=0.9, armswing=0, margin=(18, 10),
+    arch='biped', arm='weapon', off='armB', wind=0, strike=0, stride=0.9, armswing=0,
     cast_arm=0, cast_add={'weapon': (-3, 0, -1)},
     wind_add={'weapon': (2, -7, 2), 'armF': 6, 'foreF': 4, 'armB': 8},
     strike_add={'weapon': (-2, 12, -4), 'armF': -10, 'foreF': -8, 'armB': -12, 'hips': (0, 4, 1)},
-    follow_add={'weapon': (-1, 6, -2), 'armF': -6, 'armB': -8},
+    follow_add={'weapon': (-1, 6, -2), 'armF': -6, 'armB': -8}, margin=(34, 10),
+    # a full-body thrust
+    swing=dict(W={'hips': (0, -4, 0), 'torso': -8, 'weapon': (3, -14, 3), 'armF': 10, 'foreF': 6, 'armB': 14, 'legL': 4},
+               S={'hips': (0, 8, 1), 'torso': 12, 'head': -3, 'weapon': (-2, 18, -5), 'armF': -16, 'foreF': -10, 'armB': -18, 'legL': 12, 'legR': -12, 'shinR': 10},
+               ms=(60, 130, 40, 120, 60, 90, 60), over=1.15),
     bones={
         'hips':   dict(p=(62, 57), t=(62, 70), z=5, r=1.8),
         'torso':  dict(parent='hips', p=(62, 55), t=(62, 35), z=6, r=1.5),
@@ -185,7 +253,11 @@ RIGS['ai_skeleton_pikeman'] = dict(
 
 RIGS['ai_bone_mage'] = dict(
     arch='biped', arm='armB', off='weapon', wind=9, strike=-13, stride=0, armswing=2, lean=0.7, cast_arm=-16, cast_off=-3,
-    idle_add={'flame': (0, 0, -2), 'weapon': -1.5}, wind_add={'flame': (0, -1, 1)}, strike_add={'flame': (0, 3, -3)}, cast_add={'flame': (0, 0, -4)},
+    idle_add={'flame': (0, 0, -2), 'weapon': -1.5}, wind_add={'flame': (0, -1, 1)}, strike_add={'flame': (0, 3, -3)}, cast_add={'flame': (0, 0, -4)}, margin=(22, 14),
+    # the flame hand is pulled in, then thrown at the foe
+    swing=dict(W={'torso': -6, 'head': 3, 'armB': (0, -6, 0), 'flame': (0, -4, -3, 0.8, 0.8), 'weapon': -4},
+               S={'hips': (0, 3, 0), 'torso': 8, 'head': -4, 'armB': (-8, 8, -2), 'flame': (0, 10, -4, 1.35, 1.35), 'weapon': 5},
+               ms=(60, 130, 40, 120, 60, 90, 60)),
     bones={
         'hips':   dict(p=(55, 74), t=(55, 106), z=4, r=1.8),
         'torso':  dict(parent='hips', p=(55, 72), t=(55, 47), z=6, r=1.6),
@@ -198,8 +270,12 @@ RIGS['ai_bone_mage'] = dict(
     })
 
 RIGS['ai_wraith'] = dict(
-    arch='biped', arm='armB', off='armF', wind=-12, strike=12, fore=(-10, 16), stride=0, armswing=4, float=2, lean=0.8, margin=(16, 12),
-    strike_add={'hips': (0, 5, 1)},
+    arch='biped', arm='armB', off='armF', wind=-12, strike=12, fore=(-10, 16), stride=0, armswing=4, float=2, lean=0.8,
+    strike_add={'hips': (0, 5, 1)}, margin=(22, 22),
+    # a raking claw
+    swing=dict(W={'hips': (0, -5, -1), 'torso': -10, 'head': 4, 'armB': -40, 'foreB': -20, 'armF': 10, 'robe': -6},
+               S={'hips': (0, 9, 2), 'torso': 14, 'head': -4, 'armB': 30, 'foreB': 15, 'armF': -15, 'foreF': -10, 'robe': 10},
+               ms=(40, 90, 40, 100, 50, 70, 50), smear={'bone': 'foreB', 'tipR': 0.9}),
     bones={
         'hips':  dict(p=(50, 50), t=(50, 58), z=5, r=1.2),
         'robe':  dict(parent='hips', p=(48, 60), t=(34, 98), z=4, r=2.2),
@@ -214,6 +290,10 @@ RIGS['ai_wraith'] = dict(
 RIGS['ai_banshee'] = dict(
     arch='biped', arm='armB', off='armF', wind=8, strike=-16, stride=0, armswing=5, float=2, lean=0.8,
     wind_add={'head': -8, 'armF': -6}, strike_add={'head': 7, 'armF': 14, 'hips': (0, 2, 0)},
+    # draws breath, then screams with the arms thrown wide
+    swing=dict(W={'hips': (0, -3, -1), 'torso': -10, 'head': -12, 'armB': 10, 'armF': -8, 'cape': -8},
+               S={'hips': (0, 4, 1), 'torso': 12, 'head': 14, 'armB': -18, 'armF': 20, 'cape': 14, 'robe': 8},
+               ms=(60, 150, 40, 180, 70, 90, 60)),
     bones={
         'hips':  dict(p=(52, 50), t=(52, 58), z=5, r=1.3),
         'robe':  dict(parent='hips', p=(50, 60), t=(34, 96), z=4, r=2.2),
@@ -225,7 +305,11 @@ RIGS['ai_banshee'] = dict(
     })
 
 RIGS['ai_vampire_lord'] = dict(
-    arch='biped', arm='armB', off='armF', wind=-20, strike=14, wpn=(-26, 22), stride=0, armswing=5, float=1, lean=0.6, margin=(16, 12),
+    arch='biped', arm='armB', off='armF', wind=-20, strike=14, wpn=(-26, 22), stride=0, armswing=5, float=1, lean=0.6, margin=(28, 26),
+    # a rising slash from the hip
+    swing=dict(W={'hips': (0, -4, 0), 'torso': -8, 'armB': 35, 'weapon': 50, 'cape': -8, 'armF': 8},
+               S={'hips': (0, 8, 1), 'torso': 12, 'head': -4, 'armB': -70, 'weapon': -35, 'cape': 16, 'armF': -12, 'foreF': -10},
+               ms=(40, 90, 40, 100, 50, 70, 50), smear={'bone': 'weapon', 'tipR': 0.5}),
     bones={
         'hips':   dict(p=(62, 62), t=(60, 86), z=5, r=2.4),
         'torso':  dict(parent='hips', p=(62, 58), t=(64, 32), z=6, r=1.7),
@@ -259,7 +343,11 @@ def flyer(rig):
 ARCH['flyer'] = flyer
 
 RIGS['ai_bone_wyvern'] = dict(
-    arch='flyer', margin=(16, 14),
+    arch='flyer', margin=(22, 18),
+    # the neck coils back, then whips forward as it spits
+    swing=dict(W={'hips': (-6, -5, -2), 'head': -22, 'wingL': (-16, 0, 0, 1, 0.85), 'wingR': 12, 'tail': 10},
+               S={'hips': (6, 6, 2), 'head': (20, 5, 3), 'wingL': 14, 'wingR': -12, 'tail': -12, 'legL': -12, 'legR': -12},
+               ms=(60, 130, 40, 120, 60, 90, 60)),
     bones={
         'hips':  dict(p=(90, 62), t=(100, 64), z=5, r=1.6),
         'head':  dict(parent='hips', p=(104, 58), t=(132, 46), z=8, r=1.2),
@@ -271,7 +359,11 @@ RIGS['ai_bone_wyvern'] = dict(
     })
 
 RIGS['ai_flesh_abomination'] = dict(
-    arch='biped', arm='armB', off='armF', wind=-18, strike=16, wpn=(-20, 18), stride=0.7, armswing=6, lean=0.7, margin=(16, 12),
+    arch='biped', arm='armB', off='armF', wind=-18, strike=16, wpn=(-20, 18), stride=0.7, armswing=6, lean=0.7, margin=(22, 36),
+    # the cleaver goes up over the shoulder and comes down like a guillotine
+    swing=dict(W={'hips': (0, -3, 0), 'torso': -6, 'head': 3, 'armB': -90, 'weapon': -19, 'armF': 12, 'foreF': 8},
+               S={'hips': (0, 6, 2), 'torso': 12, 'head': -4, 'armB': -32, 'weapon': 32, 'armF': -14, 'foreF': -10, 'legL': 8, 'legR': -8, 'shinR': 8},
+               ms=(80, 190, 50, 150, 80, 120, 80), smear={'bone': 'weapon', 'tipR': 0.6}),
     bones={
         'hips':   dict(p=(80, 80), t=(80, 98), z=5, r=1.8),
         'torso':  dict(parent='hips', p=(80, 76), t=(76, 40), z=6, r=3.0),
@@ -288,7 +380,11 @@ RIGS['ai_flesh_abomination'] = dict(
     })
 
 RIGS['ai_bone_golem'] = dict(
-    arch='biped', arm='armF', off='armB', wind=18, strike=-34, fore=(12, -20), stride=0.7, armswing=6, lean=0.7, margin=(16, 12),
+    arch='biped', arm='armF', off='armB', wind=18, strike=-34, fore=(12, -20), stride=0.7, armswing=6, lean=0.7, margin=(42, 40),
+    # both fists go up, then the whole golem drops on the foe
+    swing=dict(W={'hips': (0, -3, -2), 'torso': -8, 'head': 4, 'armF': -150, 'foreF': -20, 'armB': -140, 'foreB': -20, 'legL': 3},
+               S={'hips': (0, 6, 4), 'torso': 14, 'head': -5, 'armF': -78, 'foreF': -8, 'armB': -72, 'foreB': -5, 'legL': 8, 'legR': -8, 'shinR': 8},
+               ms=(80, 190, 50, 150, 80, 120, 80), smear={'bone': 'foreF', 'tipR': 0.8}),
     bones={
         'hips':  dict(p=(60, 80), t=(60, 94), z=5, r=1.6),
         'torso': dict(parent='hips', p=(60, 76), t=(62, 42), z=6, r=2.6),

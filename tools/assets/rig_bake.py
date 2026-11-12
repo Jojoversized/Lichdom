@@ -13,7 +13,8 @@ How it works (deterministic, re-runnable):
      nearest-neighbour sampling (texels are never blended, so the art keeps its palette) and the
      selective outline is re-drawn around the new silhouette
   5. clips are keyframed per archetype (tools/assets/rigs.py) and sampled with eased interpolation:
-     idle 6, walk 8, atk 6, cast 6 frames
+     idle 6, walk 8, cast 6 frames; attacks are pose-to-pose (anticipation, smear, held hit,
+     follow-through, recovery, overshoot) with their own per-frame durations
 
 The rest pose renders back to the original image exactly (checked on every bake).
 
@@ -111,7 +112,7 @@ def build_layers(rest, lab, names, bones):
             # what may lie beneath a covering piece: the stretch BETWEEN this piece's own texels (a sword across a
             # leg, an arm across the chest: morphological closing) plus a thin rim for the joints. Never a blind
             # smear outwards: empty space behind a weapon stays empty.
-            close, rim = bones[n].get('close', 7), bones[n].get('under', 2)
+            close, rim = bones[n].get('close', 7), bones[n].get('under', 9 if n == 'torso' else 2)
             if above.any():
                 pad = close + 2
                 op = np.pad(own, pad)
@@ -179,6 +180,47 @@ def render(layers, names, bones, pose, W, H, ox, oy):
     return canvas
 
 
+def lerp_pose(a, b, u):
+    out = {}
+    for k in set(a) | set(b):
+        va = np.array(norm(a.get(k, 0)), float); vb = np.array(norm(b.get(k, 0)), float)
+        v = va + (vb - va) * u
+        out[k] = (float(v[0]), float(v[1]), float(v[2]), float(v[3]), float(v[4]))
+    return out
+
+
+def smear_mask(layers, lab, names, bones, spec, W, H, ox, oy):
+    """The area a weapon (or claw) sweeps between two poses: the union of its striking end over the swing,
+    minus where it ends up. Painted opaque in the piece's two brightest colours (the classic smear frame)."""
+    bone = spec['bone']; i = names.index(bone)
+    b = bones[bone]
+    own = lab == i
+    tip = np.array(b.get('t', b['p']), float); piv = np.array(b['p'], float)
+    if np.hypot(*(tip - piv)) < 4:      # a pinned weapon without a real bone: its striking end is its farthest texel
+        ys, xs = np.nonzero(own); j = np.argmax(np.hypot(xs - piv[0], ys - piv[1])); tip = np.array([xs[j], ys[j]], float)
+    R = spec.get('tipR', 0.62) * max(8.0, float(np.hypot(*(tip - piv))))
+    Y, X = np.mgrid[0:own.shape[0], 0:own.shape[1]]
+    dtip = np.hypot(X - tip[0], Y - tip[1])
+    steps = spec.get('steps', 14)
+    acc = np.zeros((H, W), bool); last = None
+    for k in range(steps + 1):
+        # a crescent: only the very tip trails far behind, the full striking end is drawn next to the weapon
+        lay = np.zeros(own.shape + (4,), np.uint8); lay[own & (dtip <= R * (0.22 + 0.78 * (k / steps) ** 1.5))] = 255
+        one = [np.zeros_like(l) for l in layers]; one[i] = lay
+        pose = lerp_pose(spec['from'], spec['to'], k / steps)
+        m = render(one, names, bones, pose, W, H, ox, oy)[..., 3] > 0
+        m = ndi.binary_dilation(m, iterations=1)
+        acc |= m
+        last = m
+    acc = ndi.binary_closing(acc, iterations=2)
+    lead = ndi.binary_dilation(last, iterations=spec.get('lead', 2)) & acc     # the bright leading edge, next to the weapon
+    rgb = layers[i][own][:, :3].astype(int)
+    lum = rgb.sum(1)
+    hi = rgb[lum >= np.percentile(lum, 92)].mean(0); mid = rgb[lum >= np.percentile(lum, 70)].mean(0)
+    hi = np.clip(hi * 1.12 + 22, 0, 255); mid = np.clip(mid * 1.0 + 6, 0, 255)
+    return acc, lead, hi.astype(np.uint8), mid.astype(np.uint8)
+
+
 def ease(u):
     return u * u * (3 - 2 * u)
 
@@ -224,13 +266,29 @@ def bake(key, man, debug=None, preview=None, write=True, check=None):
     r0 = render(layers, names, bones, {}, fw, fh, 0, 0)
     same = np.array_equal(r0[..., 3] > 0, rest[..., 3] > 0) and np.array_equal(r0[r0[..., 3] > 0][:, :3], rest[rest[..., 3] > 0][:, :3])
     clips = rigs.clips_for(rig)
-    frames, anims, i = [], {}, 0
+    frames, anims, durs, leads, i = [], {}, {}, {}, 0
     for name in ORDER:
         keys, loop = clips[name]
-        poses = sample_clip(keys, FRAMES[name], loop)
-        anims[name] = [i, len(poses)]
-        for p in poses:
-            f = render(layers, names, bones, p, W, H, mx, my)
+        if loop == 'frames':
+            # pose-to-pose: every entry is one drawn frame {pose, ms, smear?} (attacks: nothing is interpolated away)
+            seq = keys; durs[name] = [int(f['ms']) for f in seq]
+            leads[name] = sum(int(f['ms']) for f in seq[:next((j for j, f in enumerate(seq) if f.get('hit')), 0)])   # ms until the blow lands
+        else:
+            seq = [{'pose': p} for p in sample_clip(keys, FRAMES[name], loop)]
+        anims[name] = [i, len(seq)]
+        for fr in seq:
+            f = render(layers, names, bones, fr['pose'], W, H, mx, my)
+            sm = fr.get('smear')
+            if sm:
+                acc, lead, hi, mid = smear_mask(layers, lab, names, bones, sm, W, H, mx, my)
+                if sm.get('thin'):
+                    acc = ndi.binary_erosion(acc, iterations=sm['thin']) & lead; lead = acc & False
+                body = np.zeros((H, W), bool)
+                if sm.get('behind', True):   # the body stays readable: the smear never covers it, only the air around it
+                    hide = names
+                    body = render([l if names[j] in hide else np.zeros_like(l) for j, l in enumerate(layers)], names, bones, fr['pose'], W, H, mx, my)[..., 3] > 0
+                acc &= ~body; lead &= ~body
+                f[acc] = np.append(mid, 255); f[lead] = np.append(hi, 255)
             frames.append(sel_outline(f.astype(np.float32)).clip(0, 255).astype(np.uint8))
             i += 1
     if debug:
@@ -256,7 +314,7 @@ def bake(key, man, debug=None, preview=None, write=True, check=None):
         Image.fromarray((sh[..., :3] * a + bg * (1 - a)).astype(np.uint8)).resize((sh.shape[1] * S, sh.shape[0] * S), Image.NEAREST).save(preview)
     if check:
         S = 3
-        pick = [frames[anims['walk'][0] + k] for k in (0, 2, 4)] + [frames[anims['atk'][0] + k] for k in (1, 2, 3)] + [frames[anims['cast'][0] + 3], frames[anims['idle'][0] + 3]]
+        pick = [frames[anims['atk'][0] + k] for k in range(anims['atk'][1])] if os.environ.get('RIG_ATK') else [frames[anims['walk'][0] + k] for k in (0, 2, 4)] + [frames[anims['atk'][0] + k] for k in (1, 2, 3)] + [frames[anims['cast'][0] + 3], frames[anims['idle'][0] + 3]]
         sh = np.concatenate(pick, 1)
         bg = np.zeros(sh.shape[:2] + (3,), np.uint8) + np.array([70, 30, 70], np.uint8)
         a = sh[..., 3:4] / 255.0
@@ -270,7 +328,7 @@ def bake(key, man, debug=None, preview=None, write=True, check=None):
         rel = f"sprites/{meta['category']}/rig/{key}.png"
         os.makedirs(os.path.join(ROOT, 'assets', os.path.dirname(rel)), exist_ok=True)
         Image.fromarray(np.concatenate(rows, 0), 'RGBA').save(os.path.join(ROOT, 'assets', rel), optimize=True)
-        man.setdefault('rigged', {})[key] = {'file': rel, 'fw': W, 'fh': H, 'frames': len(frames), 'anims': anims}
+        man.setdefault('rigged', {})[key] = {'file': rel, 'fw': W, 'fh': H, 'frames': len(frames), 'anims': anims, 'durs': durs, 'lead': leads}
     print(f"{key}: {len(names)} bones, {len(frames)} frames {W}x{H}, rest pose {'exact' if same else 'DIFFERS'}")
     return same
 

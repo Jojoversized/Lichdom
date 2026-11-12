@@ -209,6 +209,13 @@ Divinity) goes to the Phylactery → buy nodes on the web → besiege again.
   per row) + `rigged` in `manifest_ai.json`, applied by BootScene over the sheet of the same key (delete the entry or
   set `"rig": false` to fall back). The rest pose must bake back to the source exactly (the tool checks). Frame counts
   are free: `animFrameIndex` gives each clip a fixed duration. Done: the 14 allied units; not yet: Lich, crusaders, bosses.
+- v0.13.1 **attacks**: a rig's `swing=dict(W=wind-up pose, S=strike pose, ms=7 frame durations, smear=dict(bone=…))` makes a
+  pose-to-pose attack (anticipation ×2, smear, hit, settle, recover ×2) instead of evenly eased keys; `RIG_ATK=1 rig_bake.py <key>
+  --check out.png --no-write` shows the seven frames. The manifest's `durs.atk` (ms per frame) drives `animFrameIndex`, and
+  `lead.atk` (ms to the hit frame) drives the sim: `swingOf()` in `ai.ts` starts the clip that long before the cooldown ends, so
+  the blow, its numbers and its sound land on the hit frame. Review in Xprite (xprite.cc, `window.xpriteAgent`): fetch the sheet,
+  `createDocument` → `applyBatch` (addFrame / addTag) → `importImage` per frame → `validate` / `render`; Xprite has no free
+  rotation, so posing stays in the rig tool and Xprite is for review, timing and hand touch-ups.
 - **Run state**: `r.keep`, `r.souls/essence/divinity` are the siege's haul (banked by `endCampaign(outcome)` in
   `progression.ts`: defeat / retreat / victory). `G.meta = { souls, essence, divinity, lv, keepsCleared, best, flags, layout }`.
 - **Defences**: slots from the web, free placement in prep only (`constructTower`, `buildSite`/`razeSite`, `placeTrap`);

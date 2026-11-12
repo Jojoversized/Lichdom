@@ -856,9 +856,9 @@
  "rigged": {
   "ai_skeleton_warrior": {
    "file": "sprites/units/rig/ai_skeleton_warrior.png",
-   "fw": 124,
-   "fh": 116,
-   "frames": 26,
+   "fw": 136,
+   "fh": 136,
+   "frames": 27,
    "anims": {
     "idle": [
      0,
@@ -870,19 +870,33 @@
     ],
     "atk": [
      14,
-     6
+     7
     ],
     "cast": [
-     20,
+     21,
      6
     ]
+   },
+   "durs": {
+    "atk": [
+     50,
+     110,
+     40,
+     110,
+     60,
+     80,
+     60
+    ]
+   },
+   "lead": {
+    "atk": 200
    }
   },
   "ai_zombie_rotting": {
    "file": "sprites/units/rig/ai_zombie_rotting.png",
    "fw": 110,
    "fh": 112,
-   "frames": 26,
+   "frames": 27,
    "anims": {
     "idle": [
      0,
@@ -894,19 +908,33 @@
     ],
     "atk": [
      14,
-     6
+     7
     ],
     "cast": [
-     20,
+     21,
      6
     ]
+   },
+   "durs": {
+    "atk": [
+     70,
+     150,
+     50,
+     130,
+     70,
+     100,
+     70
+    ]
+   },
+   "lead": {
+    "atk": 270
    }
   },
   "ai_skeleton_cleric": {
    "file": "sprites/units/rig/ai_skeleton_cleric.png",
    "fw": 123,
    "fh": 124,
-   "frames": 26,
+   "frames": 27,
    "anims": {
     "idle": [
      0,
@@ -918,19 +946,33 @@
     ],
     "atk": [
      14,
-     6
+     7
     ],
     "cast": [
-     20,
+     21,
      6
     ]
+   },
+   "durs": {
+    "atk": [
+     60,
+     130,
+     40,
+     120,
+     60,
+     90,
+     60
+    ]
+   },
+   "lead": {
+    "atk": 230
    }
   },
   "ai_haunted_armor": {
    "file": "sprites/units/rig/ai_haunted_armor.png",
-   "fw": 125,
+   "fw": 169,
    "fh": 128,
-   "frames": 26,
+   "frames": 27,
    "anims": {
     "idle": [
      0,
@@ -942,19 +984,33 @@
     ],
     "atk": [
      14,
-     6
+     7
     ],
     "cast": [
-     20,
+     21,
      6
     ]
+   },
+   "durs": {
+    "atk": [
+     60,
+     140,
+     40,
+     130,
+     70,
+     100,
+     70
+    ]
+   },
+   "lead": {
+    "atk": 240
    }
   },
   "wendigo": {
    "file": "sprites/units/rig/wendigo.png",
-   "fw": 158,
-   "fh": 104,
-   "frames": 26,
+   "fw": 166,
+   "fh": 120,
+   "frames": 27,
    "anims": {
     "idle": [
      0,
@@ -966,19 +1022,33 @@
     ],
     "atk": [
      14,
-     6
+     7
     ],
     "cast": [
-     20,
+     21,
      6
     ]
+   },
+   "durs": {
+    "atk": [
+     40,
+     90,
+     40,
+     100,
+     50,
+     70,
+     50
+    ]
+   },
+   "lead": {
+    "atk": 170
    }
   },
   "ai_skeleton_archer": {
    "file": "sprites/units/rig/ai_skeleton_archer.png",
    "fw": 129,
    "fh": 116,
-   "frames": 26,
+   "frames": 27,
    "anims": {
     "idle": [
      0,
@@ -990,19 +1060,33 @@
     ],
     "atk": [
      14,
-     6
+     7
     ],
     "cast": [
-     20,
+     21,
      6
     ]
+   },
+   "durs": {
+    "atk": [
+     60,
+     140,
+     30,
+     90,
+     60,
+     80,
+     60
+    ]
+   },
+   "lead": {
+    "atk": 230
    }
   },
   "ai_skeleton_pikeman": {
    "file": "sprites/units/rig/ai_skeleton_pikeman.png",
-   "fw": 207,
+   "fw": 239,
    "fh": 116,
-   "frames": 26,
+   "frames": 27,
    "anims": {
     "idle": [
      0,
@@ -1014,19 +1098,33 @@
     ],
     "atk": [
      14,
-     6
+     7
     ],
     "cast": [
-     20,
+     21,
      6
     ]
+   },
+   "durs": {
+    "atk": [
+     60,
+     130,
+     40,
+     120,
+     60,
+     90,
+     60
+    ]
+   },
+   "lead": {
+    "atk": 230
    }
   },
   "ai_bone_mage": {
    "file": "sprites/units/rig/ai_bone_mage.png",
-   "fw": 142,
-   "fh": 124,
-   "frames": 26,
+   "fw": 158,
+   "fh": 128,
+   "frames": 27,
    "anims": {
     "idle": [
      0,
@@ -1038,19 +1136,33 @@
     ],
     "atk": [
      14,
-     6
+     7
     ],
     "cast": [
-     20,
+     21,
      6
     ]
+   },
+   "durs": {
+    "atk": [
+     60,
+     130,
+     40,
+     120,
+     60,
+     90,
+     60
+    ]
+   },
+   "lead": {
+    "atk": 230
    }
   },
   "ai_wraith": {
    "file": "sprites/units/rig/ai_wraith.png",
-   "fw": 156,
-   "fh": 122,
-   "frames": 26,
+   "fw": 168,
+   "fh": 132,
+   "frames": 27,
    "anims": {
     "idle": [
      0,
@@ -1062,19 +1174,33 @@
     ],
     "atk": [
      14,
-     6
+     7
     ],
     "cast": [
-     20,
+     21,
      6
     ]
+   },
+   "durs": {
+    "atk": [
+     40,
+     90,
+     40,
+     100,
+     50,
+     70,
+     50
+    ]
+   },
+   "lead": {
+    "atk": 170
    }
   },
   "ai_banshee": {
    "file": "sprites/units/rig/ai_banshee.png",
    "fw": 131,
    "fh": 116,
-   "frames": 26,
+   "frames": 27,
    "anims": {
     "idle": [
      0,
@@ -1086,19 +1212,33 @@
     ],
     "atk": [
      14,
-     6
+     7
     ],
     "cast": [
-     20,
+     21,
      6
     ]
+   },
+   "durs": {
+    "atk": [
+     60,
+     150,
+     40,
+     180,
+     70,
+     90,
+     60
+    ]
+   },
+   "lead": {
+    "atk": 250
    }
   },
   "ai_vampire_lord": {
    "file": "sprites/units/rig/ai_vampire_lord.png",
-   "fw": 183,
-   "fh": 114,
-   "frames": 26,
+   "fw": 207,
+   "fh": 128,
+   "frames": 27,
    "anims": {
     "idle": [
      0,
@@ -1110,19 +1250,33 @@
     ],
     "atk": [
      14,
-     6
+     7
     ],
     "cast": [
-     20,
+     21,
      6
     ]
+   },
+   "durs": {
+    "atk": [
+     40,
+     90,
+     40,
+     100,
+     50,
+     70,
+     50
+    ]
+   },
+   "lead": {
+    "atk": 170
    }
   },
   "ai_bone_wyvern": {
    "file": "sprites/units/rig/ai_bone_wyvern.png",
-   "fw": 194,
-   "fh": 144,
-   "frames": 26,
+   "fw": 206,
+   "fh": 148,
+   "frames": 27,
    "anims": {
     "idle": [
      0,
@@ -1134,19 +1288,33 @@
     ],
     "atk": [
      14,
-     6
+     7
     ],
     "cast": [
-     20,
+     21,
      6
     ]
+   },
+   "durs": {
+    "atk": [
+     60,
+     130,
+     40,
+     120,
+     60,
+     90,
+     60
+    ]
+   },
+   "lead": {
+    "atk": 230
    }
   },
   "ai_flesh_abomination": {
    "file": "sprites/units/rig/ai_flesh_abomination.png",
-   "fw": 200,
-   "fh": 150,
-   "frames": 26,
+   "fw": 212,
+   "fh": 174,
+   "frames": 27,
    "anims": {
     "idle": [
      0,
@@ -1158,19 +1326,33 @@
     ],
     "atk": [
      14,
-     6
+     7
     ],
     "cast": [
-     20,
+     21,
      6
     ]
+   },
+   "durs": {
+    "atk": [
+     80,
+     190,
+     50,
+     150,
+     80,
+     120,
+     80
+    ]
+   },
+   "lead": {
+    "atk": 320
    }
   },
   "ai_bone_golem": {
    "file": "sprites/units/rig/ai_bone_golem.png",
-   "fw": 154,
-   "fh": 158,
-   "frames": 26,
+   "fw": 206,
+   "fh": 186,
+   "frames": 27,
    "anims": {
     "idle": [
      0,
@@ -1182,12 +1364,26 @@
     ],
     "atk": [
      14,
-     6
+     7
     ],
     "cast": [
-     20,
+     21,
      6
     ]
+   },
+   "durs": {
+    "atk": [
+     80,
+     190,
+     50,
+     150,
+     80,
+     120,
+     80
+    ]
+   },
+   "lead": {
+    "atk": 320
    }
   }
  }
