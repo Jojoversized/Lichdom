@@ -82,7 +82,7 @@ with sync_playwright() as p:
     pg.click('#b-wave'); pg.wait_for_timeout(400); shot(pg, 'f_crusade')
     print('crusade offer:', ev("() => window.__LICH.G.crusadeOffer.waves.map(w => w.total)"))
     pg.click('.card.crusade >> nth=2'); pg.wait_for_timeout(5000); shot(pg, 'g_wave')
-    assert ev("() => window.__LICH.G.wave.tier") == 2 and ev("() => window.__LICH.rogue().zeal") == 1
+    assert ev("() => window.__LICH.G.wave.tier") == 2
     ev("() => { window.__LICH.G.run.pendingLevels = 1; }"); pg.wait_for_timeout(500); shot(pg, 'h_levelup')
     pg.keyboard.press('2'); pg.wait_for_timeout(200)
     pg.keyboard.press('1'); pg.wait_for_timeout(300)

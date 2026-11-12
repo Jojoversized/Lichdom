@@ -84,7 +84,7 @@ export function anWaveEnd(S: any) {
   a.waves.push({
     n: S.n, tier: S.tier, theme: S.theme, boss: S.boss || null, dur: rnd1(G.time - (cur.t0 ?? G.time)),
     souls: S.souls, bonus: S.bonus, essence: S.essence, kills: S.kills, keepLost: S.keepLost, keepHp: Math.round(G.keep.hp), keepMax: Math.round(G.keep.maxHp),
-    bank: { souls: Math.round(r.souls), essence: Math.round(r.essence * 10) / 10 }, level: r.level, fervor: rnd1((r.fervor || 1) * 100) / 100,
+    bank: { souls: Math.round(r.souls), essence: Math.round(r.essence * 10) / 10 }, level: r.level,
     host, summons, tiers, towers, buildings, walls, fallen, revived: S.revived,
     src: S.src.map((s: any) => [s.key, Math.round(s.dmg), s.n, s.kills]), // [source, damage, kills, kills by enemy type]
     roster: cur.roster || {}, recruits: cur.recruits || {}, spent: cur.spent || {}, spells: cur.spells || {},

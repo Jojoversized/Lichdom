@@ -3,6 +3,7 @@
 import { G, Ent, retire } from '../core/state';
 import { uid, rnd, rndi, pick, dist, dist2, clamp, Pool, TAU } from '../core/util';
 import { CELL, WW, KEEP, LANES, PAL, MW } from '../config/constants';
+import { LICH_POS, LICH_RAD } from '../data/fortress';
 import { UNITS, SUMMONS } from '../data/units';
 import { ENEMIES } from '../data/enemies';
 import { TOWERS, FORTS } from '../data/towers';
@@ -74,13 +75,12 @@ export function spawnEnemy(type: string | null, lane: string, opts: any = {}): E
   const d = isBoss ? opts.boss : ENEMIES[type!];
   const p = laneSpawn(lane);
   const n = G.run.wave;
-  const fervor = G.run.fervor || 1;
   const e = Object.assign(baseEnt('enemy', p.x, p.y), { type: isBoss ? d.id : type!, def: d, team: 'm' as const, flying: !!d.flying, lane });
-  const hpM = waveHpMult(n) * fervor * (opts.champion ? 5 : 1) * waveMods().hp;
-  const dmgM = waveDmgMult(n) * Math.sqrt(fervor) * (opts.champion ? 1.6 : 1);
+  const hpM = waveHpMult(n) * (opts.champion ? 5 : 1) * waveMods().hp;
+  const dmgM = waveDmgMult(n) * (opts.champion ? 1.6 : 1);
   if (isBoss) {
     // a keep's boss: base stats (hp0/dmg0) on the keep's exponential curve; always fought at full strength
-    e.maxHp = e.hp = Math.round(d.hp0 * waveHpMult(n) * Math.sqrt(fervor));
+    e.maxHp = e.hp = Math.round(d.hp0 * waveHpMult(n));
     e.dmg = d.dmg0 * waveDmgMult(n);
     // story events can weaken the next boss (systems/events.ts 'bossHp'); consumed here
     const ro = G.run.rogue; if (ro && ro.bossHp && ro.bossHp !== 1) { e.maxHp = e.hp = Math.round(e.maxHp * ro.bossHp); ro.bossHp = 1; }
@@ -418,8 +418,10 @@ function impact(p: any) {
 }
 
 export function keepDistance(x: number, y: number) {
-  const dx = Math.max(KEEP.x0 - x, 0, x - KEEP.x1), dy = Math.max(KEEP.y0 - y, 0, y - KEEP.y1); // the gate cells the flow field leads to (rows cy0..cy1)
-  return Math.sqrt(dx * dx + dy * dy);
+  // v0.14.2: the Lich himself, standing before the gate, is the keep's hit box (the gate cells behind him still count:
+  // nothing slips past him and stops hitting)
+  const dx = Math.max(KEEP.x0 - x, 0, x - KEEP.x1), dy = Math.max(KEEP.y0 - y, 0, y - KEEP.y1);
+  return Math.min(Math.sqrt(dx * dx + dy * dy), Math.max(0, Math.hypot(x - LICH_POS.x, y - LICH_POS.y) - LICH_RAD));
 }
 export function structuresNear(x: number, y: number, r: number) {
   const out: any[] = [];

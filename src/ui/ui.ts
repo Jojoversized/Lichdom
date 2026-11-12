@@ -19,7 +19,7 @@ import { ENEMIES, BOSSES } from '../data/enemies';
 import { META, META_BRANCHES, META_BY_ID, metaCost, ACHIEVEMENTS, CUR_NAME, CUR_COLOR, CHILDREN, WebNode } from '../data/meta';
 import { FORTRESSES, KEEPS, WAVES_PER_KEEP } from '../data/world';
 import { RARITY, rollCards, applyCard } from '../systems/cards';
-import { fervorParts, metaLv, towerStats, squadSize, applyUnitStats, bld, wallSlots, wallTier, towerSlots, towerTier, trapSlots, towerKnown, fortKnown, unitOwned, musterCount, keepUnlocked, waveEssence, essenceMult, waveHpMult } from '../systems/stats';
+import { metaLv, towerStats, squadSize, applyUnitStats, bld, wallSlots, wallTier, towerSlots, towerTier, trapSlots, towerKnown, fortKnown, unitOwned, musterCount, keepUnlocked, waveEssence, essenceMult, waveHpMult } from '../systems/stats';
 import { startWave, crusadeOffer, previewWave, castSpell, canCast, spellCd, newCampaign, loadRun, retreat } from '../systems/campaign';
 import { haul, buyMeta, buyMetaMax, canBuyMeta, nodeVisible, nodeOpen, codexSee, resetWeb, webSpent } from '../systems/progression';
 import { saveRun, saveRunSoon, saveMeta, saveMetaSoon, hasRunSave, clearRunSave, loadMeta, store, SAVE_META, SAVE_RUN } from '../systems/save';
@@ -87,7 +87,6 @@ export const UI: any = {
         <div class="stat keep" data-tip="keep">${icon('keep')}<div class="bar big"><i id="s-keep"></i><b id="s-keeptxt"></b></div></div>
         <div class="stat" id="s-enemies" data-tip="enemies"></div>
         <div class="stat" id="s-units" data-tip="units"></div>
-        <div class="stat" id="s-fervor" data-tip="fervor"></div>
       </div>
       <div id="mods" class="hud-el"></div>
       <div id="bossbar" class="hidden hud-el"><div class="bname" id="b-name"></div><div class="bar boss"><i id="b-hp"></i></div><div class="btitle" id="b-title"></div></div>
@@ -141,7 +140,6 @@ export const UI: any = {
       case 'keep': return `<b>The Keep</b><br>${fmt(G.keep.hp)} / ${fmt(G.keep.maxHp)}<br>If it falls the siege ends — and everything you gathered still reaches the Phylactery.`;
       case 'enemies': return `<b>Mortals on the field</b>`;
       case 'units': return `<b>Your undead host</b><br>Raised by the Phylactery web at the start of the siege. Every undead slain during a wave rises again when the wave is repelled.<br>Total host: ${G.units.length}`;
-      case 'fervor': { const p = fervorParts(); return `<b>Crusade Fervor ×${(r.fervor || 1).toFixed(2)}</b> <span class="dim">(enemy health; damage by its square root)</span><br>Zeal: +3.5% for each Holy War fought this siege (${p.zealN}).`; }
       default: return '';
     }
   },
@@ -186,7 +184,6 @@ export const UI: any = {
     $('#s-keeptxt').textContent = fmt(Math.max(0, Math.ceil(G.keep.hp)));
     $('#s-enemies').innerHTML = `${icon('skull')} ${G.enemies.length}${G.phase === 'wave' && G.wave ? `<em>/${G.wave.total - G.wave.idx + G.enemies.length}</em>` : ''}`;
     $('#s-units').innerHTML = `${icon('rally')} ${fmt(G.units.length)} <em>undead</em>`;
-    $('#s-fervor').innerHTML = (r.fervor || 1) > 1.01 ? `<span class="lbl">Fervor</span> ×${r.fervor.toFixed(2)}` : '';
     const wb = $('#b-wave') as HTMLButtonElement;
     if (G.phase === 'prep') {
       const pv = previewWave(r.wave + 1);
@@ -266,32 +263,34 @@ export const UI: any = {
       Tut.spot({ target: '.crusadem h2', title: 'A champion is coming', btn: 'Understood', text: 'Wave 5 is led by a <b>champion</b>: a named hero with five times the health of a common soldier who hits much harder, and pays six times the souls when it falls. Keep your spells ready for when it reaches your line.', onNext: () => { t.champ = true; saveMetaSoon(); } });
     }
   },
-  /** First wave: when the fighting starts, pause and have the player cast Death Wave. */
+  /** In battle: Unholy Might the moment the host is fighting (then the speed controls), and Death Wave once two or
+   *  more mortals stand inside the ring's actual reach. Each pauses the game until the spell is cast. */
   tutBattle() {
     if (Tut.active || !G.run || G.phase !== 'wave' || G.modal) return;
     const t = G.stats.tut; if (!t || !Tut.on() || (t.spell && t.might && t.speed)) return;
     if (!t.done && !t.hud) return;
-    const fighting = G.units.filter((u: any) => u.engage && !u.engage.dead).length;
     const resume = () => { G.paused = false; this.updateSpeed(); };
+    const hold = () => { G.paused = true; this.updateSpeed(); };
     const speed = () => {
       if (t.speed) { resume(); return; }
       Tut.spot({ target: '.speed', title: 'Battle speed', btn: 'Got it', text: 'Pause, normal, fast and very fast (<b>Space</b> pauses, <b>F</b> cycles the speed). Your host fights by itself, so speed a battle up whenever you are only waiting for it to end.', onNext: () => { t.speed = true; saveMetaSoon(); resume(); } });
     };
-    if (t.spell) {
-      // the second spell, once the host itself is in the fight; the speed controls right after it
-      if (t.might ? fighting < 1 : fighting < Math.min(3, G.units.length) || !G.run.spells.includes('might') || !canCast('might')) return;
-      G.paused = true; this.updateSpeed();
-      if (t.might) { speed(); return; }
-      Tut.spot({ target: '#spellbar [data-spell="might"]', title: 'Unholy Might', click: true, text: 'Your undead are in the fight now. Unholy Might makes every one of them deal 40% more damage and take 30% less for 12 seconds, so it is worth the most while they are all swinging. Cast it.',
+    const has = (id: string) => G.run.spells.includes(id) && canCast(id);
+    // Death Wave: its ring grows to DEATHWAVE_REACH from the gate, so wait until at least two mortals are inside it
+    if (!t.spell && has('deathwave') && G.enemies.filter((e: any) => !e.dead && Math.hypot(e.x - KEEP.x1, e.y - KEEP.y) < 290).length >= 2) {
+      hold();
+      Tut.spot({ target: '#spellbar [data-spell="deathwave"]', title: 'Death Wave', click: true, text: 'Enough of the crusade is inside its reach now, so I have paused the battle for you. Death Wave sends a ring of necrotic force out from your gate and hurts everything it passes. Cast it.',
+        onNext: () => { t.spell = true; saveMetaSoon(); resume(); } });
+      return;
+    }
+    const fighting = G.units.some((u: any) => u.engage && !u.engage.dead);
+    if (!t.might && fighting && has('might')) {
+      hold();
+      Tut.spot({ target: '#spellbar [data-spell="might"]', title: 'Unholy Might', click: true, text: 'Your undead have met the enemy, so I have paused the battle. Unholy Might makes every one of them deal 40% more damage and take 30% less for 12 seconds: cast it when the host is in the fight, like now.',
         onNext: () => { t.might = true; saveMetaSoon(); speed(); } });
       return;
     }
-    if (!G.run.spells.includes('deathwave') || !canCast('deathwave')) return;
-    const near = fighting > 0 || G.enemies.some((e: any) => !e.dead && Math.hypot(e.x - KEEP.x1, e.y - KEEP.y) < 250);
-    if (!near) return;
-    G.paused = true; this.updateSpeed();
-    Tut.spot({ target: '#spellbar [data-spell="deathwave"]', title: 'Death Wave', click: true, text: 'The crusade is within reach, so I have paused the battle for you. Death Wave sends a ring of necrotic force out from your keep and hurts everything it passes. Cast it now.',
-      onNext: () => { t.spell = true; saveMetaSoon(); G.paused = false; this.updateSpeed(); } });
+    if (t.might && !t.speed && fighting) { hold(); speed(); }
   },
   /** After the first lost siege: into the Phylactery, the first muster, the first unlock, the refund button. */
   tutWeb(focus: (id: string) => void) {
@@ -521,8 +520,8 @@ export const UI: any = {
     const w = (n: number) => `<em>${n} wave${n > 1 ? 's' : ''}</em>`;
     for (const t of ro.tithes) chips.push(`<span class="mchip good" data-tipx="Enslaved villagers: souls trickle in during waves.">${SOUL()} tithe ${w(t.waves)}</span>`);
     for (const c of ro.curses) {
-      const parts = [c.count < 1 ? `${Math.round((1 - c.count) * 100)}% smaller` : '', c.hp < 1 ? `${Math.round((1 - c.hp) * 100)}% less health` : ''].filter(Boolean).join(', ');
-      chips.push(`<span class="mchip good" data-tipx="A curse on the crusade: ${parts}.">${icon('skull')} Crusade ${parts} ${w(c.waves)}</span>`);
+      const parts = [c.count < 1 ? `${Math.round((1 - c.count) * 100)}% smaller` : '', c.hp < 1 ? `${Math.round((1 - c.hp) * 100)}% less health` : c.hp > 1 ? `${Math.round((c.hp - 1) * 100)}% more health` : ''].filter(Boolean).join(', ');
+      chips.push(`<span class="mchip ${c.hp > 1 ? 'bad' : 'good'}" data-tipx="${c.hp > 1 ? 'The crusade is roused' : 'A curse on the crusade'}: ${parts}.">${icon('skull')} Crusade ${parts} ${w(c.waves)}</span>`);
     }
     for (const b of ro.buffs) chips.push(`<span class="mchip good" data-tipx="War drums: all damage of your host and towers.">${icon('frenzy')} +${Math.round(b.dmg * 100)}% damage ${w(b.waves)}</span>`);
     const html = chips.join('');
@@ -585,7 +584,7 @@ export const UI: any = {
     const r = G.run, off = crusadeOffer(), ro = rogue();
     if (off.n >= WAVES_PER_KEEP) { this.pickCrusade(1); return; } // the boss marches at full strength: nothing to choose
     const colors = ['#8fb4c8', '#d8cfb4', '#ff8a5a'];
-    const curse = ro.curses.length ? `<div class="center good">The crusade is weakened: ${ro.curses.map((c: any) => [c.count < 1 ? `${Math.round((1 - c.count) * 100)}% smaller` : '', c.hp < 1 ? `${Math.round((1 - c.hp) * 100)}% less health` : ''].filter(Boolean).join(', ') + ` (${c.waves} wave${c.waves > 1 ? 's' : ''})`).join(' · ')}</div>` : '';
+    const curse = ro.curses.length ? `<div class="center ${ro.curses.some((c: any) => c.hp > 1) ? 'dim' : 'good'}">The crusade is changed: ${ro.curses.map((c: any) => [c.count < 1 ? `${Math.round((1 - c.count) * 100)}% smaller` : '', c.hp < 1 ? `${Math.round((1 - c.hp) * 100)}% less health` : c.hp > 1 ? `${Math.round((c.hp - 1) * 100)}% more health` : ''].filter(Boolean).join(', ') + ` (${c.waves} wave${c.waves > 1 ? 's' : ''})`).join(' · ')}</div>` : '';
     const m = this.openModal(`<h2>${icon('rally', 2, 'pix')} Wave ${off.n}: Which Crusade Marches?</h2>
       <div class="center dim">Scouts report three hosts gathering in the east. Choose the one you will face — the greater the host, the greater the spoils.</div>${curse}
       <div class="cards">${off.waves.map((W: any, i: number) => {

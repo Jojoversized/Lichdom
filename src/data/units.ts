@@ -4,7 +4,7 @@ import { PAL } from '../config/constants';
 // cd = seconds between attacks. range in px. spd px/s.
 // cost buys a whole squad of `squad` undead (never fewer than 5). `size` is body
 // size (1 small … 4 huge): giant-slayer bonuses and impact effects key off it.
-// There is no army cap — the crusade answers numbers with Crusade Fervor.
+// There is no army cap.
 // v0.12.2: every tier uses its type's Dreamina sheet for now (the old procedural tier-2/3 sheets looked out of
 // place beside it); evolved tiers are told apart by a placeholder glow and tint in the renderer (TIER_GLOW).
 export const UNITS: Record<string, any> = {
@@ -29,16 +29,16 @@ export const UNITS: Record<string, any> = {
   acolyte: { name: 'Necromantic Acolyte', cost: 240, squad: 5, size: 1, hp: 40, dmg: 5, cd: 1.5, range: 90, spd: 28, armor: 0, dtype: 'necro', ranged: 'necrobolt', raiser: 6,
     tiers: [{ name: 'Necromantic Acolytes', spr: 'acolyte' }, { name: 'Necromancers', spr: 'acolyte', cost: 170, hp: 1.6, dmg: 1.6, raiser: 0.7 }, { name: 'Masters of the Grave', spr: 'acolyte', cost: 360, hp: 2.2, dmg: 2.2, raiser: 0.5 }],
     desc: 'Raises nearby corpses as temporary skeletons.' },
-  wraith: { name: 'Wraith', cost: 280, squad: 5, size: 1, hp: 78, dmg: 12, cd: 1.0, range: 14, spd: 52, armor: 0.2, dtype: 'necro', melee: true, flying: true, drain: 0.3,
+  wraith: { skirmisher: true, name: 'Wraith', cost: 280, squad: 5, size: 1, hp: 78, dmg: 12, cd: 1.0, range: 14, spd: 52, armor: 0.2, dtype: 'necro', melee: true, flying: true, drain: 0.3,
     tiers: [{ name: 'Wraiths', spr: 'wraith' }, { name: 'Shades', spr: 'wraith', cost: 170, hp: 1.6, dmg: 1.6 }, { name: 'Soul Wraiths', spr: 'wraith', cost: 360, hp: 2.4, dmg: 2.4 }],
     desc: 'Flying spirits that bypass walls and drain life.' },
-  banshee: { name: 'Banshee', cost: 320, squad: 5, size: 1, hp: 50, dmg: 9, cd: 1.6, range: 70, spd: 40, armor: 0.1, dtype: 'necro', ranged: 'scream', splash: 30, flying: true, slow: 0.35,
+  banshee: { skirmisher: true, name: 'Banshee', cost: 320, squad: 5, size: 1, hp: 50, dmg: 9, cd: 1.6, range: 70, spd: 40, armor: 0.1, dtype: 'necro', ranged: 'scream', splash: 30, flying: true, slow: 0.35,
     tiers: [{ name: 'Banshees', spr: 'banshee' }, { name: 'Keening Banshees', spr: 'banshee', cost: 180, hp: 1.6, dmg: 1.6 }, { name: 'Queens of Sorrow', spr: 'banshee', cost: 380, hp: 2.4, dmg: 2.5 }],
     desc: 'Flying. Wails damage and slow groups.' },
   vampire: { name: 'Vampire', cost: 480, squad: 5, size: 2, hp: 135, dmg: 16, cd: 0.8, range: 14, spd: 52, armor: 0.15, dtype: 'phys', melee: true, lifesteal: 0.2,
     tiers: [{ name: 'Vampires', spr: 'vampire' }, { name: 'Vampire Lords', spr: 'vampire', cost: 280, hp: 1.6, dmg: 1.7 }, { name: 'Elder Bloodlords', spr: 'vampire', cost: 560, hp: 2.5, dmg: 2.5 }],
     desc: 'Fast duelists who heal from the damage they deal.' },
-  wendigo: { name: 'Undead Wendigo', cost: 300, squad: 5, size: 1, hp: 85, dmg: 13, cd: 0.7, range: 13, spd: 64, armor: 0.05, dtype: 'phys', melee: true, lifesteal: 0.2, hunter: true,
+  wendigo: { skirmisher: true, name: 'Undead Wendigo', cost: 300, squad: 5, size: 1, hp: 85, dmg: 13, cd: 0.7, range: 13, spd: 64, armor: 0.05, dtype: 'phys', melee: true, lifesteal: 0.2, hunter: true,
     tiers: [{ name: 'Undead Wendigos', spr: 'wendigo' }, { name: 'Starving Wendigos', spr: 'wendigo', cost: 200, hp: 1.6, dmg: 1.7, spd: 1.1 }, { name: 'Wendigo Alphas', spr: 'wendigo', cost: 460, hp: 2.5, dmg: 2.6, spd: 1.15 }],
     desc: 'Ravenous bone-stalkers. The fastest undead: they run down archers and casters first and feed on what they kill.' },
   abomination: { name: 'Abomination', cost: 640, squad: 5, size: 3, hp: 560, dmg: 22, cd: 1.8, range: 16, spd: 18, armor: 0.25, dtype: 'phys', melee: true, cleave: 24, taunt: true,

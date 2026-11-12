@@ -93,16 +93,6 @@ export function recalcKeep() {
   if (old && G.keep.hp) G.keep.hp = Math.min(G.keep.maxHp, G.keep.hp + Math.max(0, G.keep.maxHp - old));
 }
 
-/** Crusade Fervor (enemy health; damage scales with its root). v0.12: only ZEAL remains — every Holy War
- *  fought in a siege adds a lasting +3.5% (story events can add or remove zeal). The keeps themselves
- *  carry the exponential curve now (data/world.ts). */
-export const ZEAL_GROWTH = 1.035;
-export function fervorParts(_wave = 1) {
-  const zealN = (G.run && G.run.rogue && G.run.rogue.zeal) || 0, zeal = Math.pow(ZEAL_GROWTH, zealN);
-  return { zeal, zealN, total: zeal };
-}
-export function computeFervor(wave = 1) { return fervorParts(wave).total; }
-
 export function applyUnitStats(u: any) {
   const r = G.run;
   if (u.summon) return;

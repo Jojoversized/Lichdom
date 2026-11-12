@@ -37,7 +37,7 @@ function moveToward(e: any, tx: number, ty: number, spd: number, dt: number) {
 }
 function blockingAt(cx: number, cy: number) { const s = G.map.struct[cellIdx(cx, cy)]; return s && s.blocks && !s.dead ? s : null; }
 export function keepReach(e: any) { return e.def.ranged ? Math.min(e.range, e.def.structOnly ? 110 : 44) : e.range; }
-const KEEP_TARGET = { kind: 'keep', dead: false, hp: 1, x: KEEP.x1, y: KEEP.y, alt: 0 };
+const KEEP_TARGET = { kind: 'keep', dead: false, hp: 1, x: LICH_POS.x, y: LICH_POS.y, alt: 0 };
 
 // =====================================================================
 // MORTALS
@@ -81,7 +81,7 @@ export function updateEnemy(e: any, dt: number) {
     const t = e.target;
     const td = t.kind === 'keep' ? keepDistance(e.x, e.y) : Math.max(0, dist(e.x, e.y, t.x, t.y) - (t.rad || 4));
     if (td <= (t.kind === 'keep' ? keepReach(e) : e.range) + 2) {
-      e.face = (t.kind === 'keep' ? KEEP.x : t.x) > e.x ? 1 : -1;
+      e.face = (t.kind === 'keep' ? LICH_POS.x : t.x) > e.x ? 1 : -1;
       if (e.cdT <= 0) { enemyAttack(e, t); e.cdT = e.cd; }
       else if (e.anim === 'walk') setAnim(e, 'idle');
       return;
@@ -93,7 +93,7 @@ export function updateEnemy(e: any, dt: number) {
   if (kd <= keepReach(e) + 2) { e.target = KEEP_TARGET; return; }
   if (e.flying || e.x > WW - 2) {
     // flyers go straight for the keep; ground units walk in from beyond the map edge
-    if (e.flying || e.x > WW - 2) { moveToward(e, e.flying ? KEEP.x1 - 10 : WW - 8, e.flying ? KEEP.y + ((e.id % 7) - 3) * 10 : e.y, e.spd * mm, dt); setAnim(e, 'walk'); return; }
+    if (e.flying || e.x > WW - 2) { moveToward(e, e.flying ? LICH_POS.x + 6 : WW - 8, e.flying ? LICH_POS.y + ((e.id % 7) - 3) * 6 : e.y, e.spd * mm, dt); setAnim(e, 'walk'); return; }
   }
   const climber = !!d.climber;
   const [ncx, ncy] = flowStep(G.map, e.x, e.y, climber);
@@ -179,9 +179,10 @@ function enemyFindTarget(e: any) {
 
 function enemyAttack(e: any, t: any) {
   const d = e.def;
+  if (t.kind === 'unit' && !t.def.skirmisher) e.linedAt = G.time;
   if (d.ranged) {
     setAnim(e, ['fireball', 'frostbolt', 'holyfire', 'arcanebolt', 'holybeam'].includes(d.ranged) ? 'cast' : 'atk'); e.atkHold = 0.35;
-    const tt = t.kind === 'keep' ? { kind: 'keep', x: clamp(e.x, KEEP.x0 + 10, KEEP.x1 - 10), y: KEEP.y1 - 20, alt: 0, dead: false } : t;
+    const tt = t.kind === 'keep' ? { kind: 'keep', x: LICH_POS.x, y: LICH_POS.y - 10, alt: 0, dead: false } : t;
     const kind = d.ranged === 'holybeam' ? 'holyfire' : d.ranged;
     const dtype = kind === 'fireball' ? 'fire' : kind === 'frostbolt' ? 'frost' : kind === 'holyfire' || kind === 'holybolt' ? 'holy' : kind === 'arcanebolt' ? 'arcane' : 'phys';
     const p = fireProjectile(e, e.x + e.face * 6, e.y - 12 - e.alt, tt, kind, e.dmg, dtype, { splash: d.splash || 0, onHit: d.slowOnHit ? ((u: any) => { u.st.slowT = 2; u.st.slow = d.slowOnHit; }) : null });
@@ -255,7 +256,18 @@ function guardPosition(u: any, ctx: any, count: number) {
  *  (ranged crusaders parked just outside used to pepper the host unanswered). `t.z0` / `t.z1`: the
  *  zone tests for ground / flying undead, computed once per threat. */
 /** How far beyond the defence zone an undead follows a foe it has already engaged (new targets: 40). */
+/** Skirmishers wait at most this long for the line to engage before going in anyway. */
+const SKIRMISH_WAIT = 5;
+let lineUnits = 0;
+/** True once a sturdy (non-skirmisher) undead is fighting this foe or one right next to it. */
+function lineHolds(t: any) {
+  if (G.time - (t.linedAt || -9) < 2.5) return true;
+  let ok = false;
+  G.hashE.query(t.x, t.y, 44, (e: any) => { if (G.time - (e.linedAt || -9) < 2.5) { ok = true; return true; } });
+  return ok;
+}
 const AGGRO_LEASH = 170;
+export const LICH_RANGE = DEFENSE_R + AGGRO_LEASH;
 function inZone(u: any, t: any) {
   if (u.summon || mopUp || t.e === u.aggro) return true;
   return (u.flying ? t.z1 : t.z0) || dist2(u.x, u.y, t.e.x, t.e.y) < 60 * 60;
@@ -278,6 +290,7 @@ export function planArmy(dt: number) {
   const crowd = planCrowd;
   { const W = G.wave; mopUp = !!W && G.phase === 'wave' && W.idx >= W.spawns.length && (W.lateT || 0) > 20 && G.enemies.length <= 15 && !G.enemies.some((e: any) => e.boss); }
   const ground = G.units.filter((u: any) => !isRanged(u) && !u.flying).length;
+  lineUnits = G.units.filter((u: any) => !u.def.skirmisher && !isRanged(u)).length;
   // enemies sorted by urgency (closest to keep first)
   const threats = G.enemies.map((e: any) => ({ e, fd: e.flying ? Math.max(0, e.x - KEEP.x1) / CELL : flowDist(e.x, e.y), z0: threatensZone(e, 0), z1: threatensZone(e, 120) }));
   // only the most urgent threats are worth planning around (keeps huge hosts cheap)
@@ -346,7 +359,8 @@ export function updateUnit(u: any, dt: number) {
   u.retT -= dt;
   if (u.retT <= 0) {
     u.retT = 0.25;
-    const near = G.hashE.nearest(u.x, u.y, (u.range || 14) + 6);
+    // sturdy melee (and the slow) react first and from further off; skirmishers only to what is on top of them
+    const near = G.hashE.nearest(u.x, u.y, (u.range || 14) + (u.def.skirmisher ? 6 : u.def.melee ? 30 : 6));
     if (near) u.engage = near; else u.engage = null;
   }
   if (u.engage && !u.engage.dead) t = u.engage;
@@ -356,6 +370,17 @@ export function updateUnit(u: any, dt: number) {
   if (u.aggro && (u.aggro.dead || !threatensZone(u.aggro, AGGRO_LEASH))) u.aggro = null;
   if (t && !u.summon && !u.flying && !threatensZone(t, t === u.aggro ? AGGRO_LEASH : 40) && dist(u.x, u.y, t.x, t.y) - (t.rad || 4) > u.range) t = null;
   if (!t && u.aggro) t = u.aggro; // nothing closer: finish what it started
+  // v0.14.2: the fast, fragile killers (wendigo, wraith, banshee) let the line take the charge first. They hold at
+  // their post until a sturdier undead is trading blows near their target, the foe comes to them, the host has
+  // no line left, or they have waited long enough
+  if (t && u.def.skirmisher && !u.summon && !mopUp) {
+    const td0 = dist(u.x, u.y, t.x, t.y) - (t.rad || 4);
+    const go = td0 <= Math.min(u.range, 22) + 8 || lineUnits <= 0 || lineHolds(t)
+      || (u.struck === t && G.time < u.struckT)                                   // already in: do not dither
+      || ((u.holdT = (u.holdT || 0) + dt) >= SKIRMISH_WAIT && threatensZone(t, 40)); // waited long enough, and the line could follow
+    if (go) { if (u.struck !== t || G.time >= u.struckT) u.holdT = 0; u.struck = t; u.struckT = G.time + 2; }
+    else { t = null; u.aggro = null; }
+  }
   if (t) {
     u.atPost = false; u.aggro = t;
     const td = dist(u.x, u.y, t.x, t.y) - (t.rad || 4);
@@ -400,6 +425,7 @@ export function updateUnit(u: any, dt: number) {
 
 function unitAttack(u: any, t: any, swung = false) {
   const d = u.def, r = G.run;
+  if (!d.skirmisher && !d.ranged) t.linedAt = G.time;
   if (d.ranged) {
     if (!swung) { setAnim(u, d.ranged === 'arrow' ? 'atk' : 'cast'); u.atkHold = 0.35; }
     if (d.ranged === 'scream') {
@@ -669,7 +695,8 @@ export function updateLich(dt: number) {
   L.cdT -= dt;
   if (L.cdT <= 0 && G.phase === 'wave') {
     const lx = LICH_POS.x, ly = LICH_POS.y;
-    const e = G.hashE.nearest(KEEP.x1, KEEP.y, 210);
+    // his bolts reach as far as the host will ever chase a foe: the defence zone plus the aggro leash
+    const e = G.hashE.nearest(GATE.x, GATE.y, LICH_RANGE);
     if (e) {
       L.cdT = 1.2 / (1 + r.m.lichAs);
       L.anim = 'cast'; L.at = 0; L.castT = 0.4; L.face = e.x > lx ? 1 : -1;

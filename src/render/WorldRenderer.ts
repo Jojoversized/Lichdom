@@ -40,6 +40,7 @@ export class WorldRenderer {
   cull: { x0: number; y0: number; x1: number; y1: number } | null = null;
   /** Unit / enemy shadows are Blitter bobs (one batched object per shadow size) rather than 3,000+ Images. */
   shadowBlits: Record<string, Phaser.GameObjects.Blitter> = {};
+  shadowLayer: Phaser.GameObjects.Container = null as any;
   keep?: Phaser.GameObjects.Sprite; lich?: Phaser.GameObjects.Sprite; well?: Phaser.GameObjects.Sprite; fortress?: Phaser.GameObjects.Image;
   props: Phaser.GameObjects.Sprite[] = [];
   worldVersion = -1;
@@ -86,6 +87,7 @@ export class WorldRenderer {
     // destroy any view still attached to old entities
     for (const k of ['units', 'enemies', 'towers', 'forts', 'buildings', 'corpses', 'dying']) for (const o of G[k]) this.destroyView(o);
     for (const k in this.shadowBlits) this.shadowBlits[k].destroy(); this.shadowBlits = {};
+    if (this.shadowLayer) { this.shadowLayer.destroy(); this.shadowLayer = null as any; }
     this.props.forEach(p => p.destroy()); this.props = [];
     this.terrain?.destroy(); this.keep?.destroy(); this.lich?.destroy(); this.well?.destroy(); this.fortress?.destroy(); this.fortress = undefined;
     if (s.textures.exists('terrain')) s.textures.remove('terrain');
@@ -115,7 +117,7 @@ export class WorldRenderer {
       this.fortress = s.add.image(0, 0, FORT_ART.key).setOrigin(0).setDepth(DEPTH.decals + 5).setScale(1 / res);
       this.keep.setVisible(false);
     }
-    this.lich = s.add.sprite(LICH_POS.x, LICH_POS.y, 'lich', 0).setOrigin(0.5, 1).setDepth(WH + 10).setScale(sheetScale('lich'));
+    this.lich = s.add.sprite(LICH_POS.x, LICH_POS.y, 'lich', 0).setOrigin(0.5, 1).setDepth(LICH_POS.y).setScale(sheetScale('lich'));
     this.well = s.add.sprite(WELL_POS.x, WELL_POS.y + 8, 'soulwell', 0).setOrigin(0.5, 1).setDepth(WELL_POS.y + 6).setScale(SC);
   }
 
@@ -127,7 +129,12 @@ export class WorldRenderer {
   /** A shadow bob from the blitter of texture `key` (bob coordinates are in texel space: the blitter is scaled SC). */
   private shadowBob(key: string) {
     let bl = this.shadowBlits[key];
-    if (!bl) { bl = this.scene.add.blitter(0, 0, key).setDepth(DEPTH.shadows).setScale(SC); this.shadowBlits[key] = bl; }
+    if (!bl) {
+      // Phaser's Blitter ignores its own scale (bobs were drawn at twice their world position: shadows floating far from
+      // their units), so the texel → world scale comes from a parent container instead
+      if (!this.shadowLayer || !this.shadowLayer.scene) this.shadowLayer = this.scene.add.container(0, 0).setScale(SC).setDepth(DEPTH.shadows);
+      bl = this.scene.make.blitter({ key, add: false } as any); this.shadowLayer.add(bl); this.shadowBlits[key] = bl;
+    }
     const src = this.scene.textures.get(key).getSourceImage() as HTMLImageElement;
     const bob: any = bl.create(0, 0); bob.hw = src.width / 2; bob.hh = src.height / 2;
     return bob;

@@ -36,6 +36,8 @@ export const FORT_ART = { key: 'fortress', res: FORT_FIT.res };
 export { FORT_PORTCULLIS };
 
 /** Where the Lich stands: on the gatehouse battlements (feet position). */
-export const LICH_POS = { x: 172, y: 350 };
+/** v0.14.2: the Lich stands on the road in front of the gate and IS what the crusade attacks (the keep's hit box). */
+export const LICH_POS = { x: 274, y: 412 };
+export const LICH_RAD = 9;
 /** Torch, portcullis and window glows on the fortress art (world px), lit by the renderer's light buffer. */
 export const FORT_LIGHTS = FORT_FIT_LIGHTS;

@@ -33,20 +33,27 @@ with sync_playwright() as p:
     assert 'Skirmish' in bubble(); shot('skirmish'); pg.click('#tut-next'); pg.wait_for_timeout(250)
     assert bubble() is None
     pg.click('.card.crusade >> nth=0')
-    for _ in range(120):
+    # in battle, in whatever order they come up: Unholy Might when the host engages (then the speed controls),
+    # Death Wave once two mortals stand inside its ring
+    seen = []
+    for _ in range(240):
         pg.wait_for_timeout(500)
-        if bubble(): break
-    assert 'Death Wave' in bubble(), bubble(); assert pg.evaluate("() => window.__LICH.G.paused"); shot('deathwave')
-    pg.click('#spellbar [data-spell="deathwave"]'); pg.wait_for_timeout(400)
-    assert pg.evaluate("() => window.__LICH.G.run.spellCd.deathwave > 0")
-    # the host joins the fight: Unholy Might, then the speed controls
-    for _ in range(120):
-        pg.wait_for_timeout(500)
-        if bubble(): break
-    assert 'Unholy Might' in bubble(), bubble(); shot('might')
-    pg.click('#spellbar [data-spell="might"]'); pg.wait_for_timeout(400)
-    assert 'Battle speed' in bubble(), bubble(); assert pg.evaluate("() => window.__LICH.G.paused"); shot('speed')
-    pg.click('#tut-next'); pg.wait_for_timeout(300)
+        t = bubble()
+        if not t:
+            if all(k in seen for k in ('might', 'speed', 'deathwave')): break
+            continue
+        assert pg.evaluate("() => window.__LICH.G.paused"), 'battle not paused under a bubble'
+        if 'Unholy Might' in t:
+            assert pg.evaluate("() => window.__LICH.G.units.some(u => u.engage && !u.engage.dead)"); shot('might'); seen.append('might')
+            pg.click('#spellbar [data-spell="might"]'); pg.wait_for_timeout(400)
+            assert 'Battle speed' in bubble(), bubble(); shot('speed'); seen.append('speed'); pg.click('#tut-next')
+        elif 'Death Wave' in t:
+            inr = pg.evaluate("() => { const L = window.__LICH; return L.G.enemies.filter(e => !e.dead && Math.hypot(e.x - 256, e.y - 408) < 290).length }")
+            assert inr >= 2, inr; shot('deathwave'); seen.append('deathwave')
+            pg.click('#spellbar [data-spell="deathwave"]')
+        else: raise AssertionError(t)
+        pg.wait_for_timeout(300)
+    print('battle hints in order:', seen); assert sorted(seen) == ['deathwave', 'might', 'speed'], seen
     assert bubble() is None and not pg.evaluate("() => window.__LICH.G.paused")
     # first level-up: cards, reroll, banish
     pg.evaluate("() => { window.__LICH.G.run.pendingLevels = 1; }"); pg.wait_for_timeout(700)
@@ -55,13 +62,13 @@ with sync_playwright() as p:
     assert bubble() is None; pg.click('.levelup .card >> nth=0'); pg.wait_for_timeout(300)
     # lose the siege
     before = pg.evaluate("() => { const G = window.__LICH.G; G.run.souls = 7; G.run.essence = 2; return { s: G.meta.souls, e: G.meta.essence } }")
-    pg.evaluate("() => { window.__LICH.G.keep.hp = 1; }")
+    pg.evaluate("() => { const L = window.__LICH; L.G.keep.ward = 0; L.damageKeep(1e9, null); }")
     for _ in range(240):
         pg.wait_for_timeout(500)
         if pg.evaluate("() => window.__LICH.G.phase") == 'over' and bubble(): break
     after = pg.evaluate("() => { const G = window.__LICH.G; return { s: G.meta.souls, e: G.meta.essence } }")
-    print('purse after the first loss', before, '->', after)
-    assert after['s'] >= before['s'] + 50 and after['e'] >= 15, after
+    print('purse after the first loss', before, '->', after, pg.evaluate("() => { const G = window.__LICH.G; return [G.phase, G.stats.tut, G.stats.runs, G.run && G.run.wave, G.keep && G.keep.hp, G.enemies.length] }"), bubble())
+    assert after['s'] >= before['s'] + 50 and after['e'] >= 15, (before, after)
     assert 'Phylactery' in bubble(); shot('defeat')
     pg.click('#d-meta'); pg.wait_for_timeout(500)
     assert 'Souls' in bubble() and 'first upgrade' in bubble(), bubble(); shot('web_skeleton')

@@ -223,6 +223,11 @@ Divinity) goes to the Phylactery → buy nodes on the web → besiege again.
   champ, gift, web, done). `endCampaign` gives the first-loss gift (+50 souls, Life Essence up to 15). Shortcuts are blocked
   while a bubble is up. One-off hints with their own flags (`might`, `speed`, `lvl`, `event`, `walls`, `towers`): `tutBattle`,
   `tutLevelUp`, `tutEvent`, `tutDefences`. `navigator.webdriver` browsers skip all of it unless the URL has `?tut` (`tools/test/tutorial.py`).
+- v0.14.2: unit shadows are Blitters inside `shadowLayer` (a container scaled to texels: a Blitter ignores its own scale).
+  The Lich stands before the gate (`LICH_POS`) and is the keep's hit box (`keepDistance`); his bolts reach `LICH_RANGE`
+  (defence zone + `AGGRO_LEASH`). `skirmisher: true` units (wendigo, wraith, banshee) wait for the line (`lineHolds`, `ai.ts`).
+  **Crusade Fervor and zeal are gone**: `WAVE_HP 1.265`, `WAVE_DMG 1.126` carry that growth; events use timed `curse` effects
+  (`hp` above 1 hardens the crusade).
 - **Run state**: `r.keep`, `r.souls/essence/divinity` are the siege's haul (banked by `endCampaign(outcome)` in
   `progression.ts`: defeat / retreat / victory). `G.meta = { souls, essence, divinity, lv, keepsCleared, best, flags, layout }`.
 - **Defences**: slots from the web, free placement in prep only (`constructTower`, `buildSite`/`razeSite`, `placeTrap`);

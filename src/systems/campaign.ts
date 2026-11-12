@@ -10,7 +10,7 @@ import { KEEPS, WAVES_PER_KEEP } from '../data/world';
 import { TOWER_ORDER } from '../data/towers';
 import { msg, lichSay, sfx, hooks } from '../core/events';
 import { generateMap, computeFlow } from '../world/mapgen';
-import { metaLv, recalcKeep, squadSize, globalDmg, computeFervor, bountyMult, soulMult, essenceMult, waveEssence, recalcAllStats, bld, keepIdx, waveTech, keepUnlocked, musterCount, unitOwned, towerKnown, arcanePower } from './stats';
+import { metaLv, recalcKeep, squadSize, globalDmg, bountyMult, soulMult, essenceMult, waveEssence, recalcAllStats, bld, keepIdx, waveTech, keepUnlocked, musterCount, unitOwned, towerKnown, arcanePower } from './stats';
 import { rebuildRuins, spawnBuilding, plotById, raiseBuildings, applyLayout, rememberLayout } from './keep';
 import { mendRamparts } from './ramparts';
 import { CRUSADE_TIERS } from '../data/events';
@@ -47,7 +47,7 @@ function newRunState(keep: number, seed: number) {
     unitTier: Object.fromEntries(UNIT_ORDER.map(u => [u, Math.min(2, metaLv('e_' + u))])) as Record<string, number>, unitBuff: {} as Record<string, number>,
     towerDmg: {} as Record<string, number>, mods: {} as Record<string, number>, picks: {} as Record<string, number>, banished: [] as string[],
     m, asc: { dmg: 0, hp: 0 }, rerolls: metaLv('i_reroll') * 2 + 1, banishes: 1 + metaLv('i_reroll'),
-    phylUsed: false, adapt: {}, spellsCastWave: 0, fervor: 1, startTime: Date.now(),
+    phylUsed: false, adapt: {}, spellsCastWave: 0, startTime: Date.now(),
   };
 }
 
@@ -229,8 +229,6 @@ export function startWave(tier?: number) {
   r.wave++;
   r.spellsCastWave = 0;
   if (r.mods.covenant) recalcAllStats();
-  if (tier === 2) ro.zeal = (ro.zeal || 0) + 1; // Holy War: a lasting rise in Fervor
-  r.fervor = computeFervor();
   const off = G.crusadeOffer && G.crusadeOffer.n === r.wave ? G.crusadeOffer.waves[tier] : null;
   G.wave = off || genWave(r.wave, tier);
   G.wave.tier = tier;
@@ -240,7 +238,7 @@ export function startWave(tier?: number) {
   G.phase = 'wave'; G.autoT = 0; G.build = null;
   const nl = LANES.find(l => l.minWave === waveTech(r.wave));
   if (nl && r.wave > 1) msg(`A new approach opens: the ${nl.name}!`, '#ffb060');
-  msg(`Wave ${r.wave} of ${WAVES_PER_KEEP}: ${G.wave.boss ? G.wave.boss.name : CRUSADE_TIERS[tier].name + ' — ' + G.wave.theme.name}${r.fervor > 1.05 ? ` (Crusade Fervor ×${r.fervor.toFixed(2)})` : ''}`, '#e0d0b0');
+  msg(`Wave ${r.wave} of ${WAVES_PER_KEEP}: ${G.wave.boss ? G.wave.boss.name : CRUSADE_TIERS[tier].name + ' — ' + G.wave.theme.name}`, '#e0d0b0');
   if (!G.wave.boss) lichSay('wave');
   sfx('horn', 0.7);
   saveRun(); saveMetaSoon();

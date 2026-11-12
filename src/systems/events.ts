@@ -178,7 +178,6 @@ function applyEffects(effects: EventEffect[], v: Record<string, any>) {
       case 'heal': G.keep.hp = Math.min(G.keep.maxHp, G.keep.hp + G.keep.maxHp * e.frac); break;
       case 'sacrifice': v.sacrificed = sacrifice(e.frac, e.type); break;
       case 'rerolls': r.rerolls = (r.rerolls || 0) + e.n; break;
-      case 'zeal': ro.zeal = Math.max(0, (ro.zeal || 0) + e.n); break;
       case 'bossHp': ro.bossHp = (ro.bossHp || 1) * e.mult; break;
       case 'flag': ro.flags[e.name] = true; break;
       case 'gamble': {
