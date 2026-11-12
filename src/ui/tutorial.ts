@@ -1,6 +1,7 @@
 // First-run onboarding: a welcome card over the menu and a guided first siege / first visit to the Phylactery.
 // One primitive: a spotlight (everything but the target is dimmed and blocked) with a speech bubble attached.
-// Progress lives in G.stats.tut (saved with the meta save): welcome, hud, orb, spell, champ, gift, web, done.
+// Progress lives in G.stats.tut (saved with the meta save): welcome, hud, orb, spell, champ, gift, web, done for the guided
+// path, and might, speed, lvl, event, walls, towers for the one-off hints that appear the first time each thing comes up.
 import { G } from '../core/state';
 
 type Target = string | (() => DOMRect | null) | null;
@@ -13,6 +14,7 @@ interface Spot {
   pass?: boolean;         // clicks on the target go through but do not move on (use with btn)
   pad?: number;
   onNext?: () => void;
+  before?: () => void;    // run just before the spot appears (e.g. open the right drawer tab)
 }
 
 let root: HTMLElement, cur: Spot | null = null, raf = 0;
@@ -64,7 +66,7 @@ export const Tut = {
   /** The saved progress. A save from before the tutorial existed counts as finished. */
   st(): any {
     const s = G.stats;
-    if (!s.tut) s.tut = !this.on() || s.seenHelp || s.runs > 0 ? { welcome: true, hud: true, orb: true, spell: true, champ: true, gift: true, web: true, done: true } : {};
+    if (!s.tut) s.tut = !this.on() || s.seenHelp || s.runs > 0 ? { welcome: true, hud: true, orb: true, spell: true, might: true, speed: true, lvl: true, event: true, walls: true, towers: true, champ: true, gift: true, web: true, done: true } : {};
     return s.tut;
   },
   /** True while the guided part is still running for this player. */
@@ -95,7 +97,7 @@ export const Tut = {
   hide() { cur = null; this.active = false; if (raf) cancelAnimationFrame(raf); raf = 0; if (root) root.className = 'hidden'; },
   /** A chain of spots, one after the other. */
   run(steps: Spot[], done?: () => void) {
-    const go = (i: number) => { if (i >= steps.length) { if (done) done(); return; } const s = steps[i], after = s.onNext; this.spot({ ...s, onNext: () => { if (after) after(); go(i + 1); } }); };
+    const go = (i: number) => { if (i >= steps.length) { if (done) done(); return; } const s = steps[i], after = s.onNext; if (s.before) s.before(); this.spot({ ...s, onNext: () => { if (after) after(); go(i + 1); } }); };
     go(0);
   },
   /** The first thing a new player sees: a card over the darkened main menu. */

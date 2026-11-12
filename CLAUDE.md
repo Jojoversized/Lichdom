@@ -221,7 +221,8 @@ Divinity) goes to the Phylactery → buy nodes on the web → besiege again.
   `click: true` = the player must click the target, `pass: true` = clicks go through without advancing). The beats are in
   `ui.ts` (`tutSiege`, `tutCrusade`, `tutBattle`, `tutWeb`, `lossTip`), progress flags in `G.stats.tut` (welcome, hud, orb, spell,
   champ, gift, web, done). `endCampaign` gives the first-loss gift (+50 souls, Life Essence up to 15). Shortcuts are blocked
-  while a bubble is up. `navigator.webdriver` browsers skip all of it unless the URL has `?tut` (`tools/test/tutorial.py`).
+  while a bubble is up. One-off hints with their own flags (`might`, `speed`, `lvl`, `event`, `walls`, `towers`): `tutBattle`,
+  `tutLevelUp`, `tutEvent`, `tutDefences`. `navigator.webdriver` browsers skip all of it unless the URL has `?tut` (`tools/test/tutorial.py`).
 - **Run state**: `r.keep`, `r.souls/essence/divinity` are the siege's haul (banked by `endCampaign(outcome)` in
   `progression.ts`: defeat / retreat / victory). `G.meta = { souls, essence, divinity, lv, keepsCleared, best, flags, layout }`.
 - **Defences**: slots from the web, free placement in prep only (`constructTower`, `buildSite`/`razeSite`, `placeTrap`);

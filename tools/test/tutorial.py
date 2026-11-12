@@ -38,8 +38,21 @@ with sync_playwright() as p:
         if bubble(): break
     assert 'Death Wave' in bubble(), bubble(); assert pg.evaluate("() => window.__LICH.G.paused"); shot('deathwave')
     pg.click('#spellbar [data-spell="deathwave"]'); pg.wait_for_timeout(400)
-    st = pg.evaluate("() => { const G = window.__LICH.G; return { paused: G.paused, cd: G.run.spellCd.deathwave > 0 } }")
-    assert bubble() is None and not st['paused'] and st['cd'], st
+    assert pg.evaluate("() => window.__LICH.G.run.spellCd.deathwave > 0")
+    # the host joins the fight: Unholy Might, then the speed controls
+    for _ in range(120):
+        pg.wait_for_timeout(500)
+        if bubble(): break
+    assert 'Unholy Might' in bubble(), bubble(); shot('might')
+    pg.click('#spellbar [data-spell="might"]'); pg.wait_for_timeout(400)
+    assert 'Battle speed' in bubble(), bubble(); assert pg.evaluate("() => window.__LICH.G.paused"); shot('speed')
+    pg.click('#tut-next'); pg.wait_for_timeout(300)
+    assert bubble() is None and not pg.evaluate("() => window.__LICH.G.paused")
+    # first level-up: cards, reroll, banish
+    pg.evaluate("() => { window.__LICH.G.run.pendingLevels = 1; }"); pg.wait_for_timeout(700)
+    for key in ('A level gained', 'Reroll', 'Banish'):
+        assert key in bubble(), (key, bubble()); shot('lvl_' + key.split()[-1].lower()); pg.click('#tut-next'); pg.wait_for_timeout(250)
+    assert bubble() is None; pg.click('.levelup .card >> nth=0'); pg.wait_for_timeout(300)
     # lose the siege
     before = pg.evaluate("() => { const G = window.__LICH.G; G.run.souls = 7; G.run.essence = 2; return { s: G.meta.souls, e: G.meta.essence } }")
     pg.evaluate("() => { window.__LICH.G.keep.hp = 1; }")
@@ -61,6 +74,16 @@ with sync_playwright() as p:
     pg.click('#tut-next'); pg.wait_for_timeout(300)
     t = tut(); print('tutorial state', t); assert t['done'] and bubble() is None
     shot('free')
+    # a later siege that starts with a rampart and a tower slot, then the first story event
+    pg.evaluate("() => { const L = window.__LICH; L.G.meta.lv.f_walls = 1; L.G.meta.lv.f_towers = 1; }")
+    pg.click('#mt-go'); pg.wait_for_timeout(900)
+    assert 'first rampart' in bubble(), bubble(); shot('walls'); pg.click('#tut-next'); pg.wait_for_timeout(300)
+    assert 'first tower' in bubble(), bubble(); shot('towers'); pg.click('#tut-next'); pg.wait_for_timeout(300)
+    assert bubble() is None
+    pg.evaluate("() => { const L = window.__LICH; L.rogue().event = 'chapel'; }"); pg.wait_for_timeout(700)
+    assert 'story event' in bubble(), bubble(); shot('event'); pg.click('#tut-next'); pg.wait_for_timeout(300)
+    assert bubble() is None
+    t = tut(); assert all(t.get(k) for k in ('might', 'speed', 'lvl', 'event', 'walls', 'towers')), t
     print('ERRORS', len(errs)); print('\n'.join(errs[:8]))
     b.close()
 sys.exit(1 if errs else 0)

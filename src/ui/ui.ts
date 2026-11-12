@@ -219,13 +219,39 @@ export const UI: any = {
   /** First siege, before the first wave: the top bar, the host, the spells, the wave button. */
   tutSiege() {
     const t = Tut.st();
-    if (!Tut.guiding() || t.hud || !G.run || G.phase !== 'prep') return;
+    if (!Tut.on() || !G.run || G.phase !== 'prep') return;
+    if (t.hud || !Tut.guiding()) { this.tutDefences(); return; }
     Tut.run([
       { target: '#topbar', title: 'Your siege at a glance', btn: 'Next', text: `The wave you are on, the ${SOUL()} <b>souls</b> and ${ESS()} <b>Life Essence</b> this siege has earned, and your <b>keep's health</b>. When the keep falls the siege ends, but everything you gathered comes home with you.` },
       { target: () => this.hostRect(), title: 'Your undead host', btn: 'Next', pad: 4, text: 'They fight on their own: you never give them orders. The host starts small, and grows between sieges.' },
       { target: '#spellbar', title: 'Your spells', btn: 'Next', text: 'These are yours to cast. Click one (or press its number) and it recharges after use.' },
       { target: '#b-wave', title: 'Call the crusade', click: true, text: 'Nothing marches until you say so. When you are ready, begin the first wave.', onNext: () => { t.hud = true; saveMetaSoon(); } },
     ]);
+  },
+  /** The first siege that starts with a rampart slot, and the first with a tower slot: where they are and how they work. */
+  tutDefences() {
+    const t = Tut.st(), steps: any[] = [];
+    if (!t.walls && wallSlots() > 0) steps.push({ target: '#buildbar', title: 'Your first rampart', btn: 'Got it', text: `The Phylactery has granted you a wall segment. Click <b>${WALL_TIERS[wallTier()].name}</b> here, then one of the marked sites around your gate to raise it. It costs nothing, can only be done between waves, and what stands when a wave begins is remembered for your next siege.`,
+      before: () => { this.tab = 'fort'; this.collapsed = false; this.renderBuild(); }, onNext: () => { t.walls = true; saveMetaSoon(); } });
+    if (!t.towers && towerSlots() > 0) steps.push({ target: '#buildbar', title: 'Your first tower', btn: 'Got it', text: 'You also hold a tower slot. Towers stand <b>on top of a built rampart</b>: raise a segment first, then pick a tower here and click that segment. Like walls they are free, placed between waves, and rebuilt if they fall.',
+      before: () => { this.tab = 'towers'; this.collapsed = false; this.renderBuild(); }, onNext: () => { t.towers = true; saveMetaSoon(); this.tab = wallSlots() ? 'fort' : 'towers'; this.renderBuild(); } });
+    if (steps.length) Tut.run(steps);
+  },
+  /** The first level-up: the three cards, the reroll and the banish. */
+  tutLevelUp() {
+    const t = Tut.st();
+    if (!Tut.on() || t.lvl || Tut.active) return;
+    Tut.run([
+      { target: '.levelup .cards', title: 'A level gained', btn: 'Next', text: 'Slain mortals fill your level bar. Each level offers three cards: <b>pick one</b>. Cards last until this siege ends, so they shape this run rather than your Phylactery.' },
+      { target: '#lv-reroll', title: 'Reroll', btn: 'Next', text: 'Nothing you want? A reroll throws all three away and draws three new ones. The number is how many you have left this siege.' },
+      { target: '#lv-ban', title: 'Banish', btn: 'Got it', text: 'Click this, then a card you never want: it is replaced now and will not be offered again for the rest of the siege. Use it on cards for units you do not field.', onNext: () => { t.lvl = true; saveMetaSoon(); } },
+    ]);
+  },
+  /** The first story event. */
+  tutEvent() {
+    const t = Tut.st();
+    if (!Tut.on() || t.event || Tut.active) return;
+    Tut.spot({ target: '.eventm .evchoices', title: 'A story event', btn: 'Got it', text: 'Every few waves something happens away from the battle. Each choice tells you what it costs or risks: some pay at once, some change the rest of this siege, and a few follow you into later ones. A greyed-out choice is one you cannot afford.', onNext: () => { t.event = true; saveMetaSoon(); } });
   },
   /** The crusade picker: the O.R.B, then the Skirmish; later the champion of wave 5. */
   tutCrusade(n: number) {
@@ -243,9 +269,25 @@ export const UI: any = {
   /** First wave: when the fighting starts, pause and have the player cast Death Wave. */
   tutBattle() {
     if (Tut.active || !G.run || G.phase !== 'wave' || G.modal) return;
-    const t = G.stats.tut; if (!t || t.done || t.spell || !t.hud || !Tut.on()) return;
+    const t = G.stats.tut; if (!t || !Tut.on() || (t.spell && t.might && t.speed)) return;
+    if (!t.done && !t.hud) return;
+    const fighting = G.units.filter((u: any) => u.engage && !u.engage.dead).length;
+    const resume = () => { G.paused = false; this.updateSpeed(); };
+    const speed = () => {
+      if (t.speed) { resume(); return; }
+      Tut.spot({ target: '.speed', title: 'Battle speed', btn: 'Got it', text: 'Pause, normal, fast and very fast (<b>Space</b> pauses, <b>F</b> cycles the speed). Your host fights by itself, so speed a battle up whenever you are only waiting for it to end.', onNext: () => { t.speed = true; saveMetaSoon(); resume(); } });
+    };
+    if (t.spell) {
+      // the second spell, once the host itself is in the fight; the speed controls right after it
+      if (t.might ? fighting < 1 : fighting < Math.min(3, G.units.length) || !G.run.spells.includes('might') || !canCast('might')) return;
+      G.paused = true; this.updateSpeed();
+      if (t.might) { speed(); return; }
+      Tut.spot({ target: '#spellbar [data-spell="might"]', title: 'Unholy Might', click: true, text: 'Your undead are in the fight now. Unholy Might makes every one of them deal 40% more damage and take 30% less for 12 seconds, so it is worth the most while they are all swinging. Cast it.',
+        onNext: () => { t.might = true; saveMetaSoon(); speed(); } });
+      return;
+    }
     if (!G.run.spells.includes('deathwave') || !canCast('deathwave')) return;
-    const near = G.enemies.some((e: any) => !e.dead && Math.hypot(e.x - KEEP.x1, e.y - KEEP.y) < 250) || G.units.some((u: any) => u.engage && !u.engage.dead);
+    const near = fighting > 0 || G.enemies.some((e: any) => !e.dead && Math.hypot(e.x - KEEP.x1, e.y - KEEP.y) < 250);
     if (!near) return;
     G.paused = true; this.updateSpeed();
     Tut.spot({ target: '#spellbar [data-spell="deathwave"]', title: 'Death Wave', click: true, text: 'The crusade is within reach, so I have paused the battle for you. Death Wave sends a ring of necrotic force out from your keep and hurts everything it passes. Cast it now.',
@@ -567,12 +609,13 @@ export const UI: any = {
   },
   /** Every few waves: a story event with three choices; the result is shown before play resumes. */
   showEvent() {
-    const ev = pendingEvent(); if (!ev || G.modal) return;
+    const ev = pendingEvent(); if (!ev || G.modal || Tut.active) return;
     const cost = (c: any) => { const k = choiceCost(c); return k.souls ? `${big(k.souls)} souls of your haul (you hold ${big(G.run.souls)})` : ''; };
     const m = this.openModal(`${eventArt(ev.id)}<h2>${icon(ev.icon, 2, 'pix')} ${ev.title}</h2><div class="evtext">${ev.text}</div>
       <div class="evchoices">${ev.choices.map((c, i) => { const ok = canChoose(c), k = cost(c);
         return `<button class="evchoice${ok ? '' : ' locked'}" data-i="${i}"${ok ? '' : ' disabled'}><span class="key">${i < 9 ? i + 1 : ''}</span><b>${c.label}</b><small>${k ? `<span class="evcost">Costs ${k}.</span> ` : ''}${c.hint}</small></button>`; }).join('')}</div>`, 'eventm', false);
     m.querySelectorAll('.evchoice').forEach((el: HTMLElement) => el.onclick = () => this.pickEvent(+el.dataset.i));
+    this.tutEvent();
   },
   pickEvent(i: number) {
     const ev = pendingEvent(); if (!ev || !ev.choices[i] || !canChoose(ev.choices[i])) { sfx('error'); return; }
@@ -585,6 +628,7 @@ export const UI: any = {
   },
 
   showLevelUp() {
+    if (Tut.active) return; // never under a tutorial bubble: the scene asks again next frame
     const r = G.run;
     const cards = rollCards(3);
     if (!cards.length) { r.pendingLevels = 0; return; }
@@ -605,6 +649,7 @@ export const UI: any = {
     };
     this.renderLv = render;
     render();
+    this.tutLevelUp();
   },
   pickCard(i: number) {
     const c = this.cards && this.cards[i]; if (!c) return;
