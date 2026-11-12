@@ -55,6 +55,8 @@ for (const u of UNIT_ORDER) {
     desc: (lv) => lv >= 2 ? `Your ${nm} rise as ${d.tiers[2].name}.` : lv === 1 ? `Your ${nm} rise as ${d.tiers[1].name}. Next: ${d.tiers[2].name}.` : `Evolve: all ${nm} rise as ${d.tiers[1].name}, then ${d.tiers[2].name}.` });
 }
 
+// v0.12.3: four of the seven divinity rites sit near the core (Endless Host on Skeleton muster 8, Eternal Night on Bone
+// Hardening 8, Tithe of the Gods on Soul Hunger, the Crown on Greater Rites) so the first Stolen Divinity is a real choice.
 // ---- Grave Might: compounding strength for the whole host
 N({ id: 'n_dmg', name: 'Grave Strength', cur: 'souls', max: 150, cost: 30, mult: 1.2, parent: 'core', branch: 'M', icon: 'frenzy', desc: (lv) => `Undead damage ${xm(1.06, lv)} (×1.06 per level).` });
 N({ id: 'n_hp', name: 'Bone Hardening', cur: 'souls', max: 150, cost: 30, mult: 1.2, parent: 'core', branch: 'M', icon: 'shield', desc: (lv) => `Undead health ${xm(1.06, lv)} (×1.06 per level).` });
@@ -65,8 +67,8 @@ N({ id: 'm_regen', name: 'Unquiet Flesh', cur: 'essence', max: 5, cost: 15, mult
 N({ id: 'a_emp', name: 'Dark Empowerment', cur: 'essence', max: 30, cost: 20, mult: 1.75, parent: 'n_dmg', need: 10, branch: 'M', icon: 'skull', desc: (lv) => `ALL damage (undead, towers, spells) ${xm(1.12, lv)}.` });
 N({ id: 'a_fort', name: 'Bone Fortitude', cur: 'essence', max: 30, cost: 20, mult: 1.75, parent: 'n_hp', need: 10, branch: 'M', icon: 'shield', desc: (lv) => `Undead and keep health ${xm(1.12, lv)}.` });
 N({ id: 'n_raise', name: 'Restless Dead', cur: 'essence', max: 5, cost: 25, mult: 2, parent: 'a_emp', need: 2, branch: 'M', icon: 'raise', desc: (lv) => `${lv * 4}% of slain mortals rise as temporary skeletons.` });
-N({ id: 'd_night', name: 'Eternal Night', cur: 'divinity', max: 1, cost: 1, parent: 'a_fort', need: 3, branch: 'M', icon: 'apocalypse', desc: () => 'The sun never rises on your sieges: every undead deals double damage and has double health.' });
-N({ id: 'd_host', name: 'The Endless Host', cur: 'divinity', max: 1, cost: 1, parent: 'a_emp', need: 3, branch: 'M', icon: 'rally', desc: () => 'Half again as many undead of every type rise at the start of a siege (+50%).' });
+N({ id: 'd_night', name: 'Eternal Night', cur: 'divinity', max: 1, cost: 1, parent: 'n_hp', need: 8, branch: 'M', icon: 'apocalypse', desc: () => 'The sun never rises on your sieges: every undead deals double damage and has double health.' });
+N({ id: 'd_host', name: 'The Endless Host', cur: 'divinity', max: 1, cost: 1, parent: 'n_skeleton', need: 8, branch: 'L', icon: 'rally', desc: () => 'Half again as many undead of every type rise at the start of a siege (+50%).' });
 
 // ---- The Fortress: keep, ramparts, towers and traps (you place towers and walls before each wave)
 N({ id: 'f_keep', name: 'Foundations of Dread', cur: 'souls', max: 150, cost: 25, mult: 1.2, parent: 'core', branch: 'F', icon: 'keep', desc: (lv) => `Keep health ${xm(1.08, lv)} (×1.08 per level).` });
@@ -113,8 +115,8 @@ N({ id: 'c_greater', name: 'Greater Rites', cur: 'essence', max: 1, cost: 20, pa
 N({ id: 'c_tactics', name: 'Battle Doctrines', cur: 'essence', max: 1, cost: 35, parent: 'c_greater', branch: 'S', icon: 'rally', desc: () => 'Level-up deck: special modifiers for the undead types you field.' });
 N({ id: 'c_engineer', name: 'Siege Doctrines', cur: 'essence', max: 1, cost: 35, parent: 'c_greater', branch: 'S', icon: 'storm', desc: () => 'Level-up deck: special modifiers for the towers you raise.' });
 N({ id: 'c_unique', name: 'Forbidden Rites', cur: 'essence', max: 1, cost: 90, parent: 'c_tactics', branch: 'S', icon: 'rune', desc: () => 'Level-up deck: unique rites (Unholy Covenant, Death Knell, Unending…).' });
-N({ id: 'c_legend', name: 'Crown of Forbidden Knowledge', cur: 'divinity', max: 1, cost: 1, parent: 'c_unique', branch: 'S', icon: 'level', desc: () => 'Level-up deck: Legendary cards can appear.' });
-N({ id: 'd_tithe', name: 'Tithe of the Gods', cur: 'divinity', max: 1, cost: 1, parent: 'i_ess', need: 2, branch: 'S', icon: 'soul', desc: () => 'Souls from every source are doubled; Life Essence +50%.' });
+N({ id: 'c_legend', name: 'Crown of Forbidden Knowledge', cur: 'divinity', max: 1, cost: 1, parent: 'c_greater', branch: 'S', icon: 'level', desc: () => 'Level-up deck: Legendary cards can appear.' });
+N({ id: 'd_tithe', name: 'Tithe of the Gods', cur: 'divinity', max: 1, cost: 1, parent: 's_gain', need: 1, branch: 'S', icon: 'soul', desc: () => 'Souls from every source are doubled; Life Essence +50%.' });
 
 export const META_BY_ID: Record<string, WebNode> = Object.fromEntries(META.map(m => [m.id, m]));
 export const metaCost = (m: WebNode, lv: number) => Math.round(m.cost * Math.pow(m.mult || 1, lv));

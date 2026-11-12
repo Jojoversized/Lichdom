@@ -2,7 +2,7 @@
 import { G } from '../core/state';
 import { rnd, pick } from '../core/util';
 import { KEEP, PAL } from '../config/constants';
-import { ACHIEVEMENTS, META_BY_ID, metaCost, WebNode } from '../data/meta';
+import { ACHIEVEMENTS, META, META_BY_ID, metaCost, WebNode } from '../data/meta';
 import { KEEPS, WAVES_PER_KEEP } from '../data/world';
 import { hooks, msg, lichSay, sfx } from '../core/events';
 import { metaLv } from './stats';
@@ -123,6 +123,20 @@ export function buyMeta(id: string) {
   G.meta.lv[id] = lv + 1;
   saveMetaSoon(); sfx('well');
   return true;
+}
+/** Everything spent on the web so far, per currency (costs are deterministic, so a refund is exact). */
+export function webSpent() {
+  const out: Record<string, number> = { souls: 0, essence: 0, divinity: 0 };
+  for (const m of META) { const lv = metaLv(m.id); for (let l = 0; l < lv; l++) out[m.cur] += metaCost(m, l); }
+  return out;
+}
+/** Free respec: every node is unlearned and everything spent is returned to the purse. */
+export function resetWeb() {
+  const back = webSpent();
+  for (const c in back) (G.meta as any)[c] += back[c];
+  G.meta.lv = { core: 1 };
+  saveMeta(); sfx('well');
+  return back;
 }
 /** Buys as many levels as the purse allows (shift-click); returns the number bought. */
 export function buyMetaMax(id: string, cap = 999) { let n = 0; while (n < cap && buyMeta(id)) n++; return n; }

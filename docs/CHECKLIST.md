@@ -24,6 +24,8 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 - [x] v0.12.2: aggro leash — an undead follows a foe it has already engaged up to 170 px beyond the defence zone (new targets still 40) and finishes it before returning to its post
 - [x] v0.12.2: starting spells are Death Wave + **Unholy Might** (12 s: undead +40% damage, −30% damage taken); Raise the Dead moved to a deep Arcane node (`sp_raise`, after Blood Harvest, 75 Life Essence)
 - [ ] Dedicated Dreamina art for tier II / III undead (replace the placeholder glow)
+- [x] v0.12.3: **Reset & refund** on the web (free, two clicks; `resetWeb()` returns everything spent in all three currencies)
+- [x] v0.12.3: four divinity rites moved near the core: Endless Host (Skeleton muster 8), Eternal Night (Bone Hardening 8), Tithe of the Gods (Soul Hunger), Crown of Forbidden Knowledge (Greater Rites); Second Phylactery, Apocalypse and the Infernal Dragon stay deeper
 - [x] Anti-stalemate: a wave that drags on 150 s after its last spawn makes the crusade hit 20% harder every 10 s
 - [x] New home screen (purse, keeps, Continue), siege-over screen for defeat / retreat / conquest, HUD shows the siege's haul
 - [x] `tools/test/bot.py` is now a meta-loop bot (siege → bank → spend → repeat); smoke, ui_flow and events_check rewritten; `strategy.py` and `balance.py` retired (they modelled in-run buying)

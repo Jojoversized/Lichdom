@@ -21,7 +21,7 @@ import { FORTRESSES, KEEPS, WAVES_PER_KEEP } from '../data/world';
 import { RARITY, rollCards, applyCard } from '../systems/cards';
 import { fervorParts, metaLv, towerStats, squadSize, applyUnitStats, bld, wallSlots, wallTier, towerSlots, towerTier, trapSlots, towerKnown, fortKnown, unitOwned, musterCount, keepUnlocked, waveEssence, essenceMult, waveHpMult } from '../systems/stats';
 import { startWave, crusadeOffer, previewWave, castSpell, canCast, spellCd, newCampaign, loadRun, retreat } from '../systems/campaign';
-import { haul, buyMeta, buyMetaMax, canBuyMeta, nodeVisible, nodeOpen, codexSee } from '../systems/progression';
+import { haul, buyMeta, buyMetaMax, canBuyMeta, nodeVisible, nodeOpen, codexSee, resetWeb, webSpent } from '../systems/progression';
 import { saveRun, saveRunSoon, saveMeta, saveMetaSoon, hasRunSave, clearRunSave, loadMeta, store, SAVE_META, SAVE_RUN } from '../systems/save';
 import { startMusic, applyMusicVolume } from '../audio/audio';
 import { anPick, anExport, anCount, anClear, persist } from '../systems/analytics';
@@ -632,7 +632,7 @@ export const UI: any = {
     G.phase = 'menu'; document.body.classList.add('menu');
     const view = this.webView || (this.webView = { x: 0, y: 0, z: 1 });
     const s = this.screen(`<div class="webhead"><h1>${ESS()} The Phylactery</h1><div id="web-purse"></div>
-        <div class="webbtns">${againKeep != null ? `<button class="btn green" id="mt-go">Besiege ${KEEPS[Math.min(KEEPS.length - 1, againKeep)].name}</button>` : ''}<button class="btn" id="mt-back">Keeps</button></div></div>
+        <div class="webbtns">${againKeep != null ? `<button class="btn green" id="mt-go">Besiege ${KEEPS[Math.min(KEEPS.length - 1, againKeep)].name}</button>` : ''}<button class="btn red" id="mt-reset" title="Unlearn every node and get back everything you spent. Free, as often as you like.">Reset & refund</button><button class="btn" id="mt-back">Keeps</button></div></div>
       <div class="weblegend"><span class="cur souls">${SOUL()} Souls: more undead, small repeatable steps</span><span class="cur essence">${ESS()} Life Essence: unlocks, buildings, strong passives</span><span class="cur divinity">${DIV()} Stolen Divinity: the rarest rites (one per keep's boss)</span><span class="dim">click: buy · shift-click: buy all you can · drag: pan · wheel: zoom</span></div>
       <div class="web" id="web"><div class="webin" id="webin"><svg id="weblines" xmlns="http://www.w3.org/2000/svg"></svg><div id="webnodes"></div></div></div>`, 'metascreen webscreen');
     const web = $('#web'), inner = $('#webin'), nodesEl = $('#webnodes'), svg = $('#weblines');
@@ -671,6 +671,12 @@ export const UI: any = {
     web.onmousemove = (e: MouseEvent) => { if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 5) moved = true; if (moved) { view.x = drag.vx + dx; view.y = drag.vy + dy; apply(); this.hideTip(); } };
     web.onmouseup = web.onmouseleave = () => { drag = null; setTimeout(() => { moved = false; }, 0); };
     web.onwheel = (e: WheelEvent) => { e.preventDefault(); const z0 = view.z, z = clamp(z0 * (e.deltaY < 0 ? 1.15 : 1 / 1.15), 0.12, 1.8); const r = web.getBoundingClientRect(), cx = e.clientX - r.left - r.width / 2, cy = e.clientY - r.top - r.height / 2; view.x = cx - (cx - view.x) * z / z0; view.y = cy - (cy - view.y) * z / z0; view.z = z; apply(); };
+    $('#mt-reset').onclick = () => {
+      const b = $('#mt-reset'), sp = webSpent();
+      if (!sp.souls && !sp.essence && !sp.divinity) { sfx('error'); return; }
+      if (!b.dataset.sure) { b.dataset.sure = '1'; b.innerHTML = `Click again: refund ${SOUL()} ${big(sp.souls)} ${ESS()} ${big(sp.essence)}${sp.divinity ? ' ' + DIV() + ' ' + sp.divinity : ''}`; setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.textContent = 'Reset & refund'; } }, 4000); return; }
+      resetWeb(); delete b.dataset.sure; b.textContent = 'Reset & refund'; this.hideTip(); render();
+    };
     $('#mt-back').onclick = () => this.showMenu();
     const go = $('#mt-go'); if (go) go.onclick = () => { newCampaign(againKeep); this.enterGame(); };
     render(); apply();

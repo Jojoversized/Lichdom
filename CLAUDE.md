@@ -200,6 +200,8 @@ Divinity) goes to the Phylactery → buy nodes on the web → besiege again.
 - v0.12.2: every unit tier draws its type's Dreamina sheet; tiers II / III get a placeholder glow + tint (`TIER_GLOW`,
   `WorldRenderer`) until they have their own art. Undead pursue an engaged foe to `AGGRO_LEASH` (170 px past the defence
   zone, `ai.ts`). Base spells: Death Wave + Unholy Might (`G.mightT`); Raise the Dead is the web node `sp_raise`.
+- v0.12.3: the web has a free **Reset & refund** (`resetWeb()` / `webSpent()` in `progression.ts`); four of the seven
+  divinity rites hang off early nodes (`d_host`, `d_night`, `d_tithe`, `c_legend`).
 - **Run state**: `r.keep`, `r.souls/essence/divinity` are the siege's haul (banked by `endCampaign(outcome)` in
   `progression.ts`: defeat / retreat / victory). `G.meta = { souls, essence, divinity, lv, keepsCleared, best, flags, layout }`.
 - **Defences**: slots from the web, free placement in prep only (`constructTower`, `buildSite`/`razeSite`, `placeTrap`);
