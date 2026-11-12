@@ -30,7 +30,7 @@ import { anStart, anResume, anPick, anWaveStart, anWaveEnd } from './analytics';
 export function resetWorld() {
   for (const k of ['units', 'enemies', 'towers', 'forts', 'buildings', 'corpses', 'dying']) for (const o of G[k]) if (o.view || o.shadow) G.retired.push(o);
   for (const k of ['units', 'enemies', 'towers', 'forts', 'buildings', 'projectiles', 'particles', 'hazards', 'corpses', 'dying', 'texts', 'bolts', 'rings', 'flashes', 'netArcs', 'waveFx', 'timers', 'decalQueue']) G[k].length = 0;
-  G.keep.ward = 0; G.tdT = 0; G.frenzyT = 0; G.stormT = 0; G.extraRaised = 0; G.citadelRaised = 0; G.fleshZombies = 0;
+  G.keep.ward = 0; G.tdT = 0; G.frenzyT = 0; G.mightT = 0; G.stormT = 0; G.extraRaised = 0; G.citadelRaised = 0; G.fleshZombies = 0;
   G.selected = null; G.build = null; G.wave = null; G.bossBar = null; G.bossIntro = null; G.speech = null;
   G.worldVersion = (G.worldVersion || 0) + 1; // tells the renderer to rebuild every view
 }
@@ -346,6 +346,11 @@ export function castSpell(id: string, x?: number, y?: number) {
     case 'time': G.tdT = 7; sfx('time'); msg('Time itself bends to your will.', '#9fe6ff'); break;
     case 'blood': addHazard(x, y, s.radius, s.dmg * P, 'necro', 4, 'blood'); sfx('blood'); break;
     case 'resurrect': { const n = G.wave ? G.wave.fallen.length : 0; reviveFallen(); msg(n ? `${n} servants return from death.` : 'None have fallen this wave.', PAL.necro); sfx('raise'); break; }
+    case 'might':
+      G.mightT = s.dur; msg('Unholy Might! Your host strikes harder and shrugs off blows.', PAL.necro); sfx('cast');
+      addRing(KEEP.x1, KEEP.y, 10, 260, PAL.necro, 0.8);
+      for (const u of G.units) addRing(u.x, u.y - 6, 2, 12, PAL.necro, 0.5);
+      break;
     case 'frenzy': G.frenzyT = 20; msg('Bloodfrenzy! Your forces attack with unholy speed.', '#ff6060'); sfx('cast'); break;
     case 'ward': G.keep.ward = 10; msg('The phylactery is warded.', PAL.necro); sfx('cast'); break;
     case 'storm': G.stormT = 8; sfx('thunder'); msg('A necrotic storm gathers.', PAL.necro); break;
@@ -435,6 +440,7 @@ export function step(dt: number) {
   stepUniqueCards(dt);
   if (G.tdT > 0) G.tdT -= dt;
   if (G.frenzyT > 0) G.frenzyT -= dt;
+  if (G.mightT > 0) G.mightT -= dt;
   if (G.keep.ward > 0) G.keep.ward -= dt;
   if (G.keep.flash > 0) G.keep.flash -= dt;
   for (const k in G.run.spellCd) if (G.run.spellCd[k] > 0) G.run.spellCd[k] -= dt;

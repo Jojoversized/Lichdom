@@ -246,8 +246,10 @@ function guardPosition(u: any, ctx: any, count: number) {
 /** Ground undead defend the gate: they plan only against foes in the defence zone or shooting into it
  *  (ranged crusaders parked just outside used to pepper the host unanswered). `t.z0` / `t.z1`: the
  *  zone tests for ground / flying undead, computed once per threat. */
+/** How far beyond the defence zone an undead follows a foe it has already engaged (new targets: 40). */
+const AGGRO_LEASH = 170;
 function inZone(u: any, t: any) {
-  if (u.summon || mopUp) return true;
+  if (u.summon || mopUp || t.e === u.aggro) return true;
   return (u.flying ? t.z1 : t.z0) || dist2(u.x, u.y, t.e.x, t.e.y) < 60 * 60;
 }
 /** The planner runs in PLAN_SLICES interleaved slices on consecutive ticks, so a 3,000-strong host
@@ -341,9 +343,13 @@ export function updateUnit(u: any, dt: number) {
   }
   if (u.engage && !u.engage.dead) t = u.engage;
   // never chase a foe out of the defence zone: hit it if it is in reach, otherwise go back to the post
-  if (t && !u.summon && !u.flying && !threatensZone(t, 40) && dist(u.x, u.y, t.x, t.y) - (t.rad || 4) > u.range) t = null;
+  // …but a foe the undead has already engaged is pursued much further (AGGRO_LEASH) before it gives up,
+  // so the host no longer turns its back the moment a target steps over the line
+  if (u.aggro && (u.aggro.dead || !threatensZone(u.aggro, AGGRO_LEASH))) u.aggro = null;
+  if (t && !u.summon && !u.flying && !threatensZone(t, t === u.aggro ? AGGRO_LEASH : 40) && dist(u.x, u.y, t.x, t.y) - (t.rad || 4) > u.range) t = null;
+  if (!t && u.aggro) t = u.aggro; // nothing closer: finish what it started
   if (t) {
-    u.atPost = false;
+    u.atPost = false; u.aggro = t;
     const td = dist(u.x, u.y, t.x, t.y) - (t.rad || 4);
     // ranged undead kite away from mortal melee that closes in
     if (isRanged(u) && td < 16 && t.def.melee && !u.flying) { moveToward(u, u.x - 20, u.y + (u.slot > 0.5 ? 8 : -8), spd, dt); setAnim(u, 'walk'); }

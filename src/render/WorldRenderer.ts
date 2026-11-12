@@ -23,6 +23,9 @@ const snap = (v: number) => Math.round(v * T) / T;
 /** Draw scale of a sheet: 1 / its texel density (procedural art 2, AI art 4). */
 const sheetScale = (key: string) => 1 / ((SHEETS[key] && (SHEETS[key] as any).res) || T);
 
+/** Placeholder look of evolved undead until they get their own Dreamina art: tier II a cold soul-blue glow,
+ *  tier III a blood-crimson one (both pulse slightly), with a faint matching tint on the sprite. */
+export const TIER_GLOW: any[] = [null, { color: '#6fc8ff', r: 22, a: 0.42, tint: 0xcfe6ff }, { color: '#ff4a4a', r: 26, a: 0.42, tint: 0xffd2cc }];
 const DEPTH = { terrain: -10000, decals: -9990, groundFx: -9000, shadows: -8000, world: 0, fx: 100000, dark: 200000, glow: 200001, overlay: 300000 };
 const colorCache = new Map<string, number>();
 const col = (c: string) => { let v = colorCache.get(c); if (v === undefined) { v = c.startsWith('#') ? hexNum(c) : 0xffffff; colorCache.set(c, v); } return v; };
@@ -202,10 +205,12 @@ export class WorldRenderer {
     if (e.temp > 0 && e.temp < 3 && Math.floor(G.time * 8) % 2) alpha = 0.5;
     if (e.type === 'banshee' || e.type === 'wraith' || e.type === 'wraiths' || e.type === 'devourer') alpha *= 0.88;
     if (spr.alpha !== alpha) spr.setAlpha(alpha);
-    const tint = e.hitT > 0 ? 1 : e.st.freezeT > 0 ? 2 : e.st.prisonT > 0 ? 3 : 0;
+    // evolved undead (tier II / III) share the base sheet for now: a faint tint and a coloured glow tell them apart
+    const tier = e.team === 'u' && !e.summon ? (e.tier || 0) : 0;
+    const tint = e.hitT > 0 ? 1 : e.st.freezeT > 0 ? 2 : e.st.prisonT > 0 ? 3 : tier ? 3 + tier : 0;
     if (e._tint !== tint) {
       e._tint = tint;
-      if (tint === 1) spr.setTintFill(0xffffff); else if (tint === 2) spr.setTint(0x9fe6ff); else if (tint === 3) spr.setTint(0xd0a0ff); else spr.clearTint();
+      if (tint === 1) spr.setTintFill(0xffffff); else if (tint === 2) spr.setTint(0x9fe6ff); else if (tint === 3) spr.setTint(0xd0a0ff); else if (tint >= 4) spr.setTint(TIER_GLOW[tint - 3].tint); else spr.clearTint();
     }
     if (!e.sbob) {
       const w = clamp(Math.round(e.rad * 2.4 / 4) * 4, 8, 48);
@@ -490,7 +495,7 @@ export class WorldRenderer {
     for (const b of G.bolts) { const p = b.pts[b.pts.length - 1]; add(p[0], p[1], 34, b.color, (1 - b.t / b.life) * 0.9); }
     let lit = 0;
     for (const e of G.enemies) { if (e.def.holy || e.boss) add(e.x, e.y - 10, e.boss ? 50 : 22, PAL.holy, 0.45); else if (lit++ < 120) add(e.x, e.y - 8, 16, '#ffd0a0', 0.35); }
-    for (const u of G.units) { if (u.summon) add(u.x, u.y - 16, 36, u.type === 'dragon' ? PAL.fire : PAL.necro, 0.5); else if (lit++ < 200) add(u.x, u.y - 8, 14, '#c8ffd0', 0.25); }
+    for (const u of G.units) { if (u.summon) add(u.x, u.y - 16, 36, u.type === 'dragon' ? PAL.fire : PAL.necro, 0.5); else if (lit++ < 200) { const tg = TIER_GLOW[u.tier || 0]; if (tg) add(u.x, u.y - 10, tg.r * (1 + Math.sin(now / 260 + u.id) * 0.12), tg.color, tg.a); else add(u.x, u.y - 8, 14, '#c8ffd0', 0.25); } }
     for (const w of G.waveFx) add(w.x, w.y, w.r + 20, PAL.necro, 0.4);
     let sc = 0; for (const p of G.particles) if (p.type === 'soul' && sc++ < 30) add(p.x, p.y, 8, PAL.necro, 0.6);
     const amb = M.theme.ambient * (G.phase === 'prep' ? 0.9 : 1);
@@ -515,6 +520,7 @@ export class WorldRenderer {
     const vw = this.viewW, vh = this.viewH;
     if (G.tdT > 0) { g.fillStyle(0x508cc8, 0.1); g.fillRect(ox, oy, vw, vh); }
     if (G.frenzyT > 0) { g.fillStyle(0xa01414, 0.06); g.fillRect(ox, oy, vw, vh); }
+    if (G.mightT > 0) { g.fillStyle(0x30c050, 0.05); g.fillRect(ox, oy, vw, vh); }
     if (G.flash > 0) { g.fillStyle(0xfffae6, Math.min(0.5, G.flash)); g.fillRect(ox, oy, vw, vh); }
     if (G.keep.hp < G.keep.maxHp) this.bar(g, LICH_POS.x, LICH_POS.y - 44, 60, G.keep.hp / G.keep.maxHp, 0x3fae5a);
     const bars = (e: any) => {

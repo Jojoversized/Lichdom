@@ -169,6 +169,7 @@ export function dealDamage(t: any, amount: number, dtype: string, src: any, opt:
   if (t.kind === 'keep') { damageKeep(amount, src); return amount; }
   let dmg = amount, crit = false;
   if (src && src.team === 'u' && !opt.noCrit && Math.random() < G.run.m.crit) { dmg *= G.run.m.critMult; crit = true; }
+  if (G.mightT > 0) { if (src && src.team === 'u' && src.kind === 'unit') dmg *= 1.4; if (t.team === 'u' && t.kind === 'unit') dmg *= 0.7; } // Unholy Might
   if (t.team === 'm') {
     if (G.run.mods.reaper && !t.reaped && src && src.team === 'u') { dmg *= 2; t.reaped = true; } // Reaper's Mark: the first blow lands twice as hard
     if (t.def.dodge && !opt.aoe && Math.random() < t.def.dodge) { addText(t.x, t.y - 18, 'dodge', '#aaaaaa'); return 0; }

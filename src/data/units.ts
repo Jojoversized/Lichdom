@@ -5,21 +5,23 @@ import { PAL } from '../config/constants';
 // cost buys a whole squad of `squad` undead (never fewer than 5). `size` is body
 // size (1 small … 4 huge): giant-slayer bonuses and impact effects key off it.
 // There is no army cap — the crusade answers numbers with Crusade Fervor.
+// v0.12.2: every tier uses its type's Dreamina sheet for now (the old procedural tier-2/3 sheets looked out of
+// place beside it); evolved tiers are told apart by a placeholder glow and tint in the renderer (TIER_GLOW).
 export const UNITS: Record<string, any> = {
   skeleton: { name: 'Skeleton Warrior', cost: 160, squad: 8, size: 1, hp: 66, dmg: 8, cd: 1.0, range: 12, spd: 34, armor: 0.1, dtype: 'phys', melee: true,
-    tiers: [{ name: 'Skeleton Warriors', spr: 'skeleton' }, { name: 'Armored Skeletons', spr: 'skeleton2', cost: 120, hp: 1.7, dmg: 1.4, armor: 0.2 }, { name: 'Deathguard Legion', spr: 'skeleton3', cost: 320, hp: 2.8, dmg: 2.2, armor: 0.3 }],
+    tiers: [{ name: 'Skeleton Warriors', spr: 'skeleton' }, { name: 'Armored Skeletons', spr: 'skeleton', cost: 120, hp: 1.7, dmg: 1.4, armor: 0.2 }, { name: 'Deathguard Legion', spr: 'skeleton', cost: 320, hp: 2.8, dmg: 2.2, armor: 0.3 }],
     desc: 'Cheap, reliable bone infantry. The backbone of every undead host.' },
   archer: { name: 'Skeleton Archer', cost: 170, squad: 6, size: 1, hp: 35, dmg: 7, cd: 1.2, range: 110, spd: 32, armor: 0, dtype: 'phys', ranged: 'arrow',
-    tiers: [{ name: 'Skeleton Archers', spr: 'archer' }, { name: 'Bone Marksmen', spr: 'archer2', cost: 140, hp: 1.5, dmg: 1.6, range: 1.15 }, { name: 'Wailing Rangers', spr: 'archer3', cost: 340, hp: 2.2, dmg: 2.5, range: 1.25 }],
+    tiers: [{ name: 'Skeleton Archers', spr: 'archer' }, { name: 'Bone Marksmen', spr: 'archer', cost: 140, hp: 1.5, dmg: 1.6, range: 1.15 }, { name: 'Wailing Rangers', spr: 'archer', cost: 340, hp: 2.2, dmg: 2.5, range: 1.25 }],
     desc: 'Ranged support that peppers anything in reach from behind the line.' },
   zombie: { name: 'Zombie Horde', cost: 130, squad: 8, size: 1, hp: 110, dmg: 6, cd: 1.4, range: 12, spd: 20, armor: 0, dtype: 'phys', melee: true, bloodless: false,
-    tiers: [{ name: 'Zombie Horde', spr: 'zombie' }, { name: 'Ghoul Pack', spr: 'zombie2', cost: 100, hp: 1.8, dmg: 1.5, spd: 1.3 }, { name: 'Plague Behemoths', spr: 'zombie3', cost: 280, hp: 3.2, dmg: 2.4 }],
+    tiers: [{ name: 'Zombie Horde', spr: 'zombie' }, { name: 'Ghoul Pack', spr: 'zombie', cost: 100, hp: 1.8, dmg: 1.5, spd: 1.3 }, { name: 'Plague Behemoths', spr: 'zombie', cost: 280, hp: 3.2, dmg: 2.4 }],
     desc: 'Slow, tough and cheap. Soaks damage for your other troops.' },
   pikeman: { name: 'Skeletal Pikemen', cost: 180, squad: 6, size: 1, hp: 85, dmg: 13, cd: 1.2, range: 20, spd: 30, armor: 0.2, dtype: 'phys', melee: true, antiCav: 2.5,
-    tiers: [{ name: 'Skeletal Pikemen', spr: 'pikeman' }, { name: 'Phalanx of Bone', spr: 'pikeman2', cost: 150, hp: 1.7, dmg: 1.6, armor: 0.25 }, { name: 'Ossuary Phalanx', spr: 'pikeman2', cost: 340, hp: 2.6, dmg: 2.4, armor: 0.3 }],
+    tiers: [{ name: 'Skeletal Pikemen', spr: 'pikeman' }, { name: 'Phalanx of Bone', spr: 'pikeman', cost: 150, hp: 1.7, dmg: 1.6, armor: 0.25 }, { name: 'Ossuary Phalanx', spr: 'pikeman', cost: 340, hp: 2.6, dmg: 2.4, armor: 0.3 }],
     desc: 'Long reach. Deals 250% damage to cavalry.' },
   deathknight: { name: 'Death Knight', cost: 440, squad: 5, size: 2, hp: 230, dmg: 24, cd: 1.3, range: 14, spd: 38, armor: 0.35, dtype: 'necro', melee: true, pierce: 0.5,
-    tiers: [{ name: 'Death Knights', spr: 'deathknight' }, { name: 'Dread Knights', spr: 'deathknight', cost: 260, hp: 1.6, dmg: 1.6 }, { name: 'Riders of the Pale Host', spr: 'deathknight2', cost: 520, hp: 2.4, dmg: 2.3, spd: 1.4 }],
+    tiers: [{ name: 'Death Knights', spr: 'deathknight' }, { name: 'Dread Knights', spr: 'deathknight', cost: 260, hp: 1.6, dmg: 1.6 }, { name: 'Riders of the Pale Host', spr: 'deathknight', cost: 520, hp: 2.4, dmg: 2.3, spd: 1.4 }],
     desc: 'Elite necro-knights. Ignore 50% of armor.' },
   bonemage: { name: 'Bone Mage', cost: 280, squad: 5, size: 1, hp: 45, dmg: 15, cd: 2.0, range: 100, spd: 28, armor: 0, dtype: 'necro', ranged: 'necrobolt', splash: 22,
     tiers: [{ name: 'Bone Mages', spr: 'bonemage' }, { name: 'Ossomancers', spr: 'bonemage', cost: 180, hp: 1.5, dmg: 1.7 }, { name: 'Archmages of Bone', spr: 'bonemage', cost: 380, hp: 2.2, dmg: 2.6, splash: 1.4 }],
@@ -56,7 +58,7 @@ export const UNIT_ORDER = [...BASE_ORDER.filter(k => UNITS[k]), ...Object.keys(U
 
 // ---------------- Summons (Soul Well) ----------------
 export const SUMMONS: Record<string, any> = {
-  legion: { name: 'Skeleton Legion', spr: 'skeleton3', hp: 260, dmg: 26, cd: 1.0, range: 13, spd: 36, armor: 0.3, dtype: 'phys', melee: true, count: 12, cost: 140, desc: 'Twelve Deathguard rise from the earth at once.' },
+  legion: { name: 'Skeleton Legion', spr: 'skeleton', hp: 260, dmg: 26, cd: 1.0, range: 13, spd: 36, armor: 0.3, dtype: 'phys', melee: true, count: 12, cost: 140, desc: 'Twelve Deathguard rise from the earth at once.' },
   wraiths: { name: 'Wraith Swarm', spr: 'wraith', hp: 180, dmg: 22, cd: 0.9, range: 14, spd: 56, armor: 0.2, dtype: 'necro', melee: true, flying: true, drain: 0.3, count: 8, cost: 200, desc: 'Eight wraiths that hunt anything, ignoring walls.' },
   colossus: { name: 'Bone Colossus', spr: 'colossus', hp: 3200, dmg: 120, cd: 2.6, range: 26, spd: 20, armor: 0.5, cleave: 46, dtype: 'phys', melee: true, count: 2, cost: 260, desc: 'Two gigantic skeletal monstrosities that crush entire formations.' },
   abom: { name: 'The Abomination', spr: 'sumabom', hp: 5200, dmg: 60, cd: 1.8, range: 22, spd: 18, armor: 0.45, cleave: 34, taunt: true, dtype: 'phys', melee: true, count: 2, cost: 220, desc: 'Two mountains of flesh that draw every blade to themselves.' },

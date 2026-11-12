@@ -1,11 +1,13 @@
 import { PAL } from '../config/constants';
 
 // ---------------- Spells ----------------
-// v0.12: spells cost nothing but their cooldown. Death Wave and Raise the Dead are known from the first;
+// v0.12: spells cost nothing but their cooldown. Death Wave and Unholy Might are known from the first
+// (Raise the Dead, far too strong for a fresh host, is now a deep node: v0.12.2);
 // every other spell is learned on the Phylactery web (node `sp_<id>`). Summoning spells call creatures
 // that fight for `dur` seconds (they were Soul Well purchases before v0.12).
 export const SPELLS: Record<string, any> = {
   deathwave: { name: 'Death Wave', icon: 'deathwave', cd: 18, target: false, dmg: 45, desc: 'An expanding ring of necrotic force from the keep.' },
+  might: { name: 'Unholy Might', icon: 'rally', cd: 30, target: false, dur: 12, dmg: 0, desc: 'For 12s every undead deals 40% more damage and takes 30% less.' },
   raise: { name: 'Raise the Dead', icon: 'raise', cd: 30, target: true, radius: 60, desc: 'All corpses in the area rise as skeleton warriors for 30s.' },
   prison: { name: 'Soul Prison', icon: 'prison', cd: 22, target: true, radius: 45, desc: 'Roots enemies for 4s. Trapped enemies take +25% damage.' },
   meteor: { name: 'Meteoric Cataclysm', icon: 'meteor', cd: 25, target: true, radius: 60, dmg: 55, desc: 'Calls down a hail of meteors on an area.' },
@@ -23,6 +25,6 @@ export const SPELLS: Record<string, any> = {
   dragon: { name: 'Infernal Dragon', icon: 'meteor', cd: 150, target: false, summon: 'dragon', dur: 60, desc: 'An Infernal Dragon breathes rivers of fire across the crusade for 60s.' },
   apocalypse: { name: 'Apocalypse', icon: 'apocalypse', cd: 150, target: false, dmg: 500, desc: 'Rain fire and necrotic ruin across the entire battlefield.' },
 };
-export const SPELL_ORDER = ['deathwave', 'raise', 'prison', 'meteor', 'frenzy', 'time', 'blood', 'ward', 'storm', 'resurrect', 'legion', 'wraiths', 'colossus', 'abom', 'devourer', 'dragon', 'apocalypse'];
-export const BASE_SPELLS = ['deathwave', 'raise'];
+export const SPELL_ORDER = ['deathwave', 'might', 'raise', 'prison', 'meteor', 'frenzy', 'time', 'blood', 'ward', 'storm', 'resurrect', 'legion', 'wraiths', 'colossus', 'abom', 'devourer', 'dragon', 'apocalypse'];
+export const BASE_SPELLS = ['deathwave', 'might'];
 

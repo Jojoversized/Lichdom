@@ -20,6 +20,10 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 - [x] Undead fight to the death: the fall-back-to-the-keep-to-mend behaviour is removed (they turned their backs mid-fight and stood idle while mending); the passive mending for undead standing at the gate stays
 - [x] Souls and Life Essence gains +10% (`BASE_SOULS 0.44`, `BASE_ESS 1.1`)
 - [x] Mortal damage eased (`BASE_DMG 1.6 → 1.3`) to offset the keep now taking melee hits and undead no longer mending mid-wave; bot: keep 1 in ~14–19 sieges (random play, high variance)
+- [x] v0.12.2: evolved undead (tier II / III) use their type's Dreamina sheet instead of the old procedural tier sheets, told apart by a placeholder glow + faint tint (`TIER_GLOW` in WorldRenderer: tier II soul-blue, tier III crimson)
+- [x] v0.12.2: aggro leash — an undead follows a foe it has already engaged up to 170 px beyond the defence zone (new targets still 40) and finishes it before returning to its post
+- [x] v0.12.2: starting spells are Death Wave + **Unholy Might** (12 s: undead +40% damage, −30% damage taken); Raise the Dead moved to a deep Arcane node (`sp_raise`, after Blood Harvest, 75 Life Essence)
+- [ ] Dedicated Dreamina art for tier II / III undead (replace the placeholder glow)
 - [x] Anti-stalemate: a wave that drags on 150 s after its last spawn makes the crusade hit 20% harder every 10 s
 - [x] New home screen (purse, keeps, Continue), siege-over screen for defeat / retreat / conquest, HUD shows the siege's haul
 - [x] `tools/test/bot.py` is now a meta-loop bot (siege → bank → spend → repeat); smoke, ui_flow and events_check rewritten; `strategy.py` and `balance.py` retired (they modelled in-run buying)

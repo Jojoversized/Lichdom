@@ -94,7 +94,7 @@ N({ id: 'a_dmg', name: 'Arcane Potency', cur: 'souls', max: 150, cost: 35, mult:
 N({ id: 'a_cd', name: 'Temporal Mastery', cur: 'souls', max: 10, cost: 150, mult: 1.7, parent: 'a_dmg', need: 4, branch: 'A', icon: 'time', desc: (lv) => `-${lv * 4}% spell cooldowns.` });
 const SPELL_NODES: [string, string, number, number, Cur][] = [
   ['prison', 'a_dmg', 3, 12, 'essence'], ['meteor', 'a_dmg', 6, 20, 'essence'], ['frenzy', 'sp_prison', 1, 25, 'essence'], ['time', 'sp_meteor', 1, 45, 'essence'], ['blood', 'sp_meteor', 1, 40, 'essence'],
-  ['ward', 'sp_frenzy', 1, 50, 'essence'], ['storm', 'sp_time', 1, 110, 'essence'], ['resurrect', 'sp_blood', 1, 90, 'essence'],
+  ['raise', 'sp_blood', 1, 75, 'essence'], ['ward', 'sp_frenzy', 1, 50, 'essence'], ['storm', 'sp_time', 1, 110, 'essence'], ['resurrect', 'sp_blood', 1, 90, 'essence'],
   ['legion', 'a_cd', 2, 35, 'essence'], ['wraiths', 'sp_legion', 1, 80, 'essence'], ['colossus', 'sp_wraiths', 1, 180, 'essence'], ['abom', 'sp_colossus', 1, 320, 'essence'], ['devourer', 'sp_abom', 1, 600, 'essence'],
   ['apocalypse', 'sp_storm', 1, 1, 'divinity'], ['dragon', 'sp_devourer', 1, 1, 'divinity'],
 ];
