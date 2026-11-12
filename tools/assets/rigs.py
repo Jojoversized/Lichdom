@@ -162,10 +162,11 @@ RIGS['ai_skeleton_cleric'] = dict(
     })
 
 RIGS['ai_haunted_armor'] = dict(
-    arch='biped', arm='armF', off='armB', wind=20, strike=-36, fore=(12, -22), stride=0.8, armswing=7, margin=(36, 10),
-    # a gauntlet haymaker
-    swing=dict(W={'hips': (0, -4, 0), 'torso': -9, 'head': 3, 'armB': 42, 'foreB': 34, 'armF': -18},
-               S={'hips': (0, 7, 1), 'torso': 14, 'head': -5, 'armB': -84, 'foreB': -22, 'armF': 26, 'foreF': 12, 'legL': 12, 'legR': -12, 'shinR': 10},
+    arch='biped', arm='armF', off='armB', wind=20, strike=-36, fore=(12, -22), stride=0.8, armswing=7, margin=(40, 10),
+    # a hip-driven straight: the trunk turns away from the camera (it narrows, the striking shoulder goes back and the
+    # fist is cocked at the chest), then unwinds into a fully extended arm
+    swing=dict(W={'hips': (0, -5, 0), 'torso': (-9, -2, 0, 0.9, 1), 'head': (4, 1, 0, 1.1, 1), 'armB': (58, -7, -2), 'foreB': -96, 'armF': (-20, 5, 0), 'foreF': -10, 'legL': 4, 'legR': -3},
+               S={'hips': (0, 9, 1), 'torso': (13, 2, 0, 1.05, 1), 'head': -5, 'armB': (-86, 5, -1), 'foreB': 6, 'armF': (30, -4, 0), 'foreF': 14, 'legL': 12, 'legR': -12, 'shinR': 10},
                ms=(60, 140, 40, 130, 70, 100, 70), smear={'bone': 'foreB', 'tipR': 0.8}),
     bones={
         'hips':  dict(p=(53, 74), t=(53, 82), z=5, r=1.4),
@@ -305,10 +306,10 @@ RIGS['ai_banshee'] = dict(
     })
 
 RIGS['ai_vampire_lord'] = dict(
-    arch='biped', arm='armB', off='armF', wind=-20, strike=14, wpn=(-26, 22), stride=0, armswing=5, float=1, lean=0.6, margin=(28, 26),
-    # a rising slash from the hip
-    swing=dict(W={'hips': (0, -4, 0), 'torso': -8, 'armB': 35, 'weapon': 50, 'cape': -8, 'armF': 8},
-               S={'hips': (0, 8, 1), 'torso': 12, 'head': -4, 'armB': -70, 'weapon': -35, 'cape': 16, 'armF': -12, 'foreF': -10},
+    arch='biped', arm='armB', off='armF', wind=-20, strike=14, wpn=(-26, 22), stride=0, armswing=5, float=1, lean=0.6, margin=(28, 40),
+    # a descending slash: it rises out of the crouch with the blade over its shoulder and cuts down across the foe
+    swing=dict(W={'hips': (0, -4, -4), 'torso': -8, 'head': 3, 'armB': -120, 'weapon': -22, 'cape': -10, 'armF': 10},
+               S={'hips': (0, 8, 2), 'torso': 12, 'head': -4, 'armB': -50, 'weapon': 14, 'cape': 16, 'armF': -12, 'foreF': -10},
                ms=(40, 90, 40, 100, 50, 70, 50), smear={'bone': 'weapon', 'tipR': 0.5}),
     bones={
         'hips':   dict(p=(62, 62), t=(60, 86), z=5, r=2.4),

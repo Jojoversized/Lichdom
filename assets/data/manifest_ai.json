@@ -970,7 +970,7 @@
   },
   "ai_haunted_armor": {
    "file": "sprites/units/rig/ai_haunted_armor.png",
-   "fw": 169,
+   "fw": 177,
    "fh": 128,
    "frames": 27,
    "anims": {
@@ -1237,7 +1237,7 @@
   "ai_vampire_lord": {
    "file": "sprites/units/rig/ai_vampire_lord.png",
    "fw": 207,
-   "fh": 128,
+   "fh": 142,
    "frames": 27,
    "anims": {
     "idle": [
