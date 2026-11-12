@@ -22,6 +22,9 @@ export class BootScene extends Phaser.Scene {
     const ai = this.cache.json.get('manifest_ai');
     if (ai) {
       // new content (e.g. the Wendigo) always loads; only the reskin overrides are switchable
+      // rigged animation (tools/assets/rig_bake.py): a baked multi-frame sheet replaces the single-pose strip of the
+      // same key; drop the entry (or set "rig": false on it) to fall back to the original sheet
+      for (const [key, r] of Object.entries<any>(ai.rigged || {})) if (ai.sheets?.[key] && r.rig !== false) Object.assign(ai.sheets[key], { file: r.file, fw: r.fw, fh: r.fh, frames: r.frames, anims: r.anims });
       Object.assign(SHEETS, ai.sheets || {}); Object.assign(IMAGES, ai.images || {});
       if (ai.enabled !== false && (G.settings?.aiArt ?? true))
         for (const [key, aiKey] of Object.entries<string>(ai.overrides || {})) if (ai.sheets?.[aiKey]) SHEETS[key] = ai.sheets[aiKey];

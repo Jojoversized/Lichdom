@@ -15,7 +15,8 @@ import { gainXp } from './progression';
 import { bossAbilities } from './bosses';
 import { WALL_TIERS } from '../data/towers';
 
-export function setAnim(e: any, a: string) { if (e.anim !== a) { e.anim = a; e.at = 0; } }
+/** An attack always restarts its clip (fast attackers would otherwise sit on its last frame). */
+export function setAnim(e: any, a: string) { if (e.anim !== a || a === 'atk') { e.anim = a; e.at = 0; } }
 function startAttack(e: any) { setAnim(e, 'atk'); e.atkHold = 0.3; }
 function moveToward(e: any, tx: number, ty: number, spd: number, dt: number) {
   const dx = tx - e.x, dy = ty - e.y, d = Math.sqrt(dx * dx + dy * dy);

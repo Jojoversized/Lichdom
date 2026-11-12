@@ -26,6 +26,10 @@ Legend: [x] done · [~] partial / simplified · [ ] to do. Update this file at t
 - [ ] Dedicated Dreamina art for tier II / III undead (replace the placeholder glow)
 - [x] v0.12.3: **Reset & refund** on the web (free, two clicks; `resetWeb()` returns everything spent in all three currencies)
 - [x] v0.12.3: four divinity rites moved near the core: Endless Host (Skeleton muster 8), Eternal Night (Bone Hardening 8), Tithe of the Gods (Soul Hunger), Crown of Forbidden Knowledge (Greater Rites); Second Phylactery, Apocalypse and the Infernal Dragon stay deeper
+- [x] v0.13: **rigged animations for all 14 allied undead** (`tools/assets/rig_bake.py` + `rigs.py`): a skeleton per unit (5–11 bones), limbs move as rigid pieces, baked offline into 26-frame sheets (idle 6 / walk 8 / atk 6 / cast 6) in `assets/sprites/units/rig/`; no runtime rigging, the original single-pose sheets are kept and the `rigged` map in `manifest_ai.json` switches them
+- [x] v0.13: clip durations are fixed whatever the frame count (`animFrameIndex`); every attack restarts its clip
+- [ ] Rig the Lich, the 7 Dreamina crusaders and the 6 bosses the same way (rigs.py entries only)
+- [ ] Rig review in play: tune amplitudes per unit; vampire and robed casters have no leg bones (they glide with a bob)
 - [x] Anti-stalemate: a wave that drags on 150 s after its last spawn makes the crusade hit 20% harder every 10 s
 - [x] New home screen (purse, keeps, Continue), siege-over screen for defeat / retreat / conquest, HUD shows the siege's haul
 - [x] `tools/test/bot.py` is now a meta-loop bot (siege → bank → spend → repeat); smoke, ui_flow and events_check rewritten; `strategy.py` and `balance.py` retired (they modelled in-run buying)

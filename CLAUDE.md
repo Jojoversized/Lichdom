@@ -67,6 +67,7 @@ All art and sound are **procedurally authored** in code and exported to real fil
 - `tools/assets/painters.mjs` — every painter (humanoid generator, horses, dragons, siege engines,
   towers, keeps, props, fortifications, icons) and the sprite specs. **Edit art here.**
 - `tools/assets/gen-sprites.mjs` — writes sheets into `assets/sprites/**` and `assets/data/manifest.json`.
+- `tools/assets/rig_bake.py` + `rigs.py` — skeletal rigs for imported AI sprites, baked to multi-frame sheets (v0.13).
 - `tools/assets/gen-font.py` — builds `assets/fonts/LichNumerals.ttf` (pixel digits; needs Python fontTools; the TTF is committed).
 - `tools/assets/gen-audio.mjs` — synthesizes SFX into `assets/audio/sfx/*.wav` (+ `assets/data/sfx.json`).
 - Output is deterministic (seeded). Commit regenerated assets.
@@ -202,6 +203,12 @@ Divinity) goes to the Phylactery → buy nodes on the web → besiege again.
   zone, `ai.ts`). Base spells: Death Wave + Unholy Might (`G.mightT`); Raise the Dead is the web node `sp_raise`.
 - v0.12.3: the web has a free **Reset & refund** (`resetWeb()` / `webSpent()` in `progression.ts`); four of the seven
   divinity rites hang off early nodes (`d_host`, `d_night`, `d_tithe`, `c_legend`).
+- v0.13 **rigged animation**: `python3 tools/assets/rig_bake.py --all` bakes skeletal animation for the imported
+  single-pose sprites (rigs and clips in `tools/assets/rigs.py`; `--grid <key> out.png` prints a ruler for authoring,
+  `--debug` the bone ownership map, `--check` sample frames). Output `assets/sprites/<category>/rig/<key>.png` (8 frames
+  per row) + `rigged` in `manifest_ai.json`, applied by BootScene over the sheet of the same key (delete the entry or
+  set `"rig": false` to fall back). The rest pose must bake back to the source exactly (the tool checks). Frame counts
+  are free: `animFrameIndex` gives each clip a fixed duration. Done: the 14 allied units; not yet: Lich, crusaders, bosses.
 - **Run state**: `r.keep`, `r.souls/essence/divinity` are the siege's haul (banked by `endCampaign(outcome)` in
   `progression.ts`: defeat / retreat / victory). `G.meta = { souls, essence, divinity, lv, keepsCleared, best, flags, layout }`.
 - **Defences**: slots from the web, free placement in prep only (`constructTower`, `buildSite`/`razeSite`, `placeTrap`);

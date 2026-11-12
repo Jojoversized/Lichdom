@@ -50,8 +50,9 @@ export function makeShadowTextures(scene: Phaser.Scene, T = 2) {
 /** phase: per-entity offset (seconds) so a squad never breathes or marches in lockstep. */
 export function animFrameIndex(meta: SheetMeta, anim: string, at: number, phase = 0) {
   const a = (meta.anims && (meta.anims[anim] || meta.anims.idle)) || [0, 1];
-  // idle cycles last ~1.4s regardless of frame count; walk 8 fps; attack plays once
-  const speed = anim === 'walk' ? 8 : anim === 'atk' ? 10 : anim === 'cast' ? 6 : Math.max(1.4, a[1] / 1.4);
+  // every clip has a fixed DURATION whatever its frame count (rigged sheets have 6-8 frames, the older strips 2-4):
+  // idle ~1.4 s, a walk cycle 0.55 s, an attack plays once in 0.3 s (the attack hold), a cast gesture 0.36 s
+  const speed = anim === 'walk' ? a[1] / 0.55 : anim === 'atk' ? a[1] / 0.3 : anim === 'cast' ? a[1] / 0.36 : Math.max(1.4, a[1] / 1.4);
   if (anim !== 'atk') at += phase;
   const f = Math.floor(at * speed);
   return a[0] + (anim === 'atk' ? Math.min(f, a[1] - 1) : f % Math.max(1, a[1]));
