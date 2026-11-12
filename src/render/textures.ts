@@ -52,6 +52,13 @@ export function animFrameIndex(meta: SheetMeta, anim: string, at: number, phase 
   const a = (meta.anims && (meta.anims[anim] || meta.anims.idle)) || [0, 1];
   // every clip has a fixed DURATION whatever its frame count (rigged sheets have 6-8 frames, the older strips 2-4):
   // idle ~1.4 s, a walk cycle 0.55 s, an attack plays once in 0.3 s (the attack hold), a cast gesture 0.36 s
+  const ds = meta.durs && meta.durs[anim];
+  if (ds) { // pose-to-pose clip: every frame has its own duration (a held wind-up, a 40 ms smear, a held hit…)
+    let ms = (anim === 'atk' ? at : at + phase) * 1000, i = 0;
+    if (anim !== 'atk') { let tot = 0; for (const d of ds) tot += d; ms %= tot; }
+    while (i < ds.length - 1 && ms >= ds[i]) ms -= ds[i++];
+    return a[0] + i;
+  }
   const speed = anim === 'walk' ? a[1] / 0.55 : anim === 'atk' ? a[1] / 0.3 : anim === 'cast' ? a[1] / 0.36 : Math.max(1.4, a[1] / 1.4);
   if (anim !== 'atk') at += phase;
   const f = Math.floor(at * speed);
