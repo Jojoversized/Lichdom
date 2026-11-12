@@ -295,3 +295,23 @@ img.pixd { image-rendering: auto; vertical-align: middle; }
 .wnode.core .wn { font-size: 12px; color: #5dff7a; width: 120px; }
 .wnode:hover { z-index: 5; filter: brightness(1.25); }
 @keyframes webpulse { 50% { box-shadow: 0 0 0 2px #0c0b0e, 0 0 18px 5px var(--bc); } }
+
+/* ---- first-run tutorial (z 250: above modals and screens, below tooltips) ---- */
+#tut { position: fixed; inset: 0; z-index: 250; pointer-events: none; }
+#tut .tb { position: fixed; background: rgba(4,4,6,.5); pointer-events: auto; }
+#tut .tb.clear { background: transparent; }
+#tut .tring { position: fixed; border: 2px solid #5dff7a; box-shadow: 0 0 0 2px #08090b, 0 0 18px 2px rgba(93,255,122,.55), inset 0 0 12px rgba(93,255,122,.25); pointer-events: none; animation: tutpulse 1.2s steps(6) infinite alternate; }
+@keyframes tutpulse { from { opacity: .65; } to { opacity: 1; } }
+#tut .tbub { position: fixed; width: 330px; max-width: calc(100vw - 16px); padding: 12px 14px; pointer-events: auto; border-color: #5dff7a; background: #0c0b0e; line-height: 1.45; }
+#tut .tbub h3 { margin: 0 0 6px; color: #5dff7a; }
+#tut .tbub .tn { margin-top: 10px; text-align: right; }
+#tut .tbub .th { margin-top: 8px; color: #8a8494; font-size: 12px; }
+#tut.welcome .tb { background: rgba(3,3,5,.74); }
+#tut.welcome .tbub { left: 50%; top: 50%; transform: translate(-50%, -50%); width: 620px; padding: 26px 30px; text-align: center; }
+#tut.welcome .tbub h1 { margin: 0 0 14px; font-size: 30px; color: #5dff7a; }
+#tut.welcome .tbub p { margin: 0 0 18px; font-size: 16px; line-height: 1.6; color: #d8d2c4; text-align: left; }
+#tut.welcome .tbub .tn { text-align: center; }
+#tut.welcome #tut-next { background: #0a0d0b; color: #5dff7a; border-color: #5dff7a; padding: 10px 34px; }
+#tut.welcome #tut-next:hover { background: #5dff7a; color: #08090b; }
+.losstip { margin: 18px auto 0; max-width: 560px; padding: 8px 12px; border-left: 3px solid #5dff7a; background: rgba(93,255,122,.06); color: #b9b3a6; font-size: 13px; text-align: left; }
+.losstip b { color: #5dff7a; margin-right: 6px; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; }

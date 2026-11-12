@@ -24,6 +24,7 @@ import { startWave, crusadeOffer, previewWave, castSpell, canCast, spellCd, newC
 import { haul, buyMeta, buyMetaMax, canBuyMeta, nodeVisible, nodeOpen, codexSee, resetWeb, webSpent } from '../systems/progression';
 import { saveRun, saveRunSoon, saveMeta, saveMetaSoon, hasRunSave, clearRunSave, loadMeta, store, SAVE_META, SAVE_RUN } from '../systems/save';
 import { startMusic, applyMusicVolume } from '../audio/audio';
+import { Tut } from './tutorial';
 import { anPick, anExport, anCount, anClear, persist } from '../systems/analytics';
 
 const $ = (s: string, el: ParentNode = document) => el.querySelector(s) as HTMLElement;
@@ -125,6 +126,7 @@ export const UI: any = {
     hooks.achievement = (a) => this.toastAchievement(a);
     hooks.defeat = (b) => this.showDefeat(b);
     hooks.refreshBuild = () => this.renderBuild();
+    Tut.init();
     this.bindKeys();
   },
 
@@ -156,6 +158,8 @@ export const UI: any = {
 
   // ---------------- HUD ----------------
   update(dt: number, worldToScreen: (x: number, y: number) => [number, number]) {
+    this.w2s = worldToScreen;
+    this.tutBattle();
     if (G.speech) {
       const sp = $('#speech'), e = G.speech.e, H = (SHEETS[e.spr] && SHEETS[e.spr].H) || 30;
       const [sx, sy] = worldToScreen(e.x, e.y - H - e.alt - 10);
@@ -204,6 +208,85 @@ export const UI: any = {
     this.updateSpeed();
   },
   /** Updates a top-bar stat's text without wiping its floating gain labels. */
+  // ---------------- first-run tutorial (ui/tutorial.ts draws it; the beats live here) ----------------
+  /** Screen box around the undead host, for the tutorial spotlight. */
+  hostRect(): DOMRect | null {
+    if (!this.w2s || !G.units.length) return null;
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (const u of G.units) { const [x, y] = this.w2s(u.x, u.y); const [, yt] = this.w2s(u.x, u.y - 26); x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, yt); y1 = Math.max(y1, y); }
+    return new DOMRect(x0 - 18, y0 - 6, x1 - x0 + 36, y1 - y0 + 14);
+  },
+  /** First siege, before the first wave: the top bar, the host, the spells, the wave button. */
+  tutSiege() {
+    const t = Tut.st();
+    if (!Tut.guiding() || t.hud || !G.run || G.phase !== 'prep') return;
+    Tut.run([
+      { target: '#topbar', title: 'Your siege at a glance', btn: 'Next', text: `The wave you are on, the ${SOUL()} <b>souls</b> and ${ESS()} <b>Life Essence</b> this siege has earned, and your <b>keep's health</b>. When the keep falls the siege ends, but everything you gathered comes home with you.` },
+      { target: () => this.hostRect(), title: 'Your undead host', btn: 'Next', pad: 4, text: 'They fight on their own: you never give them orders. The host starts small, and grows between sieges.' },
+      { target: '#spellbar', title: 'Your spells', btn: 'Next', text: 'These are yours to cast. Click one (or press its number) and it recharges after use.' },
+      { target: '#b-wave', title: 'Call the crusade', click: true, text: 'Nothing marches until you say so. When you are ready, begin the first wave.', onNext: () => { t.hud = true; saveMetaSoon(); } },
+    ]);
+  },
+  /** The crusade picker: the O.R.B, then the Skirmish; later the champion of wave 5. */
+  tutCrusade(n: number) {
+    const t = Tut.st();
+    if (!Tut.guiding() && t.champ) return;
+    if (Tut.guiding() && !t.orb) {
+      Tut.run([
+        { target: '.crusadem .cards', title: 'The O.R.B', btn: 'Next', text: 'The Orb of Revealing Battles shows you every host that could march next, and lets you choose which one does. A larger host pays more souls and Life Essence; a smaller one is easier to survive.' },
+        { target: '.crusadem .card[data-i="0"]', title: 'Skirmish', btn: 'Got it', text: 'The smallest host. Your army is tiny right now, so I <b>strongly</b> recommend picking the weaker fights until you have bought a few upgrades.', onNext: () => { t.orb = true; saveMetaSoon(); } },
+      ]);
+    } else if (n === 5 && !t.champ && Tut.on()) {
+      Tut.spot({ target: '.crusadem h2', title: 'A champion is coming', btn: 'Understood', text: 'Wave 5 is led by a <b>champion</b>: a named hero with five times the health of a common soldier who hits much harder, and pays six times the souls when it falls. Keep your spells ready for when it reaches your line.', onNext: () => { t.champ = true; saveMetaSoon(); } });
+    }
+  },
+  /** First wave: when the fighting starts, pause and have the player cast Death Wave. */
+  tutBattle() {
+    if (Tut.active || !G.run || G.phase !== 'wave' || G.modal) return;
+    const t = G.stats.tut; if (!t || t.done || t.spell || !t.hud || !Tut.on()) return;
+    if (!G.run.spells.includes('deathwave') || !canCast('deathwave')) return;
+    const near = G.enemies.some((e: any) => !e.dead && Math.hypot(e.x - KEEP.x1, e.y - KEEP.y) < 250) || G.units.some((u: any) => u.engage && !u.engage.dead);
+    if (!near) return;
+    G.paused = true; this.updateSpeed();
+    Tut.spot({ target: '#spellbar [data-spell="deathwave"]', title: 'Death Wave', click: true, text: 'The crusade is within reach, so I have paused the battle for you. Death Wave sends a ring of necrotic force out from your keep and hurts everything it passes. Cast it now.',
+      onNext: () => { t.spell = true; saveMetaSoon(); G.paused = false; this.updateSpeed(); } });
+  },
+  /** After the first lost siege: into the Phylactery, the first muster, the first unlock, the refund button. */
+  tutWeb(focus: (id: string) => void) {
+    const t = Tut.st();
+    if (!Tut.guiding() || !t.gift || t.web) return;
+    const finish = () => { t.web = t.done = true; saveMeta(); };
+    const refund = () => Tut.spot({ target: '#mt-reset', pass: true, btn: 'Got it', text: "Don't worry, I hate forced tutorial spending too, so feel free to tell me to shove it and click this beautiful button here. I'll still love you anyways. &lt;3", onNext: finish });
+    const zombie = () => {
+      if (metaLv('u_zombie') > 0 || !canBuyMeta('u_zombie')) { refund(); return; }
+      focus('u_zombie');
+      Tut.spot({ target: '.wnode[data-id="u_zombie"]', click: true, pad: 10, text: `Not only have you obtained more skeletons from that upgrade, but also unlocked new upgrades! Note; this upgrade costs ${ESS()} life essence, rather than souls--a stronger but harder to earn currency. Level-ups for most life essence upgrades will only cost souls after, though! Try buying Zombie Horde now.`,
+        onNext: () => (metaLv('u_zombie') > 0 ? refund() : zombie()) });
+    };
+    const skeleton = () => {
+      if (metaLv('n_skeleton') > 0 || !canBuyMeta('n_skeleton')) { zombie(); return; }
+      focus('n_skeleton');
+      Tut.spot({ target: '.wnode[data-id="n_skeleton"]', click: true, pad: 10, text: `${SOUL()} <b>Souls</b> are used to unlock permanent upgrades. This one adds skeleton warriors to the start of every siege. Try unlocking your first upgrade.`,
+        onNext: () => (metaLv('n_skeleton') > 0 ? zombie() : skeleton()) });
+    };
+    skeleton();
+  },
+  /** One quiet line on the end-of-siege screen once the guided part is over. */
+  lossTip(b: any) {
+    if (b.outcome === 'victory' || Tut.guiding()) return '';
+    const m = G.meta, tips: string[] = [];
+    const afford = META.filter(n => nodeVisible(n) && canBuyMeta(n.id));
+    if (afford.some(n => n.cur === 'essence' && n.id.startsWith('u_'))) tips.push('You can afford a new kind of undead. A mixed host holds a line far better than more of the same.');
+    if (b.wave <= 3) tips.push('Falling early? Take the Skirmish for a few waves: a siege that lasts longer pays more than a rich wave you do not survive.');
+    if (b.wave === 5 || b.wave === 6) tips.push('The champion of wave 5 has five times the health of its soldiers. Save Death Wave and Unholy Might for the moment it reaches your line.');
+    if (afford.length >= 3) tips.push('Unspent souls do nothing for you. Muster levels are cheap, and every one adds undead to the start of each siege.');
+    if (m.essence >= 20 && !afford.some(n => n.cur === 'essence')) tips.push('Life Essence opens new nodes only once their parent is high enough: hover a locked node to see what it needs.');
+    tips.push('The Reset & refund button in the Phylactery is free. If a branch is not working, take everything back and try another.',
+      'Unholy Might is strongest when most of your host is already fighting, not while it is still walking out.',
+      'You can retreat between waves from the menu and keep the whole haul.');
+    return `<div class="losstip"><b>Tip</b> ${tips[(G.stats.runs + (b.wave || 0)) % tips.length]}</div>`;
+  },
+
   setStat(sel: string, html: string) {
     const el = $(sel); let v = el.querySelector('.sv') as HTMLElement;
     if (!v) { v = h('span', 'sv', ''); el.prepend(v); }
@@ -475,6 +558,7 @@ export const UI: any = {
           <div class="crew">${rew}</div><div class="key">${i + 1}</div></div>`;
       }).join('')}</div>`, 'levelup crusadem');
     m.querySelectorAll('.card.crusade').forEach((el: HTMLElement) => el.onclick = () => this.pickCrusade(+el.dataset.i));
+    this.tutCrusade(off.n);
   },
   pickCrusade(i: number) {
     if (!G.run || G.phase !== 'prep') return;
@@ -598,13 +682,15 @@ export const UI: any = {
     $('#m-codex').onclick = () => this.showCodex();
     $('#m-set').onclick = () => this.showSettings();
     $('#m-help').onclick = () => this.showHelp();
+    const tt = Tut.st();
+    if (Tut.on() && !tt.welcome) Tut.welcome(() => { tt.welcome = true; saveMeta(); sfx('click'); startMusic(); });
   },
   enterGame() {
     this.closeScreen(); this.closeModal();
     document.body.classList.remove('menu');
     this.tab = wallSlots() || trapSlots() ? 'fort' : 'army'; this.collapsed = false; this.gains = null;
     this.renderBuild(); this.renderSpells();
-    if (!G.stats.seenHelp) { G.stats.seenHelp = true; saveMetaSoon(); this.showHelp(true); }
+    this.tutSiege(); // the guided first siege replaces the old wall of help text (still under Menu → How to Play)
   },
   /** End of a siege (defeat, retreat or conquest): what was carried to the Phylactery. */
   showDefeat(b: any) {
@@ -619,11 +705,13 @@ export const UI: any = {
       <div class="ebox"><div><span>Mortals slain</span><b>${fmt(b.kills)}</b></div><div><span>Waves ${win ? 'repelled' : 'reached'}</span><b>${win ? WAVES_PER_KEEP : b.wave} / ${WAVES_PER_KEEP}</b></div>
         <div class="tot"><span>Souls</span><b class="cur souls">${SOUL()} +${big(b.souls)}</b></div><div class="tot"><span>Life Essence</span><b class="cur essence">${ESS()} +${big(b.essence)}</b></div>${b.divinity ? `<div class="tot"><span>Stolen Divinity</span><b class="cur divinity">${DIV()} +${b.divinity}</b></div>` : ''}</div>
       <div class="center">In the Phylactery: ${purse()}</div>
-      <div class="col"><button class="btn big green" id="d-meta">Enter the Phylactery</button>${next >= 0 ? `<button class="btn big" id="d-next">Besiege ${KEEPS[next].name}</button>` : ''}<button class="btn big" id="d-again">Besiege ${b.name} again</button><button class="btn" id="d-menu">All keeps</button></div></div>`, 'defeatscreen');
+      <div class="col"><button class="btn big green" id="d-meta">Enter the Phylactery</button>${next >= 0 ? `<button class="btn big" id="d-next">Besiege ${KEEPS[next].name}</button>` : ''}<button class="btn big" id="d-again">Besiege ${b.name} again</button><button class="btn" id="d-menu">All keeps</button></div>${this.lossTip(b)}</div>`, 'defeatscreen');
     $('#d-meta').onclick = () => this.showMeta(b.keep);
     $('#d-again').onclick = () => { newCampaign(b.keep); this.enterGame(); };
     const nx = $('#d-next'); if (nx) nx.onclick = () => { newCampaign(next); this.enterGame(); };
     $('#d-menu').onclick = () => toMenu();
+    const tt = Tut.st();
+    if (Tut.guiding() && tt.gift && !tt.web && !win) Tut.spot({ target: '#d-meta', click: true, title: 'Not the end', text: 'Your vessel is destroyed, but the Phylactery kept everything you gathered. That is where it is spent: step inside.' });
   },
   /** The Phylactery: a web of permanent upgrades. Drag to pan, wheel to zoom, click to buy (shift: as many
    *  as you can afford). A node appears once its parent is owned and opens at the parent's threshold. */
@@ -680,6 +768,7 @@ export const UI: any = {
     $('#mt-back').onclick = () => this.showMenu();
     const go = $('#mt-go'); if (go) go.onclick = () => { newCampaign(againKeep); this.enterGame(); };
     render(); apply();
+    this.tutWeb((id: string) => { const n = META_BY_ID[id]; view.z = 1; view.x = -n.x; view.y = -n.y; apply(); });
   },
   showCodex(fromGame?: boolean, tab = 'enemy') {
     const C = G.stats.codex;
@@ -727,7 +816,7 @@ export const UI: any = {
       <label>Effects quality <select id="st-fx"><option value="low">Low</option><option value="med">Medium</option><option value="high">High</option></select></label>
       <div class="an-row">Run analytics: <span class="num" id="st-an-n">${anCount()}</span> runs recorded
         <button class="btn sm" id="st-an-exp">Export JSON</button><button class="btn sm red" id="st-an-clr">Clear</button></div>
-      <div><button class="btn sm red" id="st-reset">Erase all progress</button></div>
+      <div><button class="btn sm" id="st-tut">Replay the tutorial</button> <button class="btn sm red" id="st-reset">Erase all progress</button></div>
     </div><div class="center"><button class="btn" id="st-back">Back</button></div>`, 'setscreen');
     ($('#st-fx') as HTMLSelectElement).value = S.fx;
     $('#st-sfx').oninput = (e: any) => { S.sfx = +e.target.value; };
@@ -736,6 +825,7 @@ export const UI: any = {
     $('#st-dmg').onchange = (e: any) => (S.dmgNumbers = e.target.checked);
     $('#st-auto').onchange = (e: any) => (S.autoWave = e.target.checked);
     $('#st-fx').onchange = (e: any) => (S.fx = e.target.value);
+    $('#st-tut').onclick = () => { G.stats.tut = {}; saveMeta(); if (fromGame) { $('#st-tut').textContent = 'It starts on your next visit to the menu'; } else this.showMenu(); };
     $('#st-reset').onclick = () => { const b = $('#st-reset'); if (!b.dataset.sure) { b.dataset.sure = '1'; b.textContent = 'Click again to erase EVERYTHING'; return; } store.del(SAVE_META); store.del(SAVE_RUN); loadMeta(); toMenu(); };
     $('#st-an-exp').onclick = () => {
       if (G.run && G.run.an && G.phase !== 'menu') persist(); // include the run in progress
@@ -755,6 +845,7 @@ export const UI: any = {
     window.addEventListener('keydown', (e) => {
       const tag = (e.target as HTMLElement).tagName;
       if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+      if (Tut.active) { e.preventDefault(); return; } // the tutorial is click-only: no shortcut may skip a step
       keys[e.key.toLowerCase()] = true;
       if (G.phase === 'menu') return;
       if (G.modal === 'levelup' && ['1', '2', '3'].includes(e.key)) { this.pickCard(+e.key - 1); return; }

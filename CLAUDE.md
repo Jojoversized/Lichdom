@@ -30,6 +30,7 @@ GitHub Pages: every push to `main` runs `.github/workflows/deploy.yml` (install 
    - `tools/test/ui_flow.py` — real clicks: web (buy / shift-buy / locked node), siege, slots, crusade, level-up, save/reload, end of siege, remembered layout (slow under swiftshader: allow ~3 min)
    - `tools/test/bot.py [sieges] [stopAfterKeeps] [tier] [repeat]` — **meta-loop bot**: siege → bank → spend on the web → repeat from an empty Phylactery; prints sieges per keep (balance) and asserts clean card offers
    - `tools/test/closeup.py [outdir] [zoom] [w] [h]` — staged skirmish screenshot for art/render review
+   - `tools/test/tutorial.py [outdir]` — the first-run onboarding start to finish (welcome, guided siege, first loss, guided web)
    - `tools/test/events_check.py [reps]` — resolves every story-event choice (gambles both ways), checks errors/placeholders/state
    - `tools/test/showcase.py [out.png] [zoom] [w] [h] [marchMs]` — every crusader type + boss in rows, paused (enemy art review)
    - `LICH_AN_OUT=runs.json tools/test/bot.py …` also saves analytics records → `python3 tools/analytics/report.py runs.json`
@@ -216,6 +217,11 @@ Divinity) goes to the Phylactery → buy nodes on the web → besiege again.
   the blow, its numbers and its sound land on the hit frame. Review in Xprite (xprite.cc, `window.xpriteAgent`): fetch the sheet,
   `createDocument` → `applyBatch` (addFrame / addTag) → `importImage` per frame → `validate` / `render`; Xprite has no free
   rotation, so posing stays in the rig tool and Xprite is for review, timing and hand touch-ups.
+- v0.14 **onboarding**: `ui/tutorial.ts` (`Tut.spot/run/welcome`: four blockers around a highlighted rect + a bubble, z 250;
+  `click: true` = the player must click the target, `pass: true` = clicks go through without advancing). The beats are in
+  `ui.ts` (`tutSiege`, `tutCrusade`, `tutBattle`, `tutWeb`, `lossTip`), progress flags in `G.stats.tut` (welcome, hud, orb, spell,
+  champ, gift, web, done). `endCampaign` gives the first-loss gift (+50 souls, Life Essence up to 15). Shortcuts are blocked
+  while a bubble is up. `navigator.webdriver` browsers skip all of it unless the URL has `?tut` (`tools/test/tutorial.py`).
 - **Run state**: `r.keep`, `r.souls/essence/divinity` are the siege's haul (banked by `endCampaign(outcome)` in
   `progression.ts`: defeat / retreat / victory). `G.meta = { souls, essence, divinity, lv, keepsCleared, best, flags, layout }`.
 - **Defences**: slots from the web, free placement in prep only (`constructTower`, `buildSite`/`razeSite`, `placeTrap`);

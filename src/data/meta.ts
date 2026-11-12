@@ -42,7 +42,7 @@ N({ id: 'core', name: 'The Phylactery', cur: 'souls', max: 1, cost: 0, parent: n
 
 // ---- The Legion: which undead rise at the start of a siege, and how many
 const UNLOCK_AFTER: Record<string, [string, number]> = {
-  archer: ['skeleton', 3], zombie: ['skeleton', 5], pikeman: ['zombie', 4], wendigo: ['zombie', 8], bonemage: ['archer', 5], acolyte: ['archer', 8],
+  archer: ['skeleton', 3], zombie: ['skeleton', 1], pikeman: ['zombie', 4], wendigo: ['zombie', 8], bonemage: ['archer', 5], acolyte: ['archer', 8],
   deathknight: ['pikeman', 6], wraith: ['bonemage', 6], banshee: ['wraith', 5], vampire: ['deathknight', 6], abomination: ['wendigo', 6], golem: ['abomination', 6], wyvern: ['banshee', 6],
 };
 for (const u of UNIT_ORDER) {

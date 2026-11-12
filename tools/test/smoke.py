@@ -17,7 +17,6 @@ with sync_playwright() as p:
     print('web nodes shown:', pg.evaluate("() => document.querySelectorAll('.wnode').length"))
     pg.click('#mt-back'); pg.wait_for_timeout(200)
     pg.click('.keepc[data-k="0"]'); pg.wait_for_timeout(600)
-    pg.click('#h-ok'); pg.wait_for_timeout(400)
     pg.screenshot(path=f'{OUT}/02_prep.png')
     print(pg.evaluate("() => { const G = window.__LICH.G; return {phase: G.phase, units: G.units.length, keep: G.run.keep} }"))
     pg.click('#b-wave'); pg.wait_for_timeout(500); pg.screenshot(path=f'{OUT}/02b_crusade.png'); pg.click('.card.crusade >> nth=1'); pg.wait_for_timeout(9000)

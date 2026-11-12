@@ -53,7 +53,7 @@ with sync_playwright() as p:
     ev("() => { const L = window.__LICH; L.G.meta.lv = JSON.parse(window.__lv); L.UI.webView = { x: 0, y: 0, z: 1 }; L.UI.showMeta(); }")
     pg.click('#mt-back'); pg.wait_for_timeout(200)
     pg.click('.keepc[data-k="1"]'); pg.wait_for_timeout(100); assert ev("() => window.__LICH.G.phase") == 'menu', 'a locked keep cannot be besieged'
-    pg.click('.keepc[data-k="0"]'); pg.wait_for_timeout(600); pg.click('#h-ok'); pg.wait_for_timeout(300)
+    pg.click('.keepc[data-k="0"]'); pg.wait_for_timeout(600);
     st = ev("() => { const L = window.__LICH, G = L.G; return { units: G.units.length, expect: L.musterCount('skeleton') + L.musterCount('archer'), forge: L.bld('forge'), blds: G.buildings.length, spells: G.run.spells, souls: G.run.souls }; }")
     print('siege begins:', st); assert st['units'] == st['expect'] and st['forge'] == 1 and st['blds'] == 1 and st['souls'] == 0
     def world_click(wx, wy, button='left'):

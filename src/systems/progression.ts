@@ -79,6 +79,9 @@ export function endCampaign(outcome: 'defeat' | 'retreat' | 'victory' = 'defeat'
   }
   G.phase = 'over';
   const b = bank();
+  // a new player's first lost siege quietly leaves enough for the first two purchases of the guided Phylactery visit
+  const tut = G.stats.tut;
+  if (tut && !tut.done && !tut.gift && outcome !== 'victory') { tut.gift = true; G.meta.souls += 50; if (G.meta.essence < 15) G.meta.essence = 15; }
   anEnd(outcome, b.essence);
   G.stats.runs++;
   G.stats.bestWave = Math.max(G.stats.bestWave, outcome === 'victory' ? WAVES_PER_KEEP : r.wave - (outcome === 'defeat' ? 1 : 0));
